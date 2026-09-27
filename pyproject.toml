@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uae-fwa-engine"
+version = "1.0.0"
+description = "Governed FWA detection engine — executable artefact for the MSc DSAI dissertation 'Automated Fraud, Waste and Abuse Detection in UAE Medical Claims Using Explainable Unsupervised Learning and Governed Payment-Integrity Controls'"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Academic use — dissertation artefact" }
+authors = [{ name = "Wasiq Ahmed Tarar", email = "M01092789@live.mdx.ac.uk" }]
+
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "scikit-learn>=1.3",
+    "pyod>=1.1",
+    "networkx>=3.1",
+    "shap>=0.42",
+    "pydantic>=2.0",
+    "PyYAML>=6.0",
+    "SQLAlchemy>=2.0",
+    "streamlit>=1.30",
+    "plotly>=5.18",
+    "argon2-cffi>=21.3",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "pytest-cov>=4.1"]
+llm = ["anthropic>=0.25", "openai>=1.20"]
+
+[project.scripts]
+fwa-validate = "fwa.run_validation:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+fwa = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "governance: tests that enforce the §3.3 safety boundary and must never be skipped",
+    "slow: tests that run a full pipeline",
+]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.coverage.run]
+source = ["fwa.engine", "fwa.statistical", "fwa.cases", "fwa.evaluation"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 85
+show_missing = true

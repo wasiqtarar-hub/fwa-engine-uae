@@ -1,0 +1,205 @@
+# =============================================================================
+# PAY-08: Denial-resubmission mutation and gaming · P0
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: PAY-08
+  title: Denial-resubmission mutation and gaming
+  priority: P0
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: PAY-08-R01
+  name: Missing/broken lineage
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: INGEST
+  population: Correction/resubmission lacks valid prior payer ID/type or references unrelated claim
+  inputs: &id001
+  - claim_version.relationship
+  - claim_version.prior_claim_sk
+  - claim_version.changed_fields
+  expression: Correction/resubmission lacks valid prior payer ID/type or references unrelated claim
+  parameters: {}
+  exclusions:
+  - legacy_route_where_permitted
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 90
+  disposition: RETURN
+  reason_code: BROKEN_LINEAGE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: claim_version is NOT_POPULATED — every claim_id in the source is unique and appears
+    once, so there is no lineage to be broken.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Correction/resubmission lacks valid prior payer ID/type or references unrelated claim
+  catalogue_config_exclusions: Legacy route where permitted
+  catalogue_disposition: Return
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-08-R02
+  name: Reimbursement-enabling field mutation
+  version: 1.0.0
+  status: shadow
+  type: H/E
+  stage: PREPAY_ASYNC
+  population: Denied line changes diagnosis, code, units, provider, setting or indicator without coherent
+    correction evidence
+  inputs: &id003
+  - claim_version.relationship
+  - claim_version.prior_claim_sk
+  - claim_version.changed_fields
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  expression: Denied line changes diagnosis, code, units, provider, setting or indicator without coherent
+    correction evidence
+  parameters: {}
+  exclusions:
+  - accepted_correction_matrix_by_denial_code
+  grouping_key: *id002
+  score: 90
+  disposition: PREPAY_PEND
+  reason_code: FIELD_MUTATION
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No resubmissions and no denial codes. The field-diff rendering this control needs
+    IS implemented (LineageIndex.field_diff) and is exercised by the integration test against constructed
+    fixtures.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Denied line changes diagnosis, code, units, provider, setting or indicator without
+    coherent correction evidence
+  catalogue_config_exclusions: Accepted correction matrix by denial code
+  catalogue_disposition: Pend with field diff
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-08-R03
+  name: Repeated resubmission loop
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: POSTPAY_DAILY
+  population: Attempts per underlying service exceed cfg.max_attempts or alternate variants until paid
+  inputs: &id004
+  - claim_version.relationship
+  - claim_version.prior_claim_sk
+  - claim_version.changed_fields
+  expression: Attempts per underlying service exceed cfg.max_attempts or alternate variants until paid
+  parameters: {}
+  exclusions:
+  - internal_complaint
+  - appeal_route
+  grouping_key: *id002
+  score: 62
+  disposition: POSTPAY_AUDIT
+  reason_code: RESUBMISSION_LOOP
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No resubmission attempts recorded.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Attempts per underlying service exceed cfg.max_attempts or alternate variants until
+    paid
+  catalogue_config_exclusions: Internal complaint/appeal route
+  catalogue_disposition: Provider case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-08-R04
+  name: Edit-learning success anomaly
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Provider's mutated resubmission success materially exceeds peers and concentrates on specific
+    denial edits
+  inputs: &id005
+  - claim_version.relationship
+  - claim_version.prior_claim_sk
+  - claim_version.changed_fields
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  expression: Provider's mutated resubmission success materially exceeds peers and concentrates on specific
+    denial edits
+  parameters: {}
+  exclusions:
+  - biller
+  - vendor
+  - policy_change_adjustment
+  grouping_key: *id002
+  score: 62
+  disposition: SIU_LEAD
+  reason_code: EDIT_LEARNING_ANOMALY
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No resubmissions, no denial codes, no payment outcomes.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: Provider's mutated resubmission success materially exceeds peers and concentrates
+    on specific denial edits
+  catalogue_config_exclusions: Biller/vendor and policy-change adjustment
+  catalogue_disposition: SIU/payment-integrity lead
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

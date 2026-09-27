@@ -1,0 +1,197 @@
+# =============================================================================
+# PAY-12: Reversal, refund, credit-balance and remittance leakage · P1 *  (added by the specification's own coverage audit)
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: PAY-12
+  title: Reversal, refund, credit-balance and remittance leakage
+  priority: P1
+  added_by_coverage_audit: true
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: PAY-12-R01
+  name: Paid cancelled/reversed claim
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: POSTPAY_DAILY
+  population: Net payment remains after effective cancellation/reversal
+  inputs: &id001
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  - claim_version.relationship
+  - claim_version.prior_claim_sk
+  - claim_version.changed_fields
+  expression: Net payment remains after effective cancellation/reversal
+  parameters: {}
+  exclusions:
+  - timing_tolerance
+  - netting_process
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 82
+  disposition: POSTPAY_AUDIT
+  reason_code: PAID_CANCELLED_CLAIM
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: finance
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No cancellations, reversals or payments.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Net payment remains after effective cancellation/reversal
+  catalogue_config_exclusions: Timing tolerance and netting process
+  catalogue_disposition: Recovery
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-12-R02
+  name: Duplicate remittance/payment reference
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: POSTPAY_DAILY
+  population: Same payable claim/line paid more than once or payment reference reused inconsistently
+  inputs: &id003
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  expression: Same payable claim/line paid more than once or payment reference reused inconsistently
+  parameters: {}
+  exclusions:
+  - split_settlement
+  - batch_payments
+  grouping_key: *id002
+  score: 82
+  disposition: POSTPAY_AUDIT
+  reason_code: DUPLICATE_REMITTANCE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: finance
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: The remittance table is NOT_POPULATED.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Same payable claim/line paid more than once or payment reference reused inconsistently
+  catalogue_config_exclusions: Split settlement and batch payments
+  catalogue_disposition: Finance pend/recovery
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-12-R03
+  name: Unapplied provider refund/credit
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: POSTPAY_DAILY
+  population: Received credit/refund not linked to outstanding recovery within SLA
+  inputs: &id004
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  - recovery_ledger.*
+  expression: Received credit/refund not linked to outstanding recovery within SLA
+  parameters: {}
+  exclusions:
+  - dispute
+  - unapplied_cash_queue
+  grouping_key: *id002
+  score: 82
+  disposition: POSTPAY_AUDIT
+  reason_code: UNAPPLIED_CREDIT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: finance
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No credits, refunds or recovery ledger.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Received credit/refund not linked to outstanding recovery within SLA
+  catalogue_config_exclusions: Dispute and unapplied-cash queue
+  catalogue_disposition: Finance exception
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-12-R04
+  name: Negative/offset manipulation
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Provider repeatedly offsets credits against unrelated claims or delays reversals versus
+    peers
+  inputs: &id005
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  expression: Provider repeatedly offsets credits against unrelated claims or delays reversals versus
+    peers
+  parameters: {}
+  exclusions:
+  - contractual_netting_rules
+  grouping_key: *id002
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: OFFSET_MANIPULATION
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: finance
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: the claim extract has no remittance, credit or reversal records, so there is nothing that
+    could show an offset being applied, delayed or netted against another claim.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: Provider repeatedly offsets credits against unrelated claims or delays reversals
+    versus peers
+  catalogue_config_exclusions: Contractual netting rules
+  catalogue_disposition: Postpay audit
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

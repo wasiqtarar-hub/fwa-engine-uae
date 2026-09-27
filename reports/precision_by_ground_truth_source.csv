@@ -1,0 +1,4 @@
+ground_truth_source,claims,labelled_fraud,prevalence,flagged,flagged_and_labelled,precision_proxy,recall_proxy,reliability_caveat
+expert_review,6845,41,0.006,2351,21,0.0089,0.5122,expert_review labels carry investigation-selection bias: they exist because someone chose to investigate.
+pattern_detection,7006,49,0.007,2414,28,0.0116,0.5714,pattern_detection labels are produced by a pattern process and share its blind spots.
+rule_engine,7042,55,0.0078,2386,27,0.0113,0.4909,"rule_engine labels are produced by a rule process, so a rule-based detector scoring well against them is close to tautological."

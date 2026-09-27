@@ -1,0 +1,289 @@
+# =============================================================================
+# CLN-04: Unnecessary, excessive or repeated services · P0
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: CLN-04
+  title: Unnecessary, excessive or repeated services
+  priority: P0
+  added_by_coverage_audit: false
+  control_count: 5
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: CLN-04-R01
+  name: Minimum repeat interval
+  version: 1.0.0
+  status: shadow
+  type: E
+  stage: PREPAY_SYNC
+  population: claim pairs for the same member with the same principal diagnosis
+  inputs:
+  - claim_header.member_sk
+  - diagnosis.code
+  - encounter.admission_date
+  expression: a prior claim exists for the same member and principal diagnosis with 0 <= days_between
+    <= cfg.min_repeat_interval_days and no accepted indicator
+  parameters:
+    interval_days: cfg.min_repeat_interval_days
+  exclusions:
+  - accepted_clinical_indicator
+  - code_family_permits_repeat
+  - required_observation_present
+  - planned_staged_care
+  - chemotherapy_or_dialysis_pathway
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 78
+  disposition: PREPAY_PEND
+  reason_code: MINIMUM_REPEAT_INTERVAL
+  evidence_fields:
+  - prior_claim_sk
+  - days_between
+  - diagnosis_code
+  - provider_sk
+  - prior_provider_sk
+  - interval_threshold
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: PARTIAL
+  data_support_reason: '''Same or equivalent service'' is approximated by the same primary diagnosis for
+    the same member, because there are no service codes. The interval test itself runs exactly as specified
+    against cfg.min_repeat_interval_days.'
+  required_canonical_fields:
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - observation.*
+  - repeat_interval_policy.*
+  implementation: cln_04_r01_minimum_repeat_interval
+  catalogue_trigger: Same/equivalent service repeated inside policy interval without accepted indicator
+  catalogue_config_exclusions: Code family, clinical exception and required Observation
+  catalogue_disposition: Clinical pend
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-04-R02
+  name: Episode frequency excess
+  version: 1.0.0
+  status: shadow
+  type: E/S
+  stage: POSTPAY_DAILY
+  population: member with at least one claim in the utilisation window
+  inputs:
+  - claim_header.member_sk
+  - encounter.admission_date
+  expression: count(member claims strictly earlier within cfg.utilisation_velocity_window_days) >= cfg.member_repeat_service_threshold
+  parameters:
+    threshold: cfg.member_repeat_service_threshold
+    window_days: cfg.utilisation_velocity_window_days
+  exclusions:
+  - chronic_care_pathway
+  - oncology_or_dialysis_pathway
+  - age_risk_adjustment_unavailable
+  - maternity_pathway
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - member_sk
+  - scenario_id
+  - period_bucket
+  score: 78
+  disposition: PREPAY_PEND
+  reason_code: EPISODE_FREQUENCY_EXCESS
+  evidence_fields:
+  - member_sk
+  - claims_in_window
+  - window_days
+  - threshold
+  - diagnoses_in_window
+  - providers_in_window
+  - total_gross_aed
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: PARTIAL
+  data_support_reason: Member-level admission counts within the utilisation window are computable and
+    are compared against cfg.member_repeat_service_threshold. Risk adjustment for age is not possible
+    (no demographics), so the peer comparison is diagnosis-based only.
+  required_canonical_fields:
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - member.date_of_birth
+  - member.sex
+  - care_pathway_policy.*
+  implementation: cln_04_r02_episode_frequency_excess
+  catalogue_trigger: Count per episode/member exceeds policy maximum or risk-adjusted peer threshold
+  catalogue_config_exclusions: Diagnosis/care pathway and age
+  catalogue_disposition: Pend/audit
+  alternate_dispositions:
+  - POSTPAY_AUDIT
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-04-R03
+  name: No result before repeat
+  version: 1.0.0
+  status: shadow
+  type: E
+  stage: PREPAY_ASYNC
+  population: Repeat diagnostic service occurs while prior result/report is absent or unchanged
+  inputs: &id001
+  - observation.value
+  - observation.event_time
+  expression: Repeat diagnostic service occurs while prior result/report is absent or unchanged
+  parameters: {}
+  exclusions:
+  - result_latency
+  - failed
+  - inconclusive_test
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - episode_id
+  - scenario_id
+  score: 78
+  disposition: PREPAY_PEND
+  reason_code: NO_RESULT_BEFORE_REPEAT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No results or reports exist.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Repeat diagnostic service occurs while prior result/report is absent or unchanged
+  catalogue_config_exclusions: Result latency, failed/inconclusive test
+  catalogue_disposition: Review
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-04-R04
+  name: Provider utilization outlier
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: provider with at least cfg.min_entity_opportunities claims
+  inputs:
+  - claim_header.provider_sk
+  - claim_header.member_sk
+  expression: shrunk claims-per-member for the provider exceeds the peer posterior upper bound and posterior_interval_width
+    <= cfg.max_posterior_width
+  parameters:
+    max_posterior_width: cfg.max_posterior_width
+  exclusions:
+  - case_mix_difference
+  - referral_centre_role
+  - small_denominator
+  - posterior_interval_too_wide
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - scenario_id
+  - period_bucket
+  score: 62
+  disposition: POSTPAY_AUDIT
+  reason_code: PROVIDER_UTILISATION_OUTLIER
+  evidence_fields:
+  - provider_sk
+  - claims_per_member
+  - shrunk_value
+  - posterior_interval
+  - peer_mean
+  - peer_level_used
+  - peer_n
+  - distinct_members
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: PARTIAL
+  data_support_reason: Claims per distinct member at a provider is computable and is shrunk toward the
+    peer mean. 'Services' is substituted by 'claims' because there are no service lines, so the intensity
+    of each claim is invisible to this control.
+  required_canonical_fields:
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - referral.*
+  implementation: cln_04_r04_provider_utilisation_outlier
+  catalogue_trigger: Services per comparable episode/member exceed shrunk peers
+  catalogue_config_exclusions: Case mix, referral role and denominator
+  catalogue_disposition: Provider case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-04-R05
+  name: Cascade pattern
+  version: 1.0.0
+  status: shadow
+  type: S/N
+  stage: NETWORK_WEEKLY
+  population: Initial low-intensity encounter reliably triggers unusually large downstream test/service
+    bundle
+  inputs: &id003
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - referral.*
+  expression: Initial low-intensity encounter reliably triggers unusually large downstream test/service
+    bundle
+  parameters: {}
+  exclusions:
+  - specialty_pathway
+  - network_structure
+  grouping_key: *id002
+  score: 62
+  disposition: POSTPAY_AUDIT
+  reason_code: CASCADE_PATTERN
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Downstream service bundles require claim lines and referral edges; neither exists.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Initial low-intensity encounter reliably triggers unusually large downstream test/service
+    bundle
+  catalogue_config_exclusions: Specialty pathway and network structure
+  catalogue_disposition: Postpay/network case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

@@ -1,0 +1,38 @@
+# Streamlit's own chrome — widgets, sidebar, dataframes, focus rings — is
+# styled from this file. app/assets/style.css restyles what a stylesheet can
+# reach, but the base theme decides what no stylesheet can override cleanly.
+# Both have to agree, and this file is where the agreement is decided:
+# app/common.py reads `theme.base` from here and loads the matching token set
+# (style.css, plus style-dark.css when the base is dark). Change one and the
+# other follows.
+#
+# ---------------------------------------------------------------------------
+# TO SWITCH TO DARK: comment out the LIGHT block, uncomment the DARK one,
+# and restart the app. Nothing else needs changing.
+# ---------------------------------------------------------------------------
+
+# ---- LIGHT (the default: white ground, plum accent) ------------------------
+[theme]
+base = "light"
+primaryColor = "#6D3560"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#FBF9FA"
+textColor = "#211D24"
+font = "sans serif"
+
+# ---- DARK ------------------------------------------------------------------
+# [theme]
+# base = "dark"
+# primaryColor = "#D9A3CC"
+# backgroundColor = "#16131A"
+# secondaryBackgroundColor = "#1D1922"
+# textColor = "#ECE8EE"
+# font = "sans serif"
+
+[browser]
+# This artefact is built to run with no network access, and usage statistics
+# would be the one outbound request it made on its own initiative.
+gatherUsageStats = false
+
+[client]
+showErrorDetails = true

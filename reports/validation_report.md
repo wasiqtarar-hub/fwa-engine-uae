@@ -1,0 +1,586 @@
+# Validation report — `uae-fwa-engine` 1.0.0
+
+> **THIS REPORT DESCRIBES ONE DATASET**
+>
+> Source `claims_demo_synthetic.csv` · 20,893 claim rows · `GENERIC_INDIA_TPA` adapter · run 2026-09-26 16:35 UTC.
+>
+> Every figure below is a measured property of that file. None of it transfers to another population without being re-measured there.
+>
+> **SAFETY BOUNDARY.** A signal is not a fraud finding. This system can establish non-payability, inconsistency or statistical abnormality. It cannot establish intent, and intent is what distinguishes fraud from waste, abuse or honest error. Only a human reviewer, on evidence, may reach a conclusion about conduct.
+
+
+Generated 2026-09-26T16:35:45.700099+00:00 · parameter-registry fingerprint `d238bf211afb75b1` · seed `20260920`.
+
+## What this report establishes, and what it does not
+
+**It establishes** that the design can be built, that the safety boundary can be enforced structurally rather than by convention, and that the governance machinery — effective dating, shadow-before-active, evidence capping, alert ceilings, kill switches, an append-only audit log — runs.
+
+**It does not establish** a performance claim that transfers to any other book of business. Its labels were produced by three detection processes (`pattern_detection`, `expert_review`, `rule_engine`), so every precision figure below is an upper bound on what a real review would confirm, not an estimate of it — and a rule-based detector scoring well against `rule_engine` labels is close to tautological. Nothing here has been reviewed by a human, so precision in the strict sense (confirmed ÷ reviewed) is NOT_MEASURABLE and is reported as such.
+
+Every number below is a measured output of this run, a configuration threshold labelled as such, or `NOT_MEASURABLE_ON_THIS_DATASET`.
+
+## 1. Run summary
+
+| item                                           | value             |
+|:-----------------------------------------------|:------------------|
+| Claims ingested                                | 20,893            |
+| Immutable raw records (SHA-256 before parsing) | 20,893            |
+| Adapter                                        | GENERIC_INDIA_TPA |
+| Controls in the catalogue                      | 164               |
+| Controls executed                              | 37                |
+| Controls that produced signals                 | 37                |
+| Signals                                        | 9,074             |
+| Cases after correlation                        | 8,502             |
+| Controls active (not shadow)                   | 0                 |
+
+
+Every control in this build is in **shadow**. None has been activated, because activation requires a policy owner who did not author the rule to approve it after a prospective shadow period, and neither exists in a single retrospective run.
+
+
+## 2. Catalogue coverage — what `claims_demo_synthetic.csv` can actually carry
+
+| classification                 |   controls | share   |
+|:-------------------------------|-----------:|:--------|
+| EXECUTABLE                     |          9 | 5.5%    |
+| PARTIAL                        |         28 | 17.1%   |
+| NOT_EXECUTABLE_ON_THIS_DATASET |        127 | 77.4%   |
+
+
+All 39 scenarios and 164 atomic controls of the catalogue are registered as configuration and validated against the atomic-control contract. 127 of them cannot run here, each with a stated reason and the canonical fields that would unlock it — see `control_coverage_matrix.csv`, which is the concrete answer to *what would real Shafafiya or eClaimLink data unlock?*
+
+Only **21** controls in the entire catalogue may deny or reprice a claim, and every one of them is type H or H/E. The registry refuses to load a statistical, network, document or model control that declares `REJECT` or `REPRICE`.
+
+
+### Controls that produced signals
+
+| rule_id    | scenario_id   | type_label   | stage          | data_support   |   signal_count |   elapsed_ms |
+|:-----------|:--------------|:-------------|:---------------|:---------------|---------------:|-------------:|
+| PAY-10-R01 | PAY-10        | H            | PREPAY_SYNC    | PARTIAL        |           2084 |      2161.39 |
+| CLN-03-R01 | CLN-03        | H            | PREPAY_SYNC    | PARTIAL        |           1382 |      1731.94 |
+| PAY-06-R03 | PAY-06        | S            | POSTPAY_DAILY  | EXECUTABLE     |            640 |      1939.19 |
+| CLN-05-R01 | CLN-05        | S            | POSTPAY_DAILY  | EXECUTABLE     |            609 |      1200.52 |
+| CLN-04-R01 | CLN-04        | E            | PREPAY_SYNC    | PARTIAL        |            563 |     10297.4  |
+| POL-01-R04 | POL-01        | S            | MODEL_MONTHLY  | PARTIAL        |            535 |       786.9  |
+| CLN-04-R02 | CLN-04        | E/S          | POSTPAY_DAILY  | PARTIAL        |            492 |     10519    |
+| ENT-02-R03 | ENT-02        | S            | PREPAY_ASYNC   | PARTIAL        |            388 |     12267.5  |
+| PAY-01-R02 | PAY-01        | H            | PREPAY_ASYNC   | PARTIAL        |            290 |      7327.65 |
+| CLN-01-R02 | CLN-01        | S/M          | POSTPAY_DAILY  | PARTIAL        |            222 |       932.75 |
+| PHR-03-R03 | PHR-03        | S            | MODEL_MONTHLY  | PARTIAL        |            217 |       850.65 |
+| ANL-01-R03 | ANL-01        | M            | MODEL_MONTHLY  | EXECUTABLE     |            162 |      9750.99 |
+| PAY-01-R01 | PAY-01        | H            | PREPAY_SYNC    | PARTIAL        |            160 |      8151.05 |
+| CLN-06-R02 | CLN-06        | H/S          | POSTPAY_DAILY  | PARTIAL        |            158 |      1861.81 |
+| NET-03-R01 | NET-03        | S/N          | MODEL_MONTHLY  | EXECUTABLE     |            128 |       793.75 |
+| PAY-06-R04 | PAY-06        | S            | MODEL_MONTHLY  | EXECUTABLE     |            127 |      1159.57 |
+| ANL-01-R01 | ANL-01        | S            | MODEL_MONTHLY  | EXECUTABLE     |            125 |       531.63 |
+| CLN-05-R02 | CLN-05        | E/S          | POSTPAY_DAILY  | EXECUTABLE     |             90 |        96.27 |
+| NET-02-R03 | NET-02        | N/S          | POSTPAY_DAILY  | PARTIAL        |             88 |     19393.3  |
+| ENT-03-R02 | ENT-03        | H            | PREPAY_SYNC    | PARTIAL        |             87 |       209.91 |
+| CLN-05-R03 | CLN-05        | H/E          | POSTPAY_DAILY  | PARTIAL        |             61 |       496.62 |
+| DOC-01-R02 | DOC-01        | T/E          | PREPAY_ASYNC   | PARTIAL        |             61 |       297.01 |
+| PAY-01-R03 | PAY-01        | H            | POSTPAY_DAILY  | PARTIAL        |             57 |      7679.56 |
+| NET-04-R03 | NET-04        | S            | MODEL_MONTHLY  | PARTIAL        |             56 |       512.78 |
+| DOC-02-R01 | DOC-02        | T            | POSTPAY_DAILY  | PARTIAL        |             46 |       178.06 |
+| NET-01-R01 | NET-01        | S            | MODEL_MONTHLY  | PARTIAL        |             44 |      1396.78 |
+| ANL-01-R02 | ANL-01        | S            | MODEL_MONTHLY  | EXECUTABLE     |             43 |      8572.83 |
+| PAY-06-R02 | PAY-06        | H            | INGEST         | PARTIAL        |             35 |        52.38 |
+| CLN-04-R04 | CLN-04        | S            | MODEL_MONTHLY  | PARTIAL        |             33 |       349.4  |
+| NET-04-R02 | NET-04        | S/N          | MODEL_MONTHLY  | PARTIAL        |             20 |       204.87 |
+| CLN-07-R04 | CLN-07        | S            | MODEL_MONTHLY  | PARTIAL        |             19 |      5803.73 |
+| CLN-07-R02 | CLN-07        | E/S          | POSTPAY_DAILY  | PARTIAL        |             13 |      4229.02 |
+| CLN-01-R03 | CLN-01        | E/T          | PREPAY_ASYNC   | PARTIAL        |             12 |       207.32 |
+| NET-02-R02 | NET-02        | N            | NETWORK_WEEKLY | PARTIAL        |             10 |       116.76 |
+| CLN-01-R01 | CLN-01        | S            | MODEL_MONTHLY  | PARTIAL        |              8 |       336.82 |
+| CLN-06-R03 | CLN-06        | S            | POSTPAY_DAILY  | PARTIAL        |              6 |      9137.23 |
+| ANL-01-R04 | ANL-01        | M            | MODEL_MONTHLY  | EXECUTABLE     |              3 |        15.29 |
+
+
+### Controls that ran and found nothing — and why that is a result
+
+_No rows._
+
+
+A control that runs and finds nothing has found something. Specifically:
+
+
+
+## 3. Canonical model population
+
+| table                  | status        |   rows |   columns_populated |   columns_defined |
+|:-----------------------|:--------------|-------:|--------------------:|------------------:|
+| member                 | PARTIAL       |  12651 |                   6 |                13 |
+| coverage_period        | PARTIAL       |  12651 |                  11 |                12 |
+| benefit_rule_version   | NOT_POPULATED |      0 |                   0 |                12 |
+| provider               | PARTIAL       |   1340 |                   8 |                15 |
+| provider_status_period | PARTIAL       |     87 |                   8 |                 8 |
+| claim_header           | POPULATED     |  20893 |                  37 |                26 |
+| claim_line             | NOT_POPULATED |      0 |                   0 |                14 |
+| diagnosis              | PARTIAL       |  20893 |                  10 |                11 |
+| encounter              | PARTIAL       |  20893 |                  11 |                12 |
+| observation            | NOT_POPULATED |      0 |                   0 |                 8 |
+| authorization          | NOT_POPULATED |      0 |                   0 |                11 |
+| authorization_line     | NOT_POPULATED |      0 |                   0 |                 8 |
+| claim_version          | NOT_POPULATED |      0 |                   0 |                 8 |
+| remittance             | NOT_POPULATED |      0 |                   0 |                10 |
+| prescription_dispense  | NOT_POPULATED |      0 |                   0 |                12 |
+| policy_event           | NOT_POPULATED |      0 |                   0 |                 8 |
+| review_outcome         | NOT_POPULATED |      0 |                   0 |                15 |
+
+
+No table is filled with invented data. A table that is empty because the source has no such data is a finding; a table full of fabricated rows would be a lie that propagates into every downstream metric. Reasons are in `canonical_population_report.csv`.
+
+
+## 4. Per-layer results
+
+### Deterministic and expert controls
+
+| control type   |   signals |
+|:---------------|----------:|
+| E              |       563 |
+| E/S            |       595 |
+| E/T            |        12 |
+| H              |      4095 |
+| H/E            |        61 |
+| H/S            |       158 |
+| M              |       165 |
+| N              |        10 |
+| N/S            |        88 |
+| S              |      2850 |
+| S/M            |       222 |
+| S/N            |       148 |
+| T              |        46 |
+| T/E            |        61 |
+
+
+### Statistical layer — ANL-01-R01 transparent composite
+
+
+1,340 providers scored; 125 above the `cfg.composite_flag_threshold` of 1.2. Score distribution: median 0.41, p95 1.93, max 14.33. The threshold's position in that distribution is visible rather than asserted.
+
+| provider_sk   |   composite_score | peer_level_used   |   peer_n |   claim_count | top_features                                                                                                                                                                           |
+|:--------------|------------------:|:------------------|---------:|--------------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| H1005         |           14.3302 | L1_L2             |       88 |            80 | Amount per inpatient day=AED 6,804/day vs peer AED 1,081/day; Mean claim amount=AED 18,438 vs peer AED 4,577; Approved-to-billed ratio=72.6% vs peer 89.6%                             |
+| H1013         |            9.558  | L1                |       55 |            82 | Amount per inpatient day=AED 5,466/day vs peer AED 1,191/day; Mean claim amount=AED 16,069 vs peer AED 5,102; Approved-to-billed ratio=73.7% vs peer 89.7%                             |
+| H1023         |            8.9773 | L1                |       31 |            80 | Amount per inpatient day=AED 4,199/day vs peer AED 964/day; Approved-to-billed ratio=71.5% vs peer 89.5%; Mean claim amount=AED 11,043 vs peer AED 4,597                               |
+| H1004         |            5.5402 | L1_L2             |       34 |            80 | Approved-to-billed ratio=72.9% vs peer 89.2%; Mean claim amount=AED 7,696 vs peer AED 3,851; Amount per inpatient day=AED 2,862/day vs peer AED 1,092/day                              |
+| H1058         |            4.9863 | L1                |       30 |            17 | Claims per distinct member=1.13 claims/member vs peer 1.00 claims/member; Readmission rate=11.8% vs peer 0.0%; Approved-to-billed ratio=89.6% vs peer 89.6%                            |
+| H0243         |            4.859  | L1                |       30 |            18 | Claims per distinct member=1.12 claims/member vs peer 1.00 claims/member; Pharmacy share of the bill=18.6% vs peer 15.0%; Amount per inpatient day=AED 1,358/day vs peer AED 1,150/day |
+| H0888         |            4.6687 | L1                |       30 |            19 | Claims per distinct member=1.12 claims/member vs peer 1.00 claims/member; Readmission rate=10.5% vs peer 0.0%; Approved-to-billed ratio=90.9% vs peer 89.6%                            |
+| H1011         |            4.5677 | L1_L2             |       43 |            79 | Approved-to-billed ratio=72.3% vs peer 89.4%; Amount per inpatient day=AED 2,875/day vs peer AED 1,125/day; Mean claim amount=AED 7,856 vs peer AED 4,661                              |
+| H1007         |            4.4393 | L1_L2             |       56 |            82 | Approved-to-billed ratio=73.9% vs peer 89.6%; Amount per inpatient day=AED 2,334/day vs peer AED 996/day; Mean claim amount=AED 6,552 vs peer AED 3,715                                |
+| H1025         |            4.2414 | GLOBAL            |     1340 |            79 | Approved-to-billed ratio=73.3% vs peer 89.5%; Pharmacy share of the bill=37.8% vs peer 16.2%; Amount per inpatient day=AED 1,762/day vs peer AED 1,008/day                             |
+| H1014         |            4.094  | L1_L2             |       34 |            90 | Approved-to-billed ratio=73.9% vs peer 89.2%; Amount per inpatient day=AED 2,127/day vs peer AED 1,092/day; Mean claim amount=AED 5,604 vs peer AED 3,851                              |
+| H1012         |            4.0205 | L1                |       38 |            82 | Approved-to-billed ratio=72.8% vs peer 89.7%; Amount per inpatient day=AED 2,024/day vs peer AED 1,128/day; Mean claim amount=AED 5,775 vs peer AED 3,979                              |
+
+_(113 further rows in the accompanying CSV.)_
+
+
+### Graph layer
+
+
+262 weekly, time-bounded snapshots; 14,760 nodes and 58,231 edges in the cumulative graph; 3,324 snapshot communities. 0 entity-resolution candidates surfaced for human confirmation — **none merged automatically**, at any confidence.
+
+| edge_type                        | present   |   edges | observed   | note                                                                                                                |
+|:---------------------------------|:----------|--------:|:-----------|:--------------------------------------------------------------------------------------------------------------------|
+| member_provider                  | True      |   20448 | True       | One edge per claim. Directly observed.                                                                              |
+| agent_member                     | True      |   20515 | True       | Policy origination. Directly observed.                                                                              |
+| agent_provider                   | True      |    7572 | False      | INFERRED from co-occurrence on the same claim, not an observed referral. Every signal resting on this edge says so. |
+| provider_tpa                     | True      |    9696 | True       | Claim administration. Directly observed.                                                                            |
+| referral (directed A→B)          | False     |       0 | False      | ABSENT — no referral records. NET-01-R02 reciprocity is structurally undefined, not merely unmeasured.              |
+| prescriber—pharmacy              | False     |       0 | False      | ABSENT — no prescriptions or pharmacy entities.                                                                     |
+| shared administrative identifier | False     |       0 | False      | ABSENT — no bank, phone, address or device tokens.                                                                  |
+| ownership                        | False     |       0 | False      | ABSENT — no ownership records.                                                                                      |
+
+
+### Model layer
+
+| model                |   training_rows |   scored_rows |   capacity_threshold |   flagged |   features |
+|:---------------------|----------------:|--------------:|---------------------:|----------:|-----------:|
+| isolation_forest     |            6319 |          4173 |               0.5546 |       100 |        104 |
+| local_outlier_factor |            6319 |          4173 |               2.2943 |       100 |        104 |
+
+
+10,401 of 20,893 claims (50%) are scored by NEITHER model: they belong to a provider held out for training, or fall in the training period. This is the price of combining a temporal split with entity isolation on a single-file dataset, and it is reported rather than absorbed — a model that scored everything would have been trained on the entities it scores.
+
+
+**Promotion gate verdicts:**
+
+
+- **isolation_forest: REMAINS IN SHADOW** — isolation_forest REMAINS IN SHADOW. Failed: Calibration check. The system loses nothing by this: ANL-01-R01, the transparent composite, is the explainable fallback and continues to run.
+
+
+| criterion                        | status   |    value |   threshold | evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|:---------------------------------|:---------|---------:|------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Temporal holdout evaluation      | PASS     | nan      |      nan    | Trained on 6,319 claims before 2026-02-11; scored 4,173 claims after it. Entity isolation holds: 0 providers appear in both sets. 10,401 of 20,893 claims (50%) are scored by NEITHER model: they belong to a provider held out for training, or fall in the training period. This is the price of combining a temporal split with entity isolation on a single-file dataset, and it is reported rather than absorbed — a model that scored everything would have been trained on the entities it scores. |
+| Prospective lift over ANL-01-R01 | PASS     |   2.2    |        1.1  | At a reviewer capacity of 100, the model's review yield is 11.0% against the transparent composite's 5.0% — a lift of 2.20× against a required 1.10×. The model beats the transparent composite. NOTE: the outcomes used are investigation-derived, selection-biased labels , so this lift is an upper bound, not an estimate of production behaviour.                                                                                                                                                    |
+| Calibration check                | FAIL     |   0.5072 |        0.15 | Expected calibration error 0.507 against a maximum of 0.150. An unsupervised anomaly score is NOT a probability; it is min-max rescaled here purely so a calibration curve can be drawn, and a poor ECE on an unsupervised score is expected rather than surprising.                                                                                                                                                                                                                                      |
+| Drift monitoring                 | PASS     | nan      |      nan    | 4 monitors ran; 1 warning, no breaches.                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Explanation quality              | PASS     | nan      |      nan    | 15 of 15 sampled contributions render in ORIGINAL UNITS beside a peer value, as the promotion gate requires.                                                                                                                                                                                                                                                                                                                                                                                              |
+
+
+- **local_outlier_factor: PROMOTED TO ACTIVE** — local_outlier_factor clears every model-gate criterion and may be promoted from shadow to active by a policy owner who did not propose it.
+
+
+| criterion                        | status   |   value |   threshold | evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+|:---------------------------------|:---------|--------:|------------:|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Temporal holdout evaluation      | PASS     |  nan    |      nan    | Trained on 6,319 claims before 2026-02-11; scored 4,173 claims after it. Entity isolation holds: 0 providers appear in both sets. 10,401 of 20,893 claims (50%) are scored by NEITHER model: they belong to a provider held out for training, or fall in the training period. This is the price of combining a temporal split with entity isolation on a single-file dataset, and it is reported rather than absorbed — a model that scored everything would have been trained on the entities it scores. |
+| Prospective lift over ANL-01-R01 | PASS     |    1.6  |        1.1  | At a reviewer capacity of 100, the model's review yield is 8.0% against the transparent composite's 5.0% — a lift of 1.60× against a required 1.10×. The model beats the transparent composite. NOTE: the outcomes used are investigation-derived, selection-biased labels , so this lift is an upper bound, not an estimate of production behaviour.                                                                                                                                                     |
+| Calibration check                | PASS     |    0.01 |        0.15 | Expected calibration error 0.010 against a maximum of 0.150. An unsupervised anomaly score is NOT a probability; it is min-max rescaled here purely so a calibration curve can be drawn, and a poor ECE on an unsupervised score is expected rather than surprising.                                                                                                                                                                                                                                      |
+| Drift monitoring                 | PASS     |  nan    |      nan    | 4 monitors ran; 1 warning, no breaches.                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Explanation quality              | PASS     |  nan    |      nan    | 13 of 15 sampled contributions render in ORIGINAL UNITS beside a peer value, as the promotion gate requires.                                                                                                                                                                                                                                                                                                                                                                                              |
+
+
+**Supervised gate: `PROMOTION_BLOCKED`.** PROMOTION_BLOCKED. 3 of 5 prerequisites are unmet: Stable outcome capture (review_outcome); Random-audit data to correct investigation-selection bias; Calibration and specialty/payer stability. No supervised model is trained, and none should be: a propensity model fitted to these labels would learn to reproduce the blind spots of whatever process produced them. The promotion gate treats that failure mode as disqualifying, not merely undesirable.
+
+
+| prerequisite                                              | met   | what_would_satisfy_it                                                                                                                     |
+|:----------------------------------------------------------|:------|:------------------------------------------------------------------------------------------------------------------------------------------|
+| Stable outcome capture (review_outcome)                   | False | Several hundred reviewer dispositions with validated categories and confirmed amounts, captured consistently over at least two quarters.  |
+| Random-audit data to correct investigation-selection bias | False | A genuine random audit: a statistically representative sample of claims reviewed by humans REGARDLESS of whether the system flagged them. |
+| Temporal train/validation/test splits                     | True  | A date-ordered split with no future data in training.                                                                                     |
+| Entity isolation across splits                            | True  | No provider, member or episode present in both a training and an evaluation split.                                                        |
+| Calibration and specialty/payer stability                 | False | Confirmed outcomes for a calibration curve, plus a real provider specialty and payer dimension to check stability across.                 |
+
+
+**ANL-01-R04 novel-cluster candidates (MONITOR_ONLY):**
+
+
+|   cluster_id |   size | candidate_typology_name                                                                           |   coherence |   aggregate_exposure_aed | top_features                                                                                            | members                                                 |
+|-------------:|-------:|:--------------------------------------------------------------------------------------------------|------------:|-------------------------:|:--------------------------------------------------------------------------------------------------------|:--------------------------------------------------------|
+|            1 |     29 | Candidate pattern: elevated approved-to-billed ratio with depressed policy tenure at service      |       0.696 |              1.57521e+06 | Approved-to-billed ratio=+0.51σ; Policy tenure at service=-0.22σ; Coding mismatch=-0.22σ                | H0096, H0116, H0207, H0225, H0334, H0345, H0357, H0358… |
+|            0 |     11 | Candidate pattern: elevated coding mismatch with elevated policy tenure at service                |       0.663 |         675077           | Coding mismatch=+0.62σ; Policy tenure at service=+0.45σ; Approved-to-billed ratio=-0.31σ                | H0262, H0459, H0820, H0989, H1093, H1158, H1182, H1223… |
+|            2 |      8 | Candidate pattern: elevated insurers on the same event with elevated days from discharge to claim |       0.75  |         461369           | Insurers on the same event=+1.16σ; Days from discharge to claim=+1.10σ; Policy tenure at service=-0.87σ | H0108, H0145, H0237, H0383, H0606, H0612, H0886, H1331  |
+
+
+### Document / NLP layer
+
+
+The source file contains **no documents**. The pipeline runs against 800 clearly-labelled SYNTHETIC discharge summaries generated by this artefact ({'en': 552, 'ar': 248}), of which 95 carry a deliberately injected inconsistency and 142 carry poor OCR quality so that confidence degradation is observable. 5 findings were DISCARDED for want of a source span or sufficient confidence — not displayed with a caveat.
+
+
+**Extraction quality, reported separately by language and document type, as the document design requires:**
+
+
+| language   | document_type     | field          |   extractions |   mean_confidence |   mean_ocr |   below_threshold |
+|:-----------|:------------------|:---------------|--------------:|------------------:|-----------:|------------------:|
+| ar         | discharge_summary | admission_date |           248 |             0.831 |      0.874 |                28 |
+| ar         | discharge_summary | diagnosis_text |           248 |             0.831 |      0.874 |                28 |
+| ar         | discharge_summary | discharge_date |           248 |             0.831 |      0.874 |                28 |
+| ar         | discharge_summary | length_of_stay |           248 |             0.831 |      0.874 |                28 |
+| ar         | discharge_summary | pharmacy_share |           248 |             0.831 |      0.874 |                28 |
+| en         | discharge_summary | admission_date |           552 |             0.836 |      0.88  |                60 |
+| en         | discharge_summary | diagnosis_text |           552 |             0.836 |      0.88  |                60 |
+| en         | discharge_summary | discharge_date |           552 |             0.836 |      0.88  |                60 |
+| en         | discharge_summary | length_of_stay |           552 |             0.836 |      0.88  |                60 |
+| en         | discharge_summary | pharmacy_share |           552 |             0.836 |      0.88  |                60 |
+
+
+No figure in that table is a measurement of clinical-NLP performance. The corpus is template-generated, so extraction accuracy on it measures whether the pipeline's plumbing works — nothing more. Arabic is included because the design requires language-separated reporting, and a pipeline evaluated on one language cannot make that claim.
+
+
+### AI layer
+
+
+|   grounded_narrative |   reviewer_copilot |   rule_authoring |   typology_triage |
+|---------------------:|-------------------:|-----------------:|------------------:|
+|                    1 |                  1 |                1 |                 1 |
+
+
+Provider: `offline_deterministic` (`template-composer-1.0.0`), deterministic: True. No AI output sets or changes a disposition, a priority or an exposure, under any configuration. Every narrative is passed through the groundedness validator, which drops any uncited or unresolvable sentence before display, and the reviewer copilot refuses conduct questions **before any model call**.
+
+
+## 5. Operational metrics
+
+| metric                                          | value                          | unit               | status                         | note                                                                                                                                                                                                                                                                                                   |
+|:------------------------------------------------|:-------------------------------|:-------------------|:-------------------------------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Precision proxy — CLAIM-level controls          | 0.0106                         | ratio              | MEASURED                       | 7,151 claims flagged (34.2% of the file) against a base rate of 0.7% — a lift of 1.53×. This is a PROXY for precision, not precision: real precision is confirmed ÷ REVIEWED and nothing has been reviewed. The labels are investigation-derived and selection-biased, so this is an UPPER BOUND.      |
+| Precision proxy — ENTITY leads (context claims) | 0.0065                         | ratio              | MEASURED                       | 9,604 claims sit under an entity lead. An entity lead does NOT assert that each of those claims is suspect — it asserts that the entity's pattern warrants review — so this figure is close to the base rate of 0.7% by construction and is reported to make that visible, not as a performance claim. |
+| Claim coverage — any control                    | 0.616                          | ratio              | MEASURED                       | Reported so that the difference between the two figures above is inspectable rather than implicit.                                                                                                                                                                                                     |
+| Gross flagged value (established exposure)      | 61838053.93                    | AED                | MEASURED                       | GROSS FLAGGED VALUE IS NOT SAVINGS. Nothing here has been reviewed, confirmed, prevented or recovered.                                                                                                                                                                                                 |
+| Gross flagged value (exposure NOT established)  | 17028426.53                    | AED                | MEASURED                       | Reported SEPARATELY and never added to the figure above: a model-only lead shows its gross amount with 'exposure not yet established'.                                                                                                                                                                 |
+| Confirmed AED                                   | NOT_MEASURABLE_ON_THIS_DATASET | AED                | NOT_MEASURABLE_ON_THIS_DATASET |                                                                                                                                                                                                                                                                                                        |
+| Prevented / recovered AED                       | NOT_MEASURABLE_ON_THIS_DATASET | AED                | NOT_MEASURABLE_ON_THIS_DATASET |                                                                                                                                                                                                                                                                                                        |
+| Net savings after review cost                   | NOT_MEASURABLE_ON_THIS_DATASET | AED                | NOT_MEASURABLE_ON_THIS_DATASET | The COST side is computable: 8,502 cases × AED 120.00 = AED 1,020,240.00 of review effort. The SAVINGS side is not, because nothing has been confirmed. Reporting the cost alone would imply a negative return that is equally unevidenced.                                                            |
+| Provider/member abrasion                        | NOT_MEASURABLE_ON_THIS_DATASET | rate               | NOT_MEASURABLE_ON_THIS_DATASET |                                                                                                                                                                                                                                                                                                        |
+| Pend turnaround                                 | NOT_MEASURABLE_ON_THIS_DATASET | hours              | NOT_MEASURABLE_ON_THIS_DATASET |                                                                                                                                                                                                                                                                                                        |
+| Overturn / appeal rate                          | NOT_MEASURABLE_ON_THIS_DATASET | ratio              | NOT_MEASURABLE_ON_THIS_DATASET |                                                                                                                                                                                                                                                                                                        |
+| Rule stability                                  | NOT_MEASURABLE_ON_THIS_DATASET | revisions/rule     | NOT_MEASURABLE_ON_THIS_DATASET | Every control in this build is in SHADOW; none has been activated, so none has had a post-activation revision to count.                                                                                                                                                                                |
+| Alerts per reviewer                             | 2125.5                         | cases/reviewer/run | MEASURED                       | 8,502 cases across 4 reviewers. Daily capacity is 100 alerts, so this run's queue represents 85.0 days of review work.                                                                                                                                                                                 |
+| Time to case disposition                        | NOT_MEASURABLE_ON_THIS_DATASET | hours              | NOT_MEASURABLE_ON_THIS_DATASET |                                                                                                                                                                                                                                                                                                        |
+
+
+## 6. Capacity-aware precision, stratified by label source
+
+|   capacity_cases |   reviewer_days |   cases_reviewed |   precision_proxy |   labelled_cases |   exposure_reviewed_aed |
+|-----------------:|----------------:|-----------------:|------------------:|-----------------:|------------------------:|
+|               25 |            0.25 |               25 |            0.04   |                1 |             1.49984e+07 |
+|              100 |            1    |              100 |            0.05   |                5 |             2.99155e+07 |
+|              500 |            5    |              500 |            0.032  |               16 |             4.51166e+07 |
+|             2000 |           20    |             2000 |            0.0215 |               43 |             5.8639e+07  |
+
+
+Precision is evaluated **at the alert volume a review team can actually process**, not at an arbitrary threshold. The capacity basis is `cfg.alerts_per_reviewer_per_day` × `cfg.reviewer_count` = 100 cases per day.
+
+
+### Stratified by `ground_truth_source`
+
+| ground_truth_source   |   claims |   labelled_fraud |   prevalence |   flagged |   flagged_and_labelled |   precision_proxy |   recall_proxy | reliability_caveat                                                                                                              |
+|:----------------------|---------:|-----------------:|-------------:|----------:|-----------------------:|------------------:|---------------:|:--------------------------------------------------------------------------------------------------------------------------------|
+| expert_review         |     6845 |               41 |       0.006  |      2351 |                     21 |            0.0089 |         0.5122 | expert_review labels carry investigation-selection bias: they exist because someone chose to investigate.                       |
+| pattern_detection     |     7006 |               49 |       0.007  |      2414 |                     28 |            0.0116 |         0.5714 | pattern_detection labels are produced by a pattern process and share its blind spots.                                           |
+| rule_engine           |     7042 |               55 |       0.0078 |      2386 |                     27 |            0.0113 |         0.4909 | rule_engine labels are produced by a rule process, so a rule-based detector scoring well against them is close to tautological. |
+
+
+`expert_review` and `rule_engine` labels are **exactly the kind of biased ground truth** the evaluation design warns against: the first exists because somebody chose to investigate, the second because a rule fired. Headline precision against them is an upper bound, not an estimate of real-world performance.
+
+
+### Recall by `fraud_type`, and which control found it
+
+| fraud_type            |   labelled_claims |   flagged_by_claim_control |   recall_claim_level |   also_under_an_entity_lead | top_claim_level_controls                                        |
+|:----------------------|------------------:|---------------------------:|---------------------:|----------------------------:|:----------------------------------------------------------------|
+| bill_inflation        |                27 |                         15 |               0.5556 |                           8 | PAY-10-R01 (11); CLN-03-R01 (3); CLN-04-R02 (2); POL-01-R04 (2) |
+| unnecessary_procedure |                27 |                         15 |               0.5556 |                          12 | PAY-10-R01 (9); CLN-04-R02 (5); CLN-03-R01 (4); ENT-02-R03 (2)  |
+| upcoding              |                25 |                         13 |               0.52   |                          14 | PAY-10-R01 (9); CLN-04-R02 (4); POL-01-R04 (3); CLN-05-R03 (1)  |
+| coordinated_ring      |                23 |                         14 |               0.6087 |                          14 | PAY-10-R01 (7); CLN-04-R02 (5); CLN-04-R01 (3); ENT-02-R03 (2)  |
+| phantom_billing       |                22 |                         13 |               0.5909 |                           7 | PAY-10-R01 (7); CLN-04-R01 (4); ENT-02-R03 (4); CLN-04-R02 (2)  |
+| identity_misuse       |                21 |                          6 |               0.2857 |                           7 | PAY-10-R01 (5); CLN-03-R01 (1)                                  |
+
+
+**Read this table with the generator in mind.** Every labelled type in a generated file is encoded through some field, and a control that tests that field will recover the type almost perfectly. That is a fact about the generator rather than evidence the control works on real claims. Measured here:
+
+- `bill_inflation` (27 claims) separates most on **`num_insurers_same_event`** — 2.00 against 1.26 elsewhere, 0.9 standard deviations apart.
+- `coordinated_ring` (23 claims) separates most on **`provider_blacklist_flag`** — 0.22 against 0.06 elsewhere, 0.7 standard deviations apart.
+- `identity_misuse` (21 claims) separates most on **`provider_blacklist_flag`** — 0.19 against 0.06 elsewhere, 0.6 standard deviations apart.
+- `phantom_billing` (22 claims) separates most on **`num_insurers_same_event`** — 1.82 against 1.26 elsewhere, 0.7 standard deviations apart.
+- `unnecessary_procedure` (27 claims) separates most on **`provider_blacklist_flag`** — 0.26 against 0.06 elsewhere, 0.9 standard deviations apart.
+- `upcoding` (25 claims) separates most on **`num_insurers_same_event`** — 1.92 against 1.26 elsewhere, 0.8 standard deviations apart.
+
+A recall figure against these labels therefore says how faithfully a control reads the encoding, not how well it would find the behaviour the label names.
+
+
+## 7. Lift over the transparent composite
+
+| layer                             |   entities_ranked |   capacity_k |   review_yield_proxy |   lift_over_base_rate |   lift_over_composite |
+|:----------------------------------|------------------:|-------------:|---------------------:|----------------------:|----------------------:|
+| ANL-01-R01 transparent composite  |              1270 |          100 |                 0.03 |                  0.82 |                  1    |
+| model: isolation_forest           |               293 |          100 |                 0.11 |                  3.01 |                  3.67 |
+| model: local_outlier_factor       |               293 |          100 |                 0.08 |                  2.19 |                  2.67 |
+| deterministic + statistical rules |               447 |          100 |                 0.03 |                  0.82 |                  1    |
+
+
+Base rate among ranked providers: 3.7%. The promotion gate requires a model to demonstrate **prospective lift over ANL-01-R01, the transparent composite**, using future-period review yield rather than in-sample separation — and review yield needs reviewer outcomes, which do not exist. The table above therefore uses a **label proxy** and is the closest this dataset permits, not the measurement the gate actually requires.
+
+
+## 8. Calibration of the priority score
+
+| bin                        |   cases |   mean_priority |   observed_rate |   predicted_rate |    gap |
+|:---------------------------|--------:|----------------:|----------------:|-----------------:|-------:|
+| (48.599000000000004, 62.6] |    1078 |         61.4426 |          0.0139 |           0.6144 | 0.6005 |
+| (62.6, 65.8]               |    1261 |         65.2665 |          0.0151 |           0.6527 | 0.6376 |
+| (65.8, 67.6]               |     972 |         66.8429 |          0.0165 |           0.6684 | 0.652  |
+| (67.6, 71.1]               |    1170 |         69.9362 |          0.035  |           0.6994 | 0.6643 |
+| (71.1, 80.6]               |     847 |         77.3372 |          0.0106 |           0.7734 | 0.7627 |
+| (80.6, 87.4]               |    1055 |         83.8454 |          0.0095 |           0.8385 | 0.829  |
+| (87.4, 93.9]               |    1063 |         90.7659 |          0.0151 |           0.9077 | 0.8926 |
+| (93.9, 99.9]               |    1056 |         96.534  |          0.0256 |           0.9653 | 0.9398 |
+
+
+The priority score is a **queue-ordering score, not a probability**. It is rescaled to [0,1] here only so a calibration curve can be drawn; a poor fit is expected and is not evidence the score is broken.
+
+
+## 9. Evaluation protocol
+
+
+### Synthetic-corruption injection — **PASS**
+
+Injected 40 permanently-marked SYNTHETIC_INJECTED records into a copy of the claim frame and re-ran the target controls. exact_duplicate: 20/20 detected by PAY-01-R01; upcoding: 20/20 detected by CLN-03-R01
+
+
+> This confirms a control detects the pattern it was DESIGNED for. It says nothing about real-world prevalence or precision. Every injected record is marked SYNTHETIC_INJECTED, exists only in a copy, and never enters the real signal store.
+
+
+| injected_pattern   | expected_control   |   injected |   detected |   detection_rate |
+|:-------------------|:-------------------|-----------:|-----------:|-----------------:|
+| exact_duplicate    | PAY-01-R01         |         20 |         20 |                1 |
+| upcoding           | CLN-03-R01         |         20 |         20 |                1 |
+
+
+### Random-audit sampler — **INFORMATIONAL**
+
+Stratified random sample of 399 claims drawn by TPA × policy type, IRRESPECTIVE of flag status. Estimated FALSE-NEGATIVE RATE 100.0% (2 of 2 labelled-fraud claims in the sample were not flagged). Random-audit MISS RATE 0.50% of all audited claims.
+
+
+> This is a SIMULATED audit over labels that were themselves produced by detection processes (pattern_detection, expert_review, rule_engine). It therefore cannot correct for those processes' blind spots — a claim no process ever flagged is labelled legitimate here whether or not it was. A genuine random audit needs HUMAN review of a representative sample regardless of flag status, and its absence blocks supervised modelling.
+
+
+| group                             |   n |
+|:----------------------------------|----:|
+| audited claims                    | 399 |
+| labelled fraud in sample          |   2 |
+| labelled fraud the system FLAGGED |   0 |
+| labelled fraud the system MISSED  |   2 |
+| flagged but not labelled          | 134 |
+
+
+### Temporal holdout — **PASS**
+
+Training data ends at 2026-02-11; scoring data begins after it. 6,319 training claims, 4,173 scored claims.
+
+
+> 10,401 of 20,893 claims (50%) are scored by NEITHER model: they belong to a provider held out for training, or fall in the training period. This is the price of combining a temporal split with entity isolation on a single-file dataset, and it is reported rather than absorbed — a model that scored everything would have been trained on the entities it scores.
+
+
+| split_date   |   train_claims |   score_claims |   train_providers |   score_providers |   provider_overlap |   excluded_claims |   total_claims | coverage_note                                                                                                                                                                                                                                                                                                                                                           |
+|:-------------|---------------:|---------------:|------------------:|------------------:|-------------------:|------------------:|---------------:|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 2026-02-11   |           6319 |           4173 |               675 |               665 |                  0 |             10401 |          20893 | 10,401 of 20,893 claims (50%) are scored by NEITHER model: they belong to a provider held out for training, or fall in the training period. This is the price of combining a temporal split with entity isolation on a single-file dataset, and it is reported rather than absorbed — a model that scored everything would have been trained on the entities it scores. |
+
+
+### Entity isolation — **PASS**
+
+0 providers appear in both the training and scoring sets (675 train / 665 score).
+
+
+> 10,401 of 20,893 claims (50%) are scored by NEITHER model: they belong to a provider held out for training, or fall in the training period. This is the price of combining a temporal split with entity isolation on a single-file dataset, and it is reported rather than absorbed — a model that scored everything would have been trained on the entities it scores.
+
+
+### Calibration check — **INFORMATIONAL**
+
+Expected calibration error between the priority score (rescaled to [0,1]) and the observed labelled-fraud rate is 0.744 across 8 bins.
+
+
+> The priority score is NOT a probability — it is a queue-ordering score from the priority formula. A poor calibration figure here is expected and is not evidence that the score is broken; it is evidence that it was never a probability.
+
+
+| bin                        |   cases |   mean_priority |   observed_rate |   predicted_rate |    gap |
+|:---------------------------|--------:|----------------:|----------------:|-----------------:|-------:|
+| (48.599000000000004, 62.6] |    1078 |         61.4426 |          0.0139 |           0.6144 | 0.6005 |
+| (62.6, 65.8]               |    1261 |         65.2665 |          0.0151 |           0.6527 | 0.6376 |
+| (65.8, 67.6]               |     972 |         66.8429 |          0.0165 |           0.6684 | 0.652  |
+| (67.6, 71.1]               |    1170 |         69.9362 |          0.035  |           0.6994 | 0.6643 |
+| (71.1, 80.6]               |     847 |         77.3372 |          0.0106 |           0.7734 | 0.7627 |
+| (80.6, 87.4]               |    1055 |         83.8454 |          0.0095 |           0.8385 | 0.829  |
+| (87.4, 93.9]               |    1063 |         90.7659 |          0.0151 |           0.9077 | 0.8926 |
+| (93.9, 99.9]               |    1056 |         96.534  |          0.0256 |           0.9653 | 0.9398 |
+
+
+### Capacity-aware precision — **INFORMATIONAL**
+
+At one day of team capacity (100 cases), the precision proxy is 5.0%.
+
+
+> Precision proxy, not precision: nothing has been reviewed. Upper bound.
+
+
+|   capacity_cases |   reviewer_days |   cases_reviewed |   precision_proxy |   labelled_cases |   exposure_reviewed_aed |
+|-----------------:|----------------:|-----------------:|------------------:|-----------------:|------------------------:|
+|               25 |            0.25 |               25 |            0.04   |                1 |             1.49984e+07 |
+|              100 |            1    |              100 |            0.05   |                5 |             2.99155e+07 |
+|              500 |            5    |              500 |            0.032  |               16 |             4.51166e+07 |
+|             2000 |           20    |             2000 |            0.0215 |               43 |             5.8639e+07  |
+
+
+### Review-yield tracking — **NOT_MEASURABLE_ON_THIS_DATASET**
+
+Review yield is the confirmed-to-flagged ratio and needs reviewer dispositions.
+
+
+> Review yield is 'the primary signal of whether a control or model is still earning its place in production'. Substituting a label-derived proxy here would be exactly the leakage this artefact is built to prevent, and would make the model promotion gate meaningless. It is reported as unmeasurable instead.
+
+
+### Stability — **INFORMATIONAL**
+
+36 controls produced monthly signals. 20 show a coefficient of variation above 1.0 across periods.
+
+
+> High variation here does not necessarily mean an unstable RULE: claim volume itself varies by month, and several controls are provider-level and fire once per provider per period by design.
+
+
+| rule_id    |   periods |   mean_signals_per_period |   coefficient_of_variation |
+|:-----------|----------:|--------------------------:|---------------------------:|
+| ANL-01-R04 |         2 |                      0.05 |                      5.734 |
+| CLN-06-R03 |         6 |                      0.1  |                      3.025 |
+| DOC-02-R01 |        25 |                      0.77 |                      2.613 |
+| CLN-01-R01 |         8 |                      0.13 |                      2.571 |
+| NET-04-R02 |        12 |                      0.33 |                      2.386 |
+| CLN-01-R03 |        11 |                      0.2  |                      2.217 |
+| CLN-07-R02 |        12 |                      0.22 |                      2.097 |
+| ANL-01-R03 |        23 |                      2.7  |                      1.958 |
+| CLN-05-R01 |        44 |                     10.15 |                      1.918 |
+| ANL-01-R02 |        23 |                      0.72 |                      1.744 |
+| NET-01-R01 |        25 |                      0.73 |                      1.719 |
+| CLN-07-R04 |        17 |                      0.32 |                      1.694 |
+
+_(24 further rows in the accompanying CSV.)_
+
+
+### Fairness monitoring — **INFORMATIONAL**
+
+Flag rates compared across TPA, policy type and provider volume band. Largest between-segment spread is on provider_volume_band (51.6% points).
+
+
+> A spread is not by itself unfairness: segments genuinely differ in case mix, and the volume band in particular is CONSTRUCTED from claim count, so a relationship between it and flag rate is partly definitional. What would indicate unfairness is a segment whose FLAG-TO-LABEL ratio is markedly higher than others', and that column is reported here for exactly that comparison. The appeal half of 'fairness/appeal monitoring' is NOT_MEASURABLE — no appeals exist.
+
+
+| segment_value             |   claims |   flag_rate |   labelled_rate | dimension   |   flag_to_label_ratio |
+|:--------------------------|---------:|------------:|----------------:|:------------|----------------------:|
+| Anytime Health            |     1996 |      0.3672 |          0.007  | tpa         |               52.3571 |
+| FHPL (Family Health Plan) |     1994 |      0.3355 |          0.0065 | tpa         |               51.4615 |
+| Good Health TPA           |     2091 |      0.3592 |          0.0067 | tpa         |               53.6429 |
+| Heritage Health           |     1921 |      0.3571 |          0.0094 | tpa         |               38.1111 |
+| MD India                  |     2126 |      0.3373 |          0.0042 | tpa         |               79.6667 |
+| Medi Assist               |     1900 |      0.3495 |          0.0063 | tpa         |               55.3333 |
+| Paramount Health          |     2416 |      0.3063 |          0.007  | tpa         |               43.5294 |
+| Raksha Health             |     1847 |      0.3633 |          0.0054 | tpa         |               67.1    |
+| Star Health               |     2270 |      0.3194 |          0.0093 | tpa         |               34.5238 |
+| Vidal Health              |     2332 |      0.3409 |          0.0073 | tpa         |               46.7647 |
+| family                    |     6818 |      0.3293 |          0.0066 | policy_type |               49.8889 |
+| group_corporate           |     7387 |      0.3505 |          0.0049 | policy_type |               71.9167 |
+
+_(5 further rows in the accompanying CSV.)_
+
+
+## 10. Release-acceptance gates
+
+| gate             | status         | measured        | threshold                            |
+|:-----------------|:---------------|:----------------|:-------------------------------------|
+| Data readiness   | PASS           | 1.0             | 0.995                                |
+| Hard edit        | NOT_ASSESSABLE |                 | 0.99                                 |
+| Expert edit      | NOT_ASSESSABLE |                 |                                      |
+| Statistical rule | NOT_ASSESSABLE |                 | review yield ≥ 20%, shadow ≥ 30 days |
+| Model            | PASS           | 1 promoted of 2 |                                      |
+| Production       | NOT_ASSESSABLE |                 |                                      |
+
+
+Full evidence is in `release_gate_report.md`.
+
+
+## 11. Reproducibility
+
+This run is deterministic. Seed `20260920` (`cfg.random_seed`), parameter-registry fingerprint `d238bf211afb75b1`. Re-running `python -m fwa.run_validation --data data/claims_demo_synthetic.csv` regenerates every file in `reports/` identically, because signal identity is a pure function of (tenant, rule, version, subject, fact, period) and every model is seeded.
+
+Stage timings for this run:
+
+| stage                                          |   seconds |
+|:-----------------------------------------------|----------:|
+| adapter and canonical model                    |      2.89 |
+| lineage and episodes                           |      0.58 |
+| rule registry                                  |      0.76 |
+| feature store                                  |     19.05 |
+| peers, shrinkage and the transparent composite |     14.41 |
+| graph and entity resolution                    |    157.04 |
+| synthetic document corpus and NLP pipeline     |      0.46 |
+| unsupervised models, SHAP, drift, clusters     |      5.81 |
+| AI layer                                       |      0    |
+| control evaluation                             |    131.58 |
+| case correlation and priority                  |      1.01 |
+
+
+### Stage latency against the stage ceilings
+
+| stage          |   ceiling_ms |   observed_ms | within_ceiling   | note                                                                                                                                                                                                  |
+|:---------------|-------------:|--------------:|:-----------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| INGEST         |         1000 |          52.4 | True             | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| PREPAY_SYNC    |          500 |       22551.8 | False            | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| PREPAY_ASYNC   |       600000 |       20099.6 | True             | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| POSTPAY_DAILY  |     86400000 |       57663.5 | True             | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| NETWORK_WEEKLY |    604800000 |         116.8 | True             | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| MODEL_MONTHLY  |   2592000000 |       31066.1 | True             | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |

@@ -1,0 +1,232 @@
+# =============================================================================
+# CLN-07: Provider capacity and throughput impossibility · P1
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: CLN-07
+  title: Provider capacity and throughput impossibility
+  priority: P1
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: CLN-07-R01
+  name: Improbable service day
+  version: 1.0.0
+  status: shadow
+  type: E/S
+  stage: POSTPAY_DAILY
+  population: Sum of conservative service minutes/units per clinician exceeds available day capacity
+  inputs: &id001
+  - claim_line.rendering_clinician_id
+  - claim_line.ordering_clinician_id
+  - provider.specialty
+  - claim_line.service_start_time
+  - claim_line.service_end_time
+  expression: Sum of conservative service minutes/units per clinician exceeds available day capacity
+  parameters: {}
+  exclusions:
+  - parallel
+  - team_services
+  - documented_hours
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - episode_id
+  - scenario_id
+  score: 70
+  disposition: POSTPAY_AUDIT
+  reason_code: IMPROBABLE_SERVICE_DAY
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: provider_network
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No clinicians, no service durations. The FACILITY-level analogue is CLN-07-R02.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Sum of conservative service minutes/units per clinician exceeds available day capacity
+  catalogue_config_exclusions: Parallel/team services and documented hours
+  catalogue_disposition: Provider timeline
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-07-R02
+  name: Facility/staff capacity
+  version: 1.0.0
+  status: shadow
+  type: E/S
+  stage: POSTPAY_DAILY
+  population: provider-days with at least one active inpatient stay
+  inputs:
+  - claim_header.provider_sk
+  - encounter.admission_date
+  - encounter.discharge_date
+  expression: concurrent_occupancy(provider, day) > cfg.provider_daily_capacity_admissions * cfg.capacity_tolerance_multiple
+  parameters:
+    capacity: cfg.provider_daily_capacity_admissions
+    tolerance: cfg.capacity_tolerance_multiple
+  exclusions:
+  - roster_unavailable_low_confidence
+  - licensed_capacity_not_sourced
+  - outreach_or_mobile_service
+  - day_case_turnover
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - scenario_id
+  - period_bucket
+  score: 70
+  disposition: POSTPAY_AUDIT
+  reason_code: FACILITY_CAPACITY_EXCEEDED
+  evidence_fields:
+  - provider_sk
+  - peak_day
+  - peak_concurrent_occupancy
+  - assumed_capacity
+  - tolerance_multiple
+  - claims_on_peak_day
+  - capacity_source
+  owner: provider_network
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: PARTIAL
+  data_support_reason: Concurrent inpatient occupancy per provider per day is computable from admission
+    and discharge dates and is compared against cfg.provider_daily_capacity_admissions × cfg.capacity_tolerance_multiple.
+    The capacity figure is a CONFIGURED PLACEHOLDER, not a licensed bed count — the catalogue's own note
+    that 'missing roster produces low confidence' applies directly, and the signal's confidence is reduced
+    accordingly.
+  required_canonical_fields:
+  - provider.licensed_bed_count
+  - provider.room_count
+  - clinician_roster.*
+  implementation: cln_07_r02_facility_capacity
+  catalogue_trigger: Claimed volume exceeds rooms/equipment/licensed staff capacity plus tolerance
+  catalogue_config_exclusions: Missing roster produces low confidence
+  catalogue_disposition: Audit lead
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-07-R03
+  name: Scarce-equipment concurrency
+  version: 1.0.0
+  status: shadow
+  type: E
+  stage: POSTPAY_DAILY
+  population: Same device/resource required by overlapping services beyond capacity
+  inputs: &id003
+  - equipment_inventory.*
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  expression: Same device/resource required by overlapping services beyond capacity
+  parameters: {}
+  exclusions:
+  - equipment_inventory
+  - turnaround
+  grouping_key: *id002
+  score: 70
+  disposition: PREPAY_PEND
+  reason_code: EQUIPMENT_CONCURRENCY
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: provider_network
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No equipment inventory and no procedures.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Same device/resource required by overlapping services beyond capacity
+  catalogue_config_exclusions: Equipment inventory and turnaround
+  catalogue_disposition: Pend/audit
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-07-R04
+  name: Capacity trend discontinuity
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: providers with at least cfg.min_history_periods monthly periods
+  inputs:
+  - claim_header.provider_sk
+  - claim_header.service_date
+  expression: CUSUM on monthly claim throughput crosses cfg.cusum_h after at least cfg.min_history_periods
+    periods of history
+  parameters:
+    k: cfg.cusum_k
+    h: cfg.cusum_h
+    min_history: cfg.min_history_periods
+  exclusions:
+  - staff_or_hours_change_unknown
+  - facility_change_unknown
+  - onboarding_or_data_feed_change
+  - insufficient_history
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - scenario_id
+  - period_bucket
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: CAPACITY_TREND_DISCONTINUITY
+  evidence_fields:
+  - provider_sk
+  - change_date
+  - pre_change_mean
+  - post_change_mean
+  - cusum_statistic
+  - periods_of_history
+  - segmentation_caveat
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: PARTIAL
+  data_support_reason: 'Monthly claim throughput per provider is computable, and a CUSUM change point
+    on it is exactly the shape of this control. What cannot be done is the EXCLUSION: without staff, hours
+    or facility-change records there is no way to segment a legitimate expansion from a suspicious jump,
+    so every signal carries that caveat and the disposition stays an audit.'
+  required_canonical_fields:
+  - clinician_roster.*
+  - provider.operating_hours
+  - contract.effective_dates
+  implementation: cln_07_r04_capacity_trend_discontinuity
+  catalogue_trigger: Throughput jumps without staff, hours, equipment or facility change
+  catalogue_config_exclusions: Onboarding/data-feed changes
+  catalogue_disposition: Provider case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

@@ -1,0 +1,219 @@
+# =============================================================================
+# DOC-01: Documentation-to-billing/authorization inconsistency · P1
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: DOC-01
+  title: Documentation-to-billing/authorization inconsistency
+  priority: P1
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: DOC-01-R01
+  name: Required document absent
+  version: 1.0.0
+  status: shadow
+  type: H/E
+  stage: PREPAY_ASYNC
+  population: Rule requires note/report/consent/Observation and it is missing after SLA
+  inputs: &id001
+  - observation.attachment_ref
+  - document.text
+  - document.language
+  - document_requirement_policy.*
+  expression: Rule requires note/report/consent/Observation and it is missing after SLA
+  parameters: {}
+  exclusions:
+  - document_type
+  - latency
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - claim_sk
+  - scenario_id
+  score: 82
+  disposition: PREPAY_PEND
+  reason_code: REQUIRED_DOCUMENT_ABSENT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: 'There is no document-requirement rule set and no document SLA, so ''required''
+    is undefined. The synthetic corpus does not change that: it supplies documents, not the policy that
+    makes one mandatory.'
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Rule requires note/report/consent/Observation and it is missing after SLA
+  catalogue_config_exclusions: Document type and latency
+  catalogue_disposition: Pend
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: DOC-01-R02
+  name: Structured fact conflict
+  version: 1.0.0
+  status: shadow
+  type: T/E
+  stage: PREPAY_ASYNC
+  population: claims with a generated synthetic discharge summary
+  inputs:
+  - document.text
+  - document.language
+  - diagnosis.code
+  - encounter.length_of_stay_days
+  - encounter.admission_date
+  expression: an extracted field conflicts with the corresponding claim field, the field-level extraction
+    confidence >= cfg.nlp_min_extraction_confidence, and a source span is present
+  parameters:
+    min_confidence: cfg.nlp_min_extraction_confidence
+  exclusions:
+  - extraction_confidence_below_threshold
+  - no_source_span_finding_discarded
+  - document_latency
+  - language_specific_precision_not_validated
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - claim_sk
+  - scenario_id
+  score: 56
+  disposition: PREPAY_PEND
+  reason_code: STRUCTURED_FACT_CONFLICT
+  evidence_fields:
+  - conflicting_field
+  - extracted_value
+  - claim_value
+  - source_span_text
+  - span_offsets
+  - extraction_confidence
+  - ocr_confidence
+  - document_language
+  - synthetic_document_marker
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: PARTIAL
+  data_support_reason: Runs against the clearly-labelled SYNTHETIC discharge summaries this artefact generates
+    (every filename and body marked SYNTHETIC), never against real documentation, because the claim extract contains
+    none. Extracted diagnosis and stay length are compared field-by-field against the claim, each with
+    its own precision threshold, and every rendered finding carries its exact source span.
+  required_canonical_fields:
+  - observation.attachment_ref
+  - document.text
+  - document.language
+  - real clinical documents with OCR confidence
+  implementation: doc_01_r02_structured_fact_conflict
+  catalogue_trigger: Extracted diagnosis, procedure, date, quantity or setting contradicts claim/authorization
+  catalogue_config_exclusions: Per-field extraction precision threshold
+  catalogue_disposition: Human review
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: DOC-01-R03
+  name: Medical-necessity support absent
+  version: 1.0.0
+  status: shadow
+  type: T/E
+  stage: PREPAY_ASYNC
+  population: Required indication/severity element cannot be found
+  inputs: &id003
+  - observation.attachment_ref
+  - document.text
+  - document.language
+  - medical_necessity_policy.*
+  expression: Required indication/severity element cannot be found
+  parameters: {}
+  exclusions:
+  - absence_is_not_proof
+  - use_qualified_reviewer
+  grouping_key: *id002
+  score: 56
+  disposition: PREPAY_PEND
+  reason_code: MEDICAL_NECESSITY_UNSUPPORTED
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: 'Requires a medical-necessity policy defining which elements are required. The
+    catalogue''s own caution — ''absence is not proof'' — is the reason this is not approximated on synthetic
+    notes: an absence in a generated document proves only that the generator did not write it.'
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Required indication/severity element cannot be found
+  catalogue_config_exclusions: Absence is not proof; use qualified reviewer
+  catalogue_disposition: Clinical review
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: DOC-01-R04
+  name: Authorization narrative drift
+  version: 1.0.0
+  status: shadow
+  type: T
+  stage: PREPAY_ASYNC
+  population: Material semantic/entity mismatch between request narrative and billed event
+  inputs: &id004
+  - authorization.*
+  - authorization_line.*
+  - claim_line.authorization_id
+  - observation.attachment_ref
+  - document.text
+  - document.language
+  expression: Material semantic/entity mismatch between request narrative and billed event
+  parameters: {}
+  exclusions:
+  - explain_with_extracted_conflicting_facts
+  grouping_key: *id002
+  score: 56
+  disposition: PREPAY_PEND
+  reason_code: AUTH_NARRATIVE_DRIFT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No authorisation narratives exist.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Material semantic/entity mismatch between request narrative and billed event
+  catalogue_config_exclusions: Explain with extracted conflicting facts
+  catalogue_disposition: Pend
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

@@ -1,0 +1,241 @@
+# =============================================================================
+# PAY-02: Unbundling and inclusive/package/DRG leakage · P0
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: PAY-02
+  title: Unbundling and inclusive/package/DRG leakage
+  priority: P0
+  added_by_coverage_audit: false
+  control_count: 5
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: PAY-02-R01
+  name: Same-claim component edit
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: Parent and separately payable component match effective bundling edit
+  inputs: &id001
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - bundling_edit_table.*
+  expression: Parent and separately payable component match effective bundling edit
+  parameters: {}
+  exclusions:
+  - permitted_indicator
+  - edit_version
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 90
+  disposition: REPRICE
+  reason_code: BUNDLING_EDIT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Requires claim lines and a bundling edit table; neither exists.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Parent and separately payable component match effective bundling edit
+  catalogue_config_exclusions: Permitted indicator and edit version
+  catalogue_disposition: Reprice/reject component
+  alternate_dispositions:
+  - REJECT
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-02-R02
+  name: Cross-claim/cross-provider component
+  version: 1.0.0
+  status: shadow
+  type: H/E
+  stage: POSTPAY_DAILY
+  population: Included component billed on related claim in global/episode window
+  inputs: &id003
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - bundling_edit_table.*
+  expression: Included component billed on related claim in global/episode window
+  parameters: {}
+  exclusions:
+  - contractual_professional
+  - facility_split
+  grouping_key: *id002
+  score: 90
+  disposition: REPRICE
+  reason_code: CROSS_CLAIM_COMPONENT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Requires component-level identification of services within an episode.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Included component billed on related claim in global/episode window
+  catalogue_config_exclusions: Contractual professional/facility split
+  catalogue_disposition: Episode reprice/pend
+  alternate_dispositions:
+  - PREPAY_PEND
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-02-R03
+  name: Package completeness/zero-price lines
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: Required package activities absent, or included activity has non-zero charge
+  inputs: &id004
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - package_definition.*
+  expression: Required package activities absent, or included activity has non-zero charge
+  parameters: {}
+  exclusions:
+  - documented_medical_omission
+  - local_claiming_rule
+  grouping_key: *id002
+  score: 90
+  disposition: RETURN
+  reason_code: PACKAGE_INCOMPLETE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No package definitions and no lines.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Required package activities absent, or included activity has non-zero charge
+  catalogue_config_exclusions: Documented medical omission and local claiming rule
+  catalogue_disposition: Return/reprice
+  alternate_dispositions:
+  - REPRICE
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-02-R04
+  name: DRG/inclusive leakage
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: POSTPAY_DAILY
+  population: FFS line separately paid although included in DRG/package
+  inputs: &id005
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  - drg_grouper.*
+  expression: FFS line separately paid although included in DRG/package
+  parameters: {}
+  exclusions:
+  - effective_inclusions
+  - exclusions
+  - carve_outs
+  grouping_key: *id002
+  score: 90
+  disposition: POSTPAY_AUDIT
+  reason_code: DRG_LEAKAGE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No DRG assignment, no lines, no payment records.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: FFS line separately paid although included in DRG/package
+  catalogue_config_exclusions: Effective inclusions/exclusions, carve-outs
+  catalogue_disposition: Recovery candidate
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-02-R05
+  name: Novel unbundling pattern
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Provider has abnormal profitable component co-occurrence not in known edit table
+  inputs: &id006
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  expression: Provider has abnormal profitable component co-occurrence not in known edit table
+  parameters: {}
+  exclusions:
+  - minimum_volume
+  - peer_adjustment
+  grouping_key: *id002
+  score: 62
+  disposition: MONITOR_ONLY
+  reason_code: NOVEL_UNBUNDLING
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: policy_owner
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Depends on the code-pair co-occurrence feature that names explicitly and that no
+    claim-level aggregate can substitute for. The claim_line feature level is NOT_POPULATED, so this control
+    has no input at all.
+  required_canonical_fields: *id006
+  implementation: null
+  catalogue_trigger: Provider has abnormal profitable component co-occurrence not in known edit table
+  catalogue_config_exclusions: Minimum volume and peer adjustment
+  catalogue_disposition: Policy-review candidate, not denial
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

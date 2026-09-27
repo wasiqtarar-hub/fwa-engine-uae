@@ -1,0 +1,46 @@
+/* =============================================================================
+   Dark tokens — injected ONLY when Streamlit's own theme is dark
+   =============================================================================
+   This file is not loaded by a media query, and that is the whole point.
+
+   Streamlit puts no marker in the DOM saying which theme is active: no
+   `data-theme`, no class, nothing a stylesheet can test. So a stylesheet that
+   asks the OS instead — `@media (prefers-color-scheme: dark)` — is not reading
+   the application's theme, it is reading a *different* signal that usually
+   agrees with it. When the two disagree, the page tears in half: this
+   stylesheet paints a dark background while Streamlit, still on its light
+   theme, paints its headings in near-black. Dark text on a dark ground, which
+   is how a user on a dark-mode desktop ended up with an unreadable page.
+
+   `app.common.boot` therefore asks Streamlit what theme it is actually using
+   (`st.context.theme.type`) and appends this file only when the answer is
+   "dark". The two halves cannot disagree, because only one of them decides.
+   ========================================================================== */
+
+:root {
+    --fwa-bg:          #16131a;
+    --fwa-surface:     #1d1922;
+    --fwa-surface-alt: #262029;
+    --fwa-fg:          #ece8ee;
+    --fwa-fg-muted:    #a49bab;
+    --fwa-line:        #2e2833;
+    --fwa-line-strong: #423a48;
+    --fwa-accent:      #d9a3cc;
+    --fwa-accent-soft: #2a1f28;
+
+    --d-reject:    #e0716b;
+    --d-reprice:   #e0a35a;
+    --d-return:    #9aa4af;
+    --d-pend:      #6aa9e0;
+    --d-audit:     #b191dd;
+    --d-siu:       #e07a9e;
+    --d-education: #5fc2ae;
+    --d-monitor:   #9aa4af;
+
+    --fwa-ok:      #5fc28c;
+    --fwa-warn:    #e0a35a;
+    --fwa-bad:     #e0716b;
+
+    --fwa-ai-bg:   #221f2e;
+    --fwa-ai-line: #a394d8;
+}

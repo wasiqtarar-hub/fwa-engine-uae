@@ -1,0 +1,52 @@
+# Three ways to run the artefact, all from one image.
+#
+#   docker compose up                    the application on http://localhost:8501
+#   docker compose run --rm validate     the reproducible validation run
+#   docker compose run --rm tests        the 652-test suite
+#
+# ``network_mode: none`` on the two batch services is not a precaution — it is
+# the demonstration. The validation run and the whole test suite complete with
+# no network interface at all, which is the strongest available evidence for the
+# build brief's requirement that the tool run "with no API key and no network
+# access".
+
+services:
+  app:
+    build: .
+    image: uae-fwa-engine:1.0.0
+    container_name: fwa-app
+    ports:
+      - "8501:8501"
+    volumes:
+      # The validation run's output, readable from the host. Mounted read-write
+      # because the Validation Report page can regenerate it.
+      - ./reports:/app/reports
+      # The generated SYNTHETIC document corpus, so it survives a restart.
+      - ./data/synthetic_documents:/app/data/synthetic_documents
+    environment:
+      FWA_LLM_PROVIDER: offline_deterministic
+    restart: unless-stopped
+
+  validate:
+    build: .
+    image: uae-fwa-engine:1.0.0
+    container_name: fwa-validate
+    profiles: ["batch"]
+    network_mode: none
+    volumes:
+      - ./reports:/app/reports
+      - ./data/synthetic_documents:/app/data/synthetic_documents
+    command: ["python", "-m", "fwa.run_validation"]
+
+  tests:
+    build: .
+    image: uae-fwa-engine:1.0.0
+    container_name: fwa-tests
+    profiles: ["batch"]
+    network_mode: none
+    command:
+      - "pytest"
+      - "--cov=fwa.engine"
+      - "--cov=fwa.statistical"
+      - "--cov=fwa.cases"
+      - "--cov=fwa.evaluation"

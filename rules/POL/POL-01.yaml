@@ -1,0 +1,269 @@
+# =============================================================================
+# POL-01: Enrollment, employer-group and policy manipulation · P1 *  (added by the specification's own coverage audit)
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: POL-01
+  title: Enrollment, employer-group and policy manipulation
+  priority: P1
+  added_by_coverage_audit: true
+  control_count: 5
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: POL-01-R01
+  name: Eligibility/roster conflict
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: POSTPAY_DAILY
+  population: Enrolled member lacks valid sponsor/employment/dependent relationship or duplicate active
+    identity exists
+  inputs: &id001
+  - member.sponsor_id
+  - member.employer_id
+  - employer_roster.*
+  expression: Enrolled member lacks valid sponsor/employment/dependent relationship or duplicate active
+    identity exists
+  parameters: {}
+  exclusions:
+  - continuation
+  - newborn
+  - mandated_coverage
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - scenario_id
+  - period_bucket
+  score: 82
+  disposition: PREPAY_PEND
+  reason_code: ELIGIBILITY_ROSTER_CONFLICT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: underwriting
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No sponsor, employer or dependent relationships, and no roster to conflict with.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Enrolled member lacks valid sponsor/employment/dependent relationship or duplicate
+    active identity exists
+  catalogue_config_exclusions: Continuation, newborn and mandated coverage
+  catalogue_disposition: Enrollment pend
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: POL-01-R02
+  name: Retroactive event after service
+  version: 1.0.0
+  status: shadow
+  type: H/S
+  stage: POSTPAY_DAILY
+  population: Member add/change occurs after high-cost service with actor/time pattern outside policy
+  inputs: &id003
+  - policy_event.event_time
+  - policy_event.actor
+  - policy_event.event_type
+  expression: Member add/change occurs after high-cost service with actor/time pattern outside policy
+  parameters: {}
+  exclusions:
+  - approved_retroactive_correction
+  - sla
+  grouping_key: *id002
+  score: 82
+  disposition: PREPAY_PEND
+  reason_code: RETROACTIVE_ENROLMENT_EVENT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: underwriting
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: 'policy_event is NOT_POPULATED: there are no enrolment events, actors or timestamps,
+    so ''occurs after'' has nothing to order.'
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Member add/change occurs after high-cost service with actor/time pattern outside
+    policy
+  catalogue_config_exclusions: Approved retroactive correction/SLA
+  catalogue_disposition: Underwriting/compliance review
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: POL-01-R03
+  name: Application/claim fact conflict
+  version: 1.0.0
+  status: shadow
+  type: E
+  stage: POSTPAY_DAILY
+  population: Material application declaration conflicts with authoritative prior coverage/claim history
+    where legally usable
+  inputs: &id004
+  - policy_application.declarations
+  - prior_coverage_history.*
+  expression: Material application declaration conflicts with authoritative prior coverage/claim history
+    where legally usable
+  parameters: {}
+  exclusions:
+  - contestability
+  - non_discrimination
+  - privacy_law
+  grouping_key: *id002
+  score: 70
+  disposition: PREPAY_PEND
+  reason_code: APPLICATION_FACT_CONFLICT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: underwriting
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No application declarations. The catalogue's own constraints — contestability,
+    non-discrimination and privacy law — would in any case gate this control behind a legal review that
+    no detection artefact can grant itself.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Material application declaration conflicts with authoritative prior coverage/claim
+    history where legally usable
+  catalogue_config_exclusions: Contestability, non-discrimination and privacy law
+  catalogue_disposition: Human review only
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: POL-01-R04
+  name: Early-tenure utilization anomaly
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: claims within cfg.early_tenure_days of policy inception
+  inputs:
+  - claim_header.days_since_policy_start
+  - claim_header.gross_amount_aed
+  - diagnosis.code
+  - claim_header.previous_fraud_on_policy
+  expression: days_since_policy_start < cfg.early_tenure_days and robust_residual(gross_amount_aed, diagnosis_peer_group)
+    > cfg.robust_residual_flag_threshold
+  parameters:
+    early_tenure_days: cfg.early_tenure_days
+    threshold: cfg.robust_residual_flag_threshold
+  exclusions:
+  - maternity_continuity
+  - chronic_condition_continuity
+  - guaranteed_issue_product
+  - not_evidence_of_fraud_alone
+  - morbidity_model_unavailable
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - member_sk
+  - scenario_id
+  - period_bucket
+  score: 58
+  disposition: MONITOR_ONLY
+  reason_code: EARLY_TENURE_UTILISATION
+  evidence_fields:
+  - member_sk
+  - days_since_policy_start
+  - early_tenure_days
+  - gross_amount_aed
+  - peer_median_aed
+  - robust_residual
+  - diagnosis_code
+  - previous_fraud_on_policy
+  - peer_level_used
+  - not_fraud_evidence_alone_notice
+  owner: underwriting
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: PARTIAL
+  data_support_reason: days_since_policy_start supports the tenure limb exactly, and claim value supports
+    the utilisation limb. Risk adjustment is by primary diagnosis, not by a morbidity model. previous_fraud_on_policy
+    is used as a POLICY-HISTORY input (it is a policy attribute in the source, not the held-out outcome
+    label) and is reported separately in the evidence so a reviewer can weigh it themselves. The catalogue's
+    caution — 'not evidence of fraud alone' — is reproduced on the signal and the disposition is MONITOR_ONLY.
+  required_canonical_fields:
+  - morbidity_model.*
+  - policy_event.*
+  implementation: pol_01_r04_early_tenure_utilisation
+  catalogue_trigger: Claim pattern shortly after inception exceeds tenure/risk-adjusted expectation
+  catalogue_config_exclusions: Not evidence of fraud alone; maternity/chronic continuity
+  catalogue_disposition: Monitor/distribution signal
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: POL-01-R05
+  name: Employer/broker enrollment cluster
+  version: 1.0.0
+  status: shadow
+  type: S/N
+  stage: MODEL_MONTHLY
+  population: Suspicious member additions, identity links or early claims cluster by employer/originator
+  inputs: &id005
+  - policy_event.*
+  - member.employer_id
+  - provider.owner_entity_id
+  - provider.bank_account_token
+  - provider.phone_token
+  - provider.address_token
+  expression: Suspicious member additions, identity links or early claims cluster by employer/originator
+  parameters: {}
+  exclusions:
+  - portfolio_size
+  - enrollment_campaign
+  grouping_key: *id002
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: ENROLMENT_CLUSTER
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Member ADDITIONS require policy_event, which is NOT_POPULATED, and identity links
+    require administrative identifiers that do not exist. The 'early claims cluster by originator' limb
+    alone is implemented, at NET-04-R03, rather than duplicated here under a control whose other two limbs
+    cannot run.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: Suspicious member additions, identity links or early claims cluster by employer/originator
+  catalogue_config_exclusions: Portfolio size and enrollment campaign
+  catalogue_disposition: NET-04-linked case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

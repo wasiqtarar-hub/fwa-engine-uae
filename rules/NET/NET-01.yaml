@@ -1,0 +1,217 @@
+# =============================================================================
+# NET-01: Referral concentration, reciprocity and downstream conversion · P1
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: NET-01
+  title: Referral concentration, reciprocity and downstream conversion
+  priority: P1
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: NET-01-R01
+  name: Referral concentration outlier
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: agents with at least cfg.min_entity_opportunities claims
+  inputs:
+  - claim_header.agent_id
+  - claim_header.provider_sk
+  - claim_header.gross_amount_aed
+  expression: top_recipient_share(agent) > cfg.referral_concentration_threshold and the agent's claim
+    count is above the minimum denominator
+  parameters:
+    threshold: cfg.referral_concentration_threshold
+  exclusions:
+  - corporate_group_or_narrow_network
+  - centre_of_excellence
+  - small_denominator
+  - inferred_edge_not_a_clinical_referral
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - agent_id
+  - scenario_id
+  - period_bucket
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: REFERRAL_CONCENTRATION
+  evidence_fields:
+  - agent_id
+  - top_provider_sk
+  - top_provider_share
+  - hhi
+  - claim_count
+  - distinct_providers
+  - exposure_aed
+  - edge_type
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: PARTIAL
+  data_support_reason: 'There are no referral edges in the claim extract. The implemented edge is AGENT→PROVIDER
+    co-occurrence: the share of an agent''s claims flowing to their single most-used provider, plus the
+    Herfindahl index of that agent''s provider distribution. That is a distribution-channel concentration,
+    not a clinical referral, and the signal says so. The peer comparison is by agent portfolio size, not
+    by specialty or geography, because neither is available.'
+  required_canonical_fields:
+  - referral.referrer_id
+  - referral.recipient_id
+  - provider.specialty
+  - provider.emirate
+  - encounter.location
+  implementation: net_01_r01_referral_concentration
+  catalogue_trigger: Top-recipient share/HHI exceeds specialty/geographic peers
+  catalogue_config_exclusions: Group/network and centre-of-excellence
+  catalogue_disposition: Network case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: NET-01-R02
+  name: Reciprocal referral loop
+  version: 1.0.0
+  status: shadow
+  type: N
+  stage: NETWORK_WEEKLY
+  population: A→B and B→A edges are unusually strong relative to opportunity
+  inputs: &id001
+  - referral.referrer_id
+  - referral.recipient_id
+  - referral.direction
+  expression: A→B and B→A edges are unusually strong relative to opportunity
+  parameters: {}
+  exclusions:
+  - multidisciplinary_teams
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - community_id
+  - scenario_id
+  - period_bucket
+  score: 55
+  disposition: MONITOR_ONLY
+  reason_code: RECIPROCAL_REFERRAL_LOOP
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Reciprocity requires DIRECTED referral edges. Agent-provider and patient-provider
+    edges here are bipartite and undirected by construction, so A→B and B→A cannot exist and the metric
+    would be identically zero.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: A→B and B→A edges are unusually strong relative to opportunity
+  catalogue_config_exclusions: Multidisciplinary teams
+  catalogue_disposition: Graph evidence
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: NET-01-R03
+  name: High-cost conversion
+  version: 1.0.0
+  status: shadow
+  type: S/N
+  stage: NETWORK_WEEKLY
+  population: Referred members convert to high-cost service at abnormal rate/value
+  inputs: &id003
+  - referral.*
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  expression: Referred members convert to high-cost service at abnormal rate/value
+  parameters: {}
+  exclusions:
+  - case_mix
+  - referral_indication
+  grouping_key: *id002
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: HIGH_COST_CONVERSION
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No referrals to convert from, and no service-level costs to convert to.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Referred members convert to high-cost service at abnormal rate/value
+  catalogue_config_exclusions: Case mix and referral indication
+  catalogue_disposition: Prioritized audit
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: NET-01-R04
+  name: Closed downstream chain
+  version: 1.0.0
+  status: shadow
+  type: N
+  stage: NETWORK_WEEKLY
+  population: Referrer→lab/imaging/pharmacy chain retains members within small dense group
+  inputs: &id004
+  - referral.*
+  - provider.provider_type
+  - provider.owner_entity_id
+  - provider.bank_account_token
+  - provider.phone_token
+  - provider.address_token
+  expression: Referrer→lab/imaging/pharmacy chain retains members within small dense group
+  parameters: {}
+  exclusions:
+  - ownership
+  - narrow_network
+  grouping_key: *id002
+  score: 55
+  disposition: SIU_LEAD
+  reason_code: CLOSED_DOWNSTREAM_CHAIN
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No labs, imaging centres or pharmacies as distinct entities, and no ownership data.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Referrer→lab/imaging/pharmacy chain retains members within small dense group
+  catalogue_config_exclusions: Ownership/narrow network
+  catalogue_disposition: SIU lead
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

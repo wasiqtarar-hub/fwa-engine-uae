@@ -1,0 +1,245 @@
+# =============================================================================
+# PAY-04: Prior-authorization compliance and scope · P0
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: PAY-04
+  title: Prior-authorization compliance and scope
+  priority: P0
+  added_by_coverage_audit: false
+  control_count: 5
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: PAY-04-R01
+  name: Missing required authorization
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: Activity requires authorization and no valid link exists
+  inputs: &id001
+  - authorization.*
+  - authorization_line.*
+  - claim_line.authorization_id
+  - benefit_rule_version.covered
+  - benefit_rule_version.benefit_limit
+  - benefit_rule_version.authorization_required
+  expression: Activity requires authorization and no valid link exists
+  parameters: {}
+  exclusions:
+  - emergency
+  - deemed_approval
+  - response_time_exception
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 90
+  disposition: PREPAY_PEND
+  reason_code: AUTH_MISSING
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: 'The authorization table is NOT_POPULATED and there is no authorization_required
+    flag. This is the single largest coverage gap relative to a real Shafafiya feed: the whole PAY-04
+    scenario (5 controls) is unrunnable, and PAY-04-R01 is the worked example the atomic-control contract
+    is usually explained through.'
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Activity requires authorization and no valid link exists
+  catalogue_config_exclusions: Emergency, deemed approval, response-time exception
+  catalogue_disposition: Pend/reject
+  alternate_dispositions:
+  - REJECT
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-04-R02
+  name: Invalid timing/status
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: Service outside authorization validity or authorization denied/cancelled
+  inputs: &id003
+  - authorization.*
+  - authorization_line.*
+  - claim_line.authorization_id
+  expression: Service outside authorization validity or authorization denied/cancelled
+  parameters: {}
+  exclusions:
+  - approved_extension
+  - urgent_retrospective_route
+  grouping_key: *id002
+  score: 90
+  disposition: PREPAY_PEND
+  reason_code: AUTH_INVALID_TIMING
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No authorisation records.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Service outside authorization validity or authorization denied/cancelled
+  catalogue_config_exclusions: Approved extension and urgent retrospective route
+  catalogue_disposition: Pend/reject
+  alternate_dispositions:
+  - REJECT
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-04-R03
+  name: Code/provider/facility scope mismatch
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: Claim dimension not equal/equivalent to approved dimension
+  inputs: &id004
+  - authorization.*
+  - authorization_line.*
+  - claim_line.authorization_id
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  expression: Claim dimension not equal/equivalent to approved dimension
+  parameters: {}
+  exclusions:
+  - equivalent_code_map
+  - approved_transfer
+  grouping_key: *id002
+  score: 90
+  disposition: PREPAY_PEND
+  reason_code: AUTH_SCOPE_MISMATCH
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No authorisation records.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Claim dimension not equal/equivalent to approved dimension
+  catalogue_config_exclusions: Equivalent-code map and approved transfer
+  catalogue_disposition: Pend
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-04-R04
+  name: Quantity/value exhaustion
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: Cumulative claimed/paid plus current exceeds approved units/value
+  inputs: &id005
+  - authorization.*
+  - authorization_line.*
+  - claim_line.authorization_id
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  expression: Cumulative claimed/paid plus current exceeds approved units/value
+  parameters: {}
+  exclusions:
+  - cancelled
+  - reversed_claims
+  - partial_fills
+  grouping_key: *id002
+  score: 90
+  disposition: REPRICE
+  reason_code: AUTH_EXHAUSTED
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No authorisation records and no paid-to-date accumulator.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: Cumulative claimed/paid plus current exceeds approved units/value
+  catalogue_config_exclusions: Cancelled/reversed claims and partial fills
+  catalogue_disposition: Reprice/pend excess
+  alternate_dispositions:
+  - PREPAY_PEND
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-04-R05
+  name: Authorization reuse
+  version: 1.0.0
+  status: shadow
+  type: H/S
+  stage: POSTPAY_DAILY
+  population: Same authorization consumed by unrelated members/episodes/providers or after exhaustion
+  inputs: &id006
+  - authorization.*
+  - authorization_line.*
+  - claim_line.authorization_id
+  expression: Same authorization consumed by unrelated members/episodes/providers or after exhaustion
+  parameters: {}
+  exclusions:
+  - family
+  - shared_authorization_only_if_policy_permits
+  grouping_key: *id002
+  score: 90
+  disposition: SIU_LEAD
+  reason_code: AUTH_REUSE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No authorisation identifiers to reuse.
+  required_canonical_fields: *id006
+  implementation: null
+  catalogue_trigger: Same authorization consumed by unrelated members/episodes/providers or after exhaustion
+  catalogue_config_exclusions: Family/shared authorization only if policy permits
+  catalogue_disposition: SIU/prepay lead
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

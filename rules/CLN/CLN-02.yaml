@@ -1,0 +1,233 @@
+# =============================================================================
+# CLN-02: Diagnosis, comorbidity and DRG severity manipulation · P0
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: CLN-02
+  title: Diagnosis, comorbidity and DRG severity manipulation
+  priority: P0
+  added_by_coverage_audit: false
+  control_count: 5
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: CLN-02-R01
+  name: Payment-changing secondary diagnosis
+  version: 1.0.0
+  status: shadow
+  type: H/E
+  stage: POSTPAY_DAILY
+  population: Removing suspect secondary diagnosis lowers DRG/payment and code lacks required supporting
+    evidence
+  inputs: &id001
+  - diagnosis.sequence (secondary codes)
+  - drg_grouper.*
+  expression: Removing suspect secondary diagnosis lowers DRG/payment and code lacks required supporting
+    evidence
+  parameters: {}
+  exclusions:
+  - current_grouper
+  - audit_policy
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - episode_id
+  - scenario_id
+  score: 90
+  disposition: POSTPAY_AUDIT
+  reason_code: SECONDARY_DX_PAYMENT_IMPACT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: coding_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Exactly one principal diagnosis per claim; there are no secondary diagnoses to
+    remove and no DRG grouper.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Removing suspect secondary diagnosis lowers DRG/payment and code lacks required supporting
+    evidence
+  catalogue_config_exclusions: Current grouper and audit policy
+  catalogue_disposition: Coding audit candidate
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-02-R02
+  name: Comorbidity prevalence outlier
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Provider's CC/MCC or local severity-code rate exceeds risk-adjusted peers
+  inputs: &id003
+  - diagnosis.sequence
+  - drg_grouper.*
+  expression: Provider's CC/MCC or local severity-code rate exceeds risk-adjusted peers
+  parameters: {}
+  exclusions:
+  - drg
+  - age
+  - transfer
+  - specialty
+  - minimum_volume
+  grouping_key: *id002
+  score: 62
+  disposition: POSTPAY_AUDIT
+  reason_code: COMORBIDITY_PREVALENCE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No secondary or comorbidity codes.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Provider's CC/MCC or local severity-code rate exceeds risk-adjusted peers
+  catalogue_config_exclusions: DRG, age, transfer, specialty, minimum volume
+  catalogue_disposition: Provider case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-02-R03
+  name: Prior-history inconsistency
+  version: 1.0.0
+  status: shadow
+  type: E/S
+  stage: POSTPAY_DAILY
+  population: Acute/severe diagnosis materially conflicts with longitudinal history and episode evidence
+  inputs: &id004
+  - diagnosis.sequence
+  - longitudinal member history across payers
+  expression: Acute/severe diagnosis materially conflicts with longitudinal history and episode evidence
+  parameters: {}
+  exclusions:
+  - new_diagnoses_allowed
+  - absence_is_weak_evidence
+  grouping_key: *id002
+  score: 78
+  disposition: POSTPAY_AUDIT
+  reason_code: PRIOR_HISTORY_INCONSISTENCY
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: A member's longitudinal history here is at most six claims with one code each,
+    which is far too thin to establish a material conflict. The catalogue itself warns that 'absence is
+    weak evidence'; on this data it would be no evidence.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Acute/severe diagnosis materially conflicts with longitudinal history and episode
+    evidence
+  catalogue_config_exclusions: New diagnoses allowed; absence is weak evidence
+  catalogue_disposition: Prioritize record review
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-02-R04
+  name: POA/sequencing conflict
+  version: 1.0.0
+  status: shadow
+  type: H/E
+  stage: PREPAY_SYNC
+  population: POA or principal/secondary sequence violates effective coding policy
+  inputs: &id005
+  - diagnosis.present_on_admission
+  - diagnosis.sequence
+  expression: POA or principal/secondary sequence violates effective coding policy
+  parameters: {}
+  exclusions:
+  - transfer
+  - obstetric
+  - newborn_rules
+  grouping_key: *id002
+  score: 90
+  disposition: PREPAY_PEND
+  reason_code: POA_SEQUENCING_CONFLICT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: coding_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No present-on-admission indicator and no diagnosis sequence.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: POA or principal/secondary sequence violates effective coding policy
+  catalogue_config_exclusions: Transfer and obstetric/newborn rules
+  catalogue_disposition: Coding pend
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-02-R05
+  name: Severity-mix changepoint
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Severity index increases without corresponding procedure, LOS or referral shift
+  inputs: &id006
+  - diagnosis.sequence
+  - drg_grouper.*
+  expression: Severity index increases without corresponding procedure, LOS or referral shift
+  parameters: {}
+  exclusions:
+  - service_line_expansion_segmentation
+  grouping_key: *id002
+  score: 62
+  disposition: POSTPAY_AUDIT
+  reason_code: SEVERITY_MIX_CHANGEPOINT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No severity index can be computed without secondary diagnoses.
+  required_canonical_fields: *id006
+  implementation: null
+  catalogue_trigger: Severity index increases without corresponding procedure, LOS or referral shift
+  catalogue_config_exclusions: Service-line expansion segmentation
+  catalogue_disposition: Postpay audit
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

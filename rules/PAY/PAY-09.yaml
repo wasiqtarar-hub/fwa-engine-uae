@@ -1,0 +1,200 @@
+# =============================================================================
+# PAY-09: Disguised non-covered service or product · P0 *  (added by the specification's own coverage audit)
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: PAY-09
+  title: Disguised non-covered service or product
+  priority: P0
+  added_by_coverage_audit: true
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: PAY-09-R01
+  name: Code-description/document conflict
+  version: 1.0.0
+  status: shadow
+  type: E/T
+  stage: PREPAY_ASYNC
+  population: Note/order/Observation describes an uncovered service while claim uses covered code
+  inputs: &id001
+  - observation.attachment_ref
+  - document.text
+  - document.language
+  - benefit_rule_version.covered
+  - benefit_rule_version.benefit_limit
+  - benefit_rule_version.authorization_required
+  expression: Note/order/Observation describes an uncovered service while claim uses covered code
+  parameters: {}
+  exclusions:
+  - nlp_confidence
+  - clinician_review
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 78
+  disposition: PREPAY_PEND
+  reason_code: DISGUISED_SERVICE_DOC_CONFLICT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Requires both real documents and a covered/non-covered benefit map. The synthetic
+    document pipeline built for DOC-01 cannot substitute, because the benefit map that defines 'uncovered'
+    does not exist.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Note/order/Observation describes an uncovered service while claim uses covered code
+  catalogue_config_exclusions: NLP confidence and clinician review
+  catalogue_disposition: Pend
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-09-R02
+  name: Covered-code substitution pattern
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Provider uses a payable proxy code unusually often around denied/non-covered services
+  inputs: &id003
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  expression: Provider uses a payable proxy code unusually often around denied/non-covered services
+  parameters: {}
+  exclusions:
+  - code_family
+  - denial_history_map
+  grouping_key: *id002
+  score: 62
+  disposition: POSTPAY_AUDIT
+  reason_code: CODE_SUBSTITUTION_PATTERN
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No procedure codes and no denial history.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Provider uses a payable proxy code unusually often around denied/non-covered services
+  catalogue_config_exclusions: Code-family and denial-history map
+  catalogue_disposition: Postpay audit
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-09-R03
+  name: Cosmetic/alternative/non-medical disguise
+  version: 1.0.0
+  status: shadow
+  type: E
+  stage: PREPAY_SYNC
+  population: Diagnosis, setting and product combination matches approved disguise-risk policy
+  inputs: &id004
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - encounter.encounter_type
+  - disguise_risk_policy.*
+  expression: Diagnosis, setting and product combination matches approved disguise-risk policy
+  parameters: {}
+  exclusions:
+  - reconstructive
+  - medical_necessity_exceptions
+  grouping_key: *id002
+  score: 78
+  disposition: PREPAY_PEND
+  reason_code: DISGUISE_RISK_COMBINATION
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Needs a curated disguise-risk policy table plus setting and product, none of which
+    exist.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Diagnosis, setting and product combination matches approved disguise-risk policy
+  catalogue_config_exclusions: Reconstructive/medical-necessity exceptions
+  catalogue_disposition: Clinical pend
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-09-R04
+  name: Member/provider confirmation mismatch
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: POSTPAY_DAILY
+  population: Member receipt/confirmation describes different item/service than billed
+  inputs: &id005
+  - member_receipt.*
+  - member_confirmation.*
+  expression: Member receipt/confirmation describes different item/service than billed
+  parameters: {}
+  exclusions:
+  - confirmation_reliability
+  - consent
+  grouping_key: *id002
+  score: 62
+  disposition: SIU_LEAD
+  reason_code: MEMBER_CONFIRMATION_MISMATCH
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No member confirmations or receipts.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: Member receipt/confirmation describes different item/service than billed
+  catalogue_config_exclusions: Confirmation reliability and consent
+  catalogue_disposition: SIU lead
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

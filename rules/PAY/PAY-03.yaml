@@ -1,0 +1,203 @@
+# =============================================================================
+# PAY-03: Code validity, demographics, units and time billing · P0
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: PAY-03
+  title: Code validity, demographics, units and time billing
+  priority: P0
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: PAY-03-R01
+  name: Invalid/effective-date code
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: INGEST
+  population: Code absent from declared code system/version or inactive at service date
+  inputs: &id001
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - code_system_version.*
+  expression: Code absent from declared code system/version or inactive at service date
+  parameters: {}
+  exclusions:
+  - approved_unlisted_code_pathway
+  - required_observation
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 90
+  disposition: RETURN
+  reason_code: INVALID_CODE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: coding_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Only a primary ICD-10 diagnosis exists, drawn from a closed set of 20 codes that
+    are all valid. There are no procedure codes to validate and no code-system version history.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Code absent from declared code system/version or inactive at service date
+  catalogue_config_exclusions: Approved unlisted-code pathway and required Observation
+  catalogue_disposition: Return
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-03-R02
+  name: Hard demographic impossibility
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: Explicit age/sex restriction fails
+  inputs: &id003
+  - member.date_of_birth
+  - member.sex
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  expression: Explicit age/sex restriction fails
+  parameters: {}
+  exclusions:
+  - gender
+  - clinical_exceptions_approved_by_policy
+  grouping_key: *id002
+  score: 90
+  disposition: REJECT
+  reason_code: DEMOGRAPHIC_IMPOSSIBILITY
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: coding_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No member demographics. Note that O80 (normal delivery) appears in the data but
+    without a sex field there is nothing to check it against.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Explicit age/sex restriction fails
+  catalogue_config_exclusions: Gender/clinical exceptions approved by policy
+  catalogue_disposition: Reject/pend
+  alternate_dispositions:
+  - PREPAY_PEND
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-03-R03
+  name: Unit maximum
+  version: 1.0.0
+  status: shadow
+  type: H/E
+  stage: PREPAY_SYNC
+  population: Daily/episode units exceed administrative or clinical maximum
+  inputs: &id004
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - unit_maximum_policy.*
+  expression: Daily/episode units exceed administrative or clinical maximum
+  parameters: {}
+  exclusions:
+  - repeat
+  - laterality
+  - dose
+  - inpatient_rules
+  grouping_key: *id002
+  score: 90
+  disposition: REPRICE
+  reason_code: UNIT_MAXIMUM_EXCEEDED
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: coding_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: the claim extract carries one billed amount per claim and no service lines, so there is
+    no unit count to compare against a daily or episode maximum.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Daily/episode units exceed administrative or clinical maximum
+  catalogue_config_exclusions: Repeat/laterality, dose, inpatient rules
+  catalogue_disposition: Reprice or clinical pend
+  alternate_dispositions:
+  - PREPAY_PEND
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-03-R04
+  name: Time-unit inconsistency
+  version: 1.0.0
+  status: shadow
+  type: H/E
+  stage: PREPAY_SYNC
+  population: Time-derived units do not match start/end time or overlap impossible services
+  inputs: &id005
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - claim_line.service_start_time
+  expression: Time-derived units do not match start/end time or overlap impossible services
+  parameters: {}
+  exclusions:
+  - rounding_policy
+  - anesthesia_concurrency
+  grouping_key: *id002
+  score: 90
+  disposition: REPRICE
+  reason_code: TIME_UNIT_INCONSISTENT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: coding_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No service times and no units.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: Time-derived units do not match start/end time or overlap impossible services
+  catalogue_config_exclusions: Rounding policy, anesthesia concurrency
+  catalogue_disposition: Reprice/pend
+  alternate_dispositions:
+  - PREPAY_PEND
+  governance_note: ''
+  shadow_since: '2026-01-01'

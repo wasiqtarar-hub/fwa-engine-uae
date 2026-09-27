@@ -1,0 +1,222 @@
+# =============================================================================
+# ENT-02: Member identity misuse, card sharing and post-mortem billing · P0
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: ENT-02
+  title: Member identity misuse, card sharing and post-mortem billing
+  priority: P0
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: ENT-02-R01
+  name: Authoritative identity conflict
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: INGEST
+  population: Protected national-ID token maps to different enrolled member or DOB/sex conflicts with
+    authoritative record
+  inputs: &id001
+  - member.date_of_birth
+  - member.sex
+  - member.protected_id_token
+  expression: Protected national-ID token maps to different enrolled member or DOB/sex conflicts with
+    authoritative record
+  parameters: {}
+  exclusions:
+  - placeholder_ids
+  - newborns
+  - corrected_identity
+  - names_alone_prohibited
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - scenario_id
+  - period_bucket
+  score: 90
+  disposition: PREPAY_PEND
+  reason_code: IDENTITY_CONFLICT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: the claim extract has one opaque patient_id and no DOB, sex or national-ID token, so there
+    is no authoritative record to conflict with.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Protected national-ID token maps to different enrolled member or DOB/sex conflicts
+    with authoritative record
+  catalogue_config_exclusions: Placeholder IDs, newborns, corrected identity; names alone prohibited
+  catalogue_disposition: Pend for identity resolution
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: ENT-02-R02
+  name: Post-mortem service
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: service_start > confirmed_death_date + cfg.reporting_tolerance
+  inputs: &id003
+  - member.death_date
+  - member.death_source
+  - member.death_source_confidence
+  expression: service_start > confirmed_death_date + cfg.reporting_tolerance
+  parameters: {}
+  exclusions:
+  - death_source_confidence
+  - administrative_claims_after_service_permitted
+  grouping_key: *id002
+  score: 90
+  disposition: PREPAY_PEND
+  reason_code: POST_MORTEM_SERVICE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No death status or death date in the source.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: service_start > confirmed_death_date + cfg.reporting_tolerance
+  catalogue_config_exclusions: Death-source confidence; administrative claims after service permitted
+  catalogue_disposition: Pend/reject with source confidence
+  alternate_dispositions:
+  - REJECT
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: ENT-02-R03
+  name: Member impossible presence
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: PREPAY_ASYNC
+  population: claim pairs where member_sk is equal and the encounters overlap in time
+  inputs:
+  - encounter.admission_date
+  - encounter.discharge_date
+  - claim_header.member_sk
+  - claim_header.provider_sk
+  expression: overlaps(a.admission_date, a.discharge_date, b.admission_date, b.discharge_date, tolerance_days=cfg.concurrent_admission_overlap_tolerance_days)
+    is TRUE and a.provider_sk != b.provider_sk
+  parameters:
+    tolerance_days: cfg.concurrent_admission_overlap_tolerance_days
+    max_concurrent: cfg.max_concurrent_admissions_per_member
+  exclusions:
+  - inpatient_ancillary_lines
+  - telehealth_encounter
+  - claim_date_without_time
+  - same_provider_transfer_within_facility
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - member_sk
+  - scenario_id
+  - period_bucket
+  score: 62
+  disposition: PREPAY_PEND
+  reason_code: MEMBER_IMPOSSIBLE_PRESENCE
+  evidence_fields:
+  - member_sk
+  - overlapping_claims
+  - admission_dates
+  - discharge_dates
+  - overlap_days
+  - providers
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: PARTIAL
+  data_support_reason: 'The OVERLAPPING-ENCOUNTER limb runs: admission and discharge dates exist, so two
+    inpatient stays for one member that overlap in time are detectable. The TRAVEL-SPEED limb does not
+    run — there is no geography. Dates carry no time component, so a same-day transfer cannot be distinguished
+    from a genuine overlap and confidence is reduced accordingly.'
+  required_canonical_fields:
+  - provider.emirate
+  - encounter.location
+  - encounter.start_time (with time of day)
+  implementation: ent_02_r03_member_impossible_presence
+  catalogue_trigger: Same member has overlapping encounters or travel speed above cfg.max_speed
+  catalogue_config_exclusions: Inpatient ancillary lines, telehealth, claim date without time
+  catalogue_disposition: Member lead with encounter pairs
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: ENT-02-R04
+  name: Card-sharing utilization pattern
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: POSTPAY_DAILY
+  population: Incompatible concurrent geography/provider clusters or abrupt demographic-inconsistent service
+    pattern
+  inputs: &id004
+  - provider.emirate
+  - encounter.location
+  - member.date_of_birth
+  - member.sex
+  expression: Incompatible concurrent geography/provider clusters or abrupt demographic-inconsistent service
+    pattern
+  parameters: {}
+  exclusions:
+  - chronic
+  - rare_disease_pathways
+  - require_minimum_independent_evidence
+  grouping_key: *id002
+  score: 62
+  disposition: SIU_LEAD
+  reason_code: CARD_SHARING_PATTERN
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: 'Both limbs need data the source lacks: geography clusters (no location) and demographic
+    inconsistency (no demographics).'
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Incompatible concurrent geography/provider clusters or abrupt demographic-inconsistent
+    service pattern
+  catalogue_config_exclusions: Chronic/rare disease pathways; require minimum independent evidence
+  catalogue_disposition: SIU lead, never auto-reject
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

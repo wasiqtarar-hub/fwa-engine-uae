@@ -1,0 +1,218 @@
+# =============================================================================
+# PHR-03: High-cost drug/infusion/specialty-product spike · P1
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: PHR-03
+  title: High-cost drug/infusion/specialty-product spike
+  priority: P1
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: PHR-03-R01
+  name: Dose/weight/body-surface conflict
+  version: 1.0.0
+  status: shadow
+  type: E
+  stage: PREPAY_SYNC
+  population: Claimed dose outside approved clinical range
+  inputs: &id001
+  - prescription_dispense.billed_product
+  - prescription_dispense.days_supply
+  - prescription_dispense.prescriber_id
+  - prescription_dispense.pharmacy_id
+  - member.weight
+  - member.height
+  expression: Claimed dose outside approved clinical range
+  parameters: {}
+  exclusions:
+  - wastage
+  - loading_dose
+  - rounding
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - scenario_id
+  - period_bucket
+  score: 70
+  disposition: PREPAY_PEND
+  reason_code: DOSE_OUT_OF_RANGE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No doses, weights or body-surface data.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Claimed dose outside approved clinical range
+  catalogue_config_exclusions: Wastage, loading dose and rounding
+  catalogue_disposition: Clinical pend/reprice
+  alternate_dispositions:
+  - REPRICE
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PHR-03-R02
+  name: Drug-diagnosis/step-therapy conflict
+  version: 1.0.0
+  status: shadow
+  type: E
+  stage: PREPAY_SYNC
+  population: Indication or prerequisite therapy absent
+  inputs: &id003
+  - prescription_dispense.billed_product
+  - prescription_dispense.days_supply
+  - prescription_dispense.prescriber_id
+  - prescription_dispense.pharmacy_id
+  - step_therapy_policy.*
+  expression: Indication or prerequisite therapy absent
+  parameters: {}
+  exclusions:
+  - authorization_overrides
+  - rare_disease
+  grouping_key: *id002
+  score: 70
+  disposition: PREPAY_PEND
+  reason_code: STEP_THERAPY_CONFLICT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No drugs to check against the diagnosis.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Indication or prerequisite therapy absent
+  catalogue_config_exclusions: Authorization overrides and rare disease
+  catalogue_disposition: Pend
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PHR-03-R03
+  name: Provider/pharmacy volume spike
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: claims with a non-null pharmacy_bill_ratio and a resolvable diagnosis peer group
+  inputs:
+  - claim_header.pharmacy_bill_ratio
+  - diagnosis.code
+  - claim_header.provider_sk
+  - claim_header.gross_amount_aed
+  expression: pharmacy_bill_ratio > cfg.pharmacy_share_peer_multiple * diagnosis_peer_median(pharmacy_bill_ratio)
+  parameters:
+    multiple: cfg.pharmacy_share_peer_multiple
+  exclusions:
+  - new_formulary_status
+  - centre_of_excellence_status
+  - patient_mix_shift
+  - insufficient_peer_evidence
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - scenario_id
+  - period_bucket
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: PHARMACY_VOLUME_SPIKE
+  evidence_fields:
+  - pharmacy_bill_ratio
+  - peer_median_ratio
+  - peer_multiple
+  - implied_pharmacy_aed
+  - diagnosis_code
+  - peer_level_used
+  - peer_n
+  owner: pharmacy_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: PARTIAL
+  data_support_reason: Implemented on the pharmacy SHARE residual against diagnosis peers — the only pharmacy
+    quantity in the source — rather than on drug volume or value. A provider whose pharmacy share sits
+    above cfg.pharmacy_share_peer_multiple × the diagnosis-peer median is flagged. 'Without patient-mix
+    shift' is partially controlled by the diagnosis-level peer group, not by a formal mix adjustment.
+  required_canonical_fields:
+  - prescription_dispense.billed_product
+  - prescription_dispense.days_supply
+  - prescription_dispense.prescriber_id
+  - prescription_dispense.pharmacy_id
+  - claim_line.activity_code (drug-level volume and value)
+  implementation: phr_03_r03_pharmacy_volume_spike
+  catalogue_trigger: Risk-adjusted volume/value changepoint without patient-mix shift
+  catalogue_config_exclusions: New formulary/centre status
+  catalogue_disposition: Audit
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PHR-03-R04
+  name: Wastage/unused-vial anomaly
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Wastage units or vial rounding exceed comparable dosing peers
+  inputs: &id004
+  - prescription_dispense.billed_product
+  - prescription_dispense.days_supply
+  - prescription_dispense.prescriber_id
+  - prescription_dispense.pharmacy_id
+  - claim_line.wastage_units
+  expression: Wastage units or vial rounding exceed comparable dosing peers
+  parameters: {}
+  exclusions:
+  - single_use_vial_policy
+  grouping_key: *id002
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: WASTAGE_ANOMALY
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: pharmacy_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No wastage units or vial data.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Wastage units or vial rounding exceed comparable dosing peers
+  catalogue_config_exclusions: Single-use vial policy
+  catalogue_disposition: Postpay sample
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

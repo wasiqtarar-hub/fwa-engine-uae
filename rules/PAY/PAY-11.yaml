@@ -1,0 +1,198 @@
+# =============================================================================
+# PAY-11: Internal adjudication, override and payment manipulation · P1 *  (added by the specification's own coverage audit)
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: PAY-11
+  title: Internal adjudication, override and payment manipulation
+  priority: P1
+  added_by_coverage_audit: true
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: PAY-11-R01
+  name: Unauthorized/manual override
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: POSTPAY_DAILY
+  population: Denial/edit overridden without required role, approval or reason
+  inputs: &id001
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  - adjudication_event.actor
+  - adjudication_event.override_reason
+  expression: Denial/edit overridden without required role, approval or reason
+  parameters: {}
+  exclusions:
+  - emergency_escalation
+  - delegated_authority
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 82
+  disposition: POSTPAY_AUDIT
+  reason_code: UNAUTHORIZED_OVERRIDE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: administrator
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: 'No adjudication decisions or override records exist in the claim extract. NOTE: this
+    control IS live against the artefact''s OWN overrides — every manual adjudication override in the
+    application is a distinct permission and is written to the append-only audit log with user, timestamp,
+    before/after and reason. The control cannot run against the source data; the governance property it
+    exists to protect is implemented in fwa.auth and fwa.audit.'
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Denial/edit overridden without required role, approval or reason
+  catalogue_config_exclusions: Emergency escalation and delegated authority
+  catalogue_disposition: Internal-control case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-11-R02
+  name: Adjudicator-provider concentration
+  version: 1.0.0
+  status: shadow
+  type: S/N
+  stage: MODEL_MONTHLY
+  population: Employee's override/payment volume to provider materially exceeds adjusted peers
+  inputs: &id003
+  - adjudication_event.actor
+  expression: Employee's override/payment volume to provider materially exceeds adjusted peers
+  parameters: {}
+  exclusions:
+  - assigned_provider_books
+  - specialty
+  grouping_key: *id002
+  score: 58
+  disposition: SIU_LEAD
+  reason_code: ADJUDICATOR_CONCENTRATION
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: administrator
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No adjudicator identity in the source.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Employee's override/payment volume to provider materially exceeds adjusted peers
+  catalogue_config_exclusions: Assigned provider books and specialty
+  catalogue_disposition: Compliance/SIU lead
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-11-R03
+  name: Post-settlement upward adjustment
+  version: 1.0.0
+  status: shadow
+  type: H/S
+  stage: POSTPAY_DAILY
+  population: Paid amount increased after settlement without valid adjustment reason/workflow
+  inputs: &id004
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  expression: Paid amount increased after settlement without valid adjustment reason/workflow
+  parameters: {}
+  exclusions:
+  - contract_true_up
+  - appeal_decision
+  grouping_key: *id002
+  score: 82
+  disposition: POSTPAY_AUDIT
+  reason_code: POST_SETTLEMENT_UPLIFT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: finance
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No settlement dates and no payment history.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Paid amount increased after settlement without valid adjustment reason/workflow
+  catalogue_config_exclusions: Contract true-up and appeal decision
+  catalogue_disposition: Internal audit case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-11-R04
+  name: Suspicious full-pay/invariant decisions
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Adjudicator/provider pair shows unusually high approval and low variance despite comparable
+    edits
+  inputs: &id005
+  - adjudication_event.actor
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  expression: Adjudicator/provider pair shows unusually high approval and low variance despite comparable
+    edits
+  parameters: {}
+  exclusions:
+  - auto_adjudicated_claims_excluded
+  grouping_key: *id002
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: INVARIANT_DECISIONS
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: administrator
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No adjudicator identity. The provider-side half of this pattern — invariant approval
+    ratio — IS implemented, as the second limb of PAY-06-R04.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: Adjudicator/provider pair shows unusually high approval and low variance despite
+    comparable edits
+  catalogue_config_exclusions: Auto-adjudicated claims excluded
+  catalogue_disposition: Internal audit lead
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

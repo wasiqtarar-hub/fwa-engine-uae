@@ -1,0 +1,219 @@
+# =============================================================================
+# DOC-02: Cloned, templated or retrospectively altered documentation · P2
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: DOC-02
+  title: Cloned, templated or retrospectively altered documentation
+  priority: P2
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: DOC-02-R01
+  name: Cross-patient near duplicate
+  version: 1.0.0
+  status: shadow
+  type: T
+  stage: POSTPAY_DAILY
+  population: pairs of synthetic documents belonging to different members
+  inputs:
+  - document.text
+  - claim_header.member_sk
+  - claim_header.provider_sk
+  expression: token-set similarity of the boilerplate-stripped text between two documents for DIFFERENT
+    members exceeds cfg.doc_clone_similarity_threshold
+  parameters:
+    threshold: cfg.doc_clone_similarity_threshold
+  exclusions:
+  - boilerplate_removed_before_comparison
+  - same_member_documents
+  - template_generated_corpus_baseline
+  - specialty_template_in_use
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - scenario_id
+  - period_bucket
+  score: 46
+  disposition: POSTPAY_AUDIT
+  reason_code: CROSS_PATIENT_NEAR_DUPLICATE
+  evidence_fields:
+  - document_pair
+  - similarity
+  - threshold
+  - member_sks
+  - provider_sk
+  - boilerplate_removed
+  - synthetic_document_marker
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P2
+  data_support: PARTIAL
+  data_support_reason: Runs against the SYNTHETIC corpus only. Boilerplate is stripped before comparison,
+    as the catalogue requires, and similarity is computed on the patient-specific remainder. Because the
+    corpus is generated from templates, a baseline similarity is expected and the threshold (cfg.doc_clone_similarity_threshold)
+    is set above it — a limitation stated on every signal.
+  required_canonical_fields:
+  - observation.attachment_ref
+  - document.text
+  - document.language
+  implementation: doc_02_r01_cross_patient_near_duplicate
+  catalogue_trigger: Patient-specific content similarity exceeds threshold across unrelated members
+  catalogue_config_exclusions: Remove standard boilerplate before comparison
+  catalogue_disposition: Audit sample
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: DOC-02-R02
+  name: Contradictory copied facts
+  version: 1.0.0
+  status: shadow
+  type: T/E
+  stage: POSTPAY_DAILY
+  population: Note contains wrong patient demographics/date/laterality or impossible copied findings
+  inputs: &id001
+  - observation.attachment_ref
+  - document.text
+  - document.language
+  - member.date_of_birth
+  - member.sex
+  expression: Note contains wrong patient demographics/date/laterality or impossible copied findings
+  parameters: {}
+  exclusions:
+  - extraction_confidence
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - claim_sk
+  - scenario_id
+  score: 46
+  disposition: PREPAY_PEND
+  reason_code: CONTRADICTORY_COPIED_FACTS
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P2
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Needs demographics and laterality to contradict; the source has neither, so a 'wrong
+    demographic' finding could not be evaluated even on synthetic text.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Note contains wrong patient demographics/date/laterality or impossible copied findings
+  catalogue_config_exclusions: Extraction confidence
+  catalogue_disposition: High-priority review
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: DOC-02-R03
+  name: Post-denial material alteration
+  version: 1.0.0
+  status: shadow
+  type: H/T
+  stage: POSTPAY_DAILY
+  population: Document version changes reimbursement-relevant facts after denial without addendum provenance
+  inputs: &id003
+  - observation.attachment_ref
+  - document.text
+  - document.language
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  - claim_version.relationship
+  - claim_version.prior_claim_sk
+  - claim_version.changed_fields
+  expression: Document version changes reimbursement-relevant facts after denial without addendum provenance
+  parameters: {}
+  exclusions:
+  - valid_signed_addendum_policy
+  grouping_key: *id002
+  score: 70
+  disposition: PREPAY_PEND
+  reason_code: POST_DENIAL_ALTERATION
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P2
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Needs denials and document version history; neither exists.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Document version changes reimbursement-relevant facts after denial without addendum
+    provenance
+  catalogue_config_exclusions: Valid signed addendum policy
+  catalogue_disposition: PAY-08-linked case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: DOC-02-R04
+  name: Template-to-complexity mismatch
+  version: 1.0.0
+  status: shadow
+  type: T/S
+  stage: MODEL_MONTHLY
+  population: High-complexity services supported by unusually generic notes versus peers
+  inputs: &id004
+  - observation.attachment_ref
+  - document.text
+  - document.language
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  expression: High-complexity services supported by unusually generic notes versus peers
+  parameters: {}
+  exclusions:
+  - specialty
+  - ehr_template
+  grouping_key: *id002
+  score: 46
+  disposition: MONITOR_ONLY
+  reason_code: TEMPLATE_COMPLEXITY_MISMATCH
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P2
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: '''High complexity'' cannot be established without service codes, so the comparison
+    has no x-axis.'
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: High-complexity services supported by unusually generic notes versus peers
+  catalogue_config_exclusions: Specialty and EHR template
+  catalogue_disposition: Supporting evidence only
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

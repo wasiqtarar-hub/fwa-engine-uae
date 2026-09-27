@@ -1,0 +1,213 @@
+# =============================================================================
+# CLN-03: Clinical incompatibility and specialty mismatch · P1
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: CLN-03
+  title: Clinical incompatibility and specialty mismatch
+  priority: P1
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: CLN-03-R01
+  name: Impossible diagnosis-procedure pair
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: claim where icd_code_matches_procedure is false
+  inputs:
+  - claim_header.icd_code_matches_procedure
+  - diagnosis.code
+  expression: icd_code_matches_procedure == false
+  parameters: {}
+  exclusions:
+  - only_rules_marked_hard_true_may_reject
+  - upstream_verdict_not_re_derivable
+  - approved_clinical_exception
+  - procedure_detail_unavailable
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - claim_sk
+  - scenario_id
+  score: 82
+  disposition: PREPAY_PEND
+  reason_code: IMPOSSIBLE_DX_PROC_PAIR
+  evidence_fields:
+  - claim_sk
+  - diagnosis_code
+  - icd_code_matches_procedure
+  - gross_amount_aed
+  - provider_sk
+  - what_the_reviewer_must_verify
+  owner: coding_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: PARTIAL
+  data_support_reason: 'Runs on icd_code_matches_procedure = False, which is a boolean VERDICT with no
+    procedure behind it: it records that some upstream process judged a mismatch, without the evidence
+    for that judgement. The disposition is therefore DOWNGRADED from the catalogue''s first-named REJECT
+    to the pend limb: a denial is permitted only on an objective, effective-dated condition this system
+    can evaluate itself, and another system''s undocumented verdict is not one. The same field also feeds
+    CLN-01-R01 as a provider-level rate.'
+  required_canonical_fields:
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - dx_proc_prohibition_table.*
+  implementation: cln_03_r01_dx_procedure_mismatch
+  catalogue_trigger: Pair explicitly prohibited by authoritative rule
+  catalogue_config_exclusions: Only rules marked hard=true
+  catalogue_disposition: Reject/pend
+  alternate_dispositions:
+  - REJECT
+  governance_note: 'Disposition downgraded from REJECT to PREPAY_PEND: the trigger is an upstream boolean
+    verdict, not an objective condition this system can re-derive, so it cannot support a denial.'
+  shadow_since: '2026-01-01'
+- rule_id: CLN-03-R02
+  name: Unsupported indication
+  version: 1.0.0
+  status: shadow
+  type: E
+  stage: PREPAY_ASYNC
+  population: No same-episode or lookback indication in curated policy
+  inputs: &id001
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - indication_policy.*
+  expression: No same-episode or lookback indication in curated policy
+  parameters: {}
+  exclusions:
+  - lookback
+  - accepted_indication_groups
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - episode_id
+  - scenario_id
+  score: 70
+  disposition: PREPAY_PEND
+  reason_code: UNSUPPORTED_INDICATION
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Requires procedures and a curated indication policy.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: No same-episode or lookback indication in curated policy
+  catalogue_config_exclusions: Lookback and accepted indication groups
+  catalogue_disposition: Clinical review
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-03-R03
+  name: Procedure sequence conflict
+  version: 1.0.0
+  status: shadow
+  type: E
+  stage: POSTPAY_DAILY
+  population: Prerequisite procedure/result absent or service occurs in impossible order
+  inputs: &id003
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - observation.*
+  expression: Prerequisite procedure/result absent or service occurs in impossible order
+  parameters: {}
+  exclusions:
+  - external_services
+  - data_latency
+  grouping_key: *id002
+  score: 70
+  disposition: PREPAY_PEND
+  reason_code: PROCEDURE_SEQUENCE_CONFLICT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No procedures and no results.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Prerequisite procedure/result absent or service occurs in impossible order
+  catalogue_config_exclusions: External services and data latency
+  catalogue_disposition: Pend/audit
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-03-R04
+  name: Rare pair/specialty anomaly
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Provider's rare combinations exceed specialty peer prevalence
+  inputs: &id004
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - claim_line.rendering_clinician_id
+  - claim_line.ordering_clinician_id
+  - provider.specialty
+  expression: Provider's rare combinations exceed specialty peer prevalence
+  parameters: {}
+  exclusions:
+  - minimum_volume
+  - exploratory_only
+  grouping_key: *id002
+  score: 58
+  disposition: MONITOR_ONLY
+  reason_code: RARE_PAIR_ANOMALY
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No procedure pairs and no licensed specialty.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Provider's rare combinations exceed specialty peer prevalence
+  catalogue_config_exclusions: Minimum volume; exploratory only
+  catalogue_disposition: Monitor/policy review
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

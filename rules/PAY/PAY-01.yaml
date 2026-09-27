@@ -1,0 +1,258 @@
+# =============================================================================
+# PAY-01: Exact, near and cross-submission duplicate billing · P0
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: PAY-01
+  title: Exact, near and cross-submission duplicate billing
+  priority: P0
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: PAY-01-R01
+  name: Exact line duplicate
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: claim_header within one tenant and payer
+  inputs:
+  - claim_header.payer_id
+  - claim_header.member_sk
+  - claim_header.provider_sk
+  - diagnosis.code
+  - encounter.admission_date
+  - encounter.discharge_date
+  - claim_header.gross_amount
+  expression: an earlier active claim exists with identical payer, member, provider, principal diagnosis,
+    admission date, discharge date and gross amount (tolerance cfg.exact_duplicate_amount_tolerance) and
+    neither claim is superseded or cancelled in the lineage index
+  parameters:
+    amount_tolerance: cfg.exact_duplicate_amount_tolerance
+  exclusions:
+  - replacement_or_cancelled_line
+  - valid_repeat_indicator
+  - bilateral_procedure_rule
+  - superseded_by_correction
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 90
+  disposition: REJECT
+  reason_code: EXACT_DUPLICATE
+  evidence_fields:
+  - duplicate_of_claim_sk
+  - match_key
+  - gross_amount_aed
+  - admission_date
+  - discharge_date
+  - provider_sk
+  - lineage_status
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: PARTIAL
+  data_support_reason: 'Runs at CLAIM-HEADER level, not line level: the match key is payer + member +
+    provider + primary diagnosis + admission date + discharge date + exact requested amount. Without activity
+    codes and units this is a strictly coarser key than the catalogue specifies, so it can miss a duplicated
+    line inside a differing claim. Because it is an exact, objective, hard-edit condition it retains the
+    REJECT disposition — but only the later claim in the active lineage is rejected.'
+  required_canonical_fields:
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - claim_line.service_date
+  - claim_line.units
+  implementation: pay_01_r01_exact_duplicate
+  catalogue_trigger: Same payer/member/provider/code/date/units/amount and no valid repeat indicator in
+    active lineage
+  catalogue_config_exclusions: Replacement/cancelled line, bilateral/repeat rule
+  catalogue_disposition: Reject later line
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-01-R02
+  name: Near duplicate
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_ASYNC
+  population: claim_header pairs for the same member and provider inside the duplicate window
+  inputs:
+  - claim_header.member_sk
+  - claim_header.provider_sk
+  - diagnosis.code
+  - encounter.admission_date
+  - claim_header.gross_amount
+  expression: within_days(a.admission_date, b.admission_date, cfg.duplicate_window_days) is TRUE and a.diagnosis_code
+    == b.diagnosis_code and abs(a.gross - b.gross) / max(a.gross, b.gross) <= cfg.duplicate_amount_tolerance
+  parameters:
+    window_days: cfg.duplicate_window_days
+    amount_tolerance: cfg.duplicate_amount_tolerance
+  exclusions:
+  - staged_or_repeat_service
+  - code_equivalence_map_permits
+  - planned_series_of_care
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 90
+  disposition: PREPAY_PEND
+  reason_code: NEAR_DUPLICATE
+  evidence_fields:
+  - matched_claim_sk
+  - days_apart
+  - amount_difference_aed
+  - diagnosis_code
+  - provider_sk
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: PARTIAL
+  data_support_reason: Runs on member + provider + primary diagnosis within cfg.duplicate_window_days
+    with amounts within cfg.duplicate_amount_tolerance. There is no code-equivalence map, so 'code equivalent'
+    is approximated by identical primary diagnosis, which is weaker.
+  required_canonical_fields:
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - code_equivalence_map
+  implementation: pay_01_r02_near_duplicate
+  catalogue_trigger: Same clinical service with changed claim ID, amount, units or code equivalent within
+    cfg.window
+  catalogue_config_exclusions: Staged/repeat services and code-equivalence map
+  catalogue_disposition: Pend with matched line
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-01-R03
+  name: Split-claim duplicate
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: POSTPAY_DAILY
+  population: multi-claim episodes
+  inputs:
+  - episode.claim_sks
+  - diagnosis.code
+  - claim_header.gross_amount
+  expression: episode contains two or more claims sharing the same principal diagnosis at the same provider
+  parameters: {}
+  exclusions:
+  - facility_professional_legitimate_split
+  - planned_staged_procedure
+  - cross_provider_transfer
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 90
+  disposition: PREPAY_PEND
+  reason_code: SPLIT_CLAIM_DUPLICATE
+  evidence_fields:
+  - episode_id
+  - claim_sks
+  - diagnosis_code
+  - episode_total_gross_aed
+  - crosses_providers
+  - linkage_confidence
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: PARTIAL
+  data_support_reason: Episodes are built from same-member readmission proximity, so a multi-claim episode
+    with a repeated primary diagnosis is detectable. 'Component service' is not — there are no components.
+    Disposition is downgraded to PREPAY_PEND because a correct repriced amount cannot be COMPUTED without
+    line-level detail, and permits REPRICE only where the correct payable amount is computable.
+  required_canonical_fields:
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - claim_header.claim_type (facility vs professional)
+  implementation: pay_01_r03_split_claim_duplicate
+  catalogue_trigger: Component/identical service appears across claim headers for same episode
+  catalogue_config_exclusions: Facility/professional legitimate split
+  catalogue_disposition: Reprice/pend episode
+  alternate_dispositions:
+  - PREPAY_PEND
+  governance_note: 'Disposition downgraded from REPRICE to PREPAY_PEND: the correct payable amount is
+    not computable without claim lines, and defines REPRICE as the case where it is.'
+  shadow_since: '2026-01-01'
+- rule_id: PAY-01-R04
+  name: Cross-payer duplicate
+  version: 1.0.0
+  status: shadow
+  type: H/S
+  stage: POSTPAY_DAILY
+  population: Privacy-preserving member/service match paid by multiple payers
+  inputs: &id001
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  - cross_payer_match_token
+  - coordination_of_benefits.*
+  expression: Privacy-preserving member/service match paid by multiple payers
+  parameters: {}
+  exclusions:
+  - only_authorized_data_sharing
+  - cob_data
+  - payment_status_required
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 90
+  disposition: POSTPAY_AUDIT
+  reason_code: CROSS_PAYER_DUPLICATE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Single-payer extract with no payment status. num_insurers_same_event indicates
+    that other insurers exist but carries no matching service record to compare against; that weaker fact
+    is handled by PAY-10-R01 instead.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Privacy-preserving member/service match paid by multiple payers
+  catalogue_config_exclusions: Only authorized data-sharing/COB data; payment status required
+  catalogue_disposition: Recovery/coordination case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

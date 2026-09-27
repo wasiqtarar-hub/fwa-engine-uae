@@ -1,0 +1,205 @@
+# =============================================================================
+# PAY-10: Coordination of benefits and third-party liability · P1 *  (added by the specification's own coverage audit)
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: PAY-10
+  title: Coordination of benefits and third-party liability
+  priority: P1
+  added_by_coverage_audit: true
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: PAY-10-R01
+  name: Other coverage not coordinated
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: claim where num_insurers_same_event >= cfg.cob_min_insurers
+  inputs:
+  - claim_header.num_insurers_same_event
+  - claim_header.gross_amount_aed
+  - coverage_period.*
+  expression: num_insurers_same_event >= cfg.cob_min_insurers and no coordination record exists
+  parameters:
+    min_insurers: cfg.cob_min_insurers
+  exclusions:
+  - uae_product_cob_policy_permits
+  - lawful_top_up_cover
+  - coordination_already_evidenced
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 82
+  disposition: PREPAY_PEND
+  reason_code: COB_NOT_COORDINATED
+  evidence_fields:
+  - num_insurers_same_event
+  - gross_amount_aed
+  - member_sk
+  - coordination_record_present
+  - payer_order_evaluable
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: PARTIAL
+  data_support_reason: 'num_insurers_same_event > 1 establishes that other coverage EXISTS, which is the
+    precondition the control needs, but payer ORDER cannot be evaluated: there is no primary/secondary
+    designation and no other-payer payment record. The signal is therefore raised as ''coordination evidence
+    required'', not as a wrong-order finding, and its confidence reflects that.'
+  required_canonical_fields:
+  - coverage_period.payer_order
+  - other_payer_remittance.*
+  implementation: pay_10_r01_cob_not_coordinated
+  catalogue_trigger: Active primary/other coverage exists but claim submitted with wrong payer order
+  catalogue_config_exclusions: UAE/product COB policy
+  catalogue_disposition: Pend/reprice
+  alternate_dispositions:
+  - REPRICE
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-10-R02
+  name: Multi-payer overpayment
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: POSTPAY_DAILY
+  population: Sum of payer payments + patient liability exceeds allowable charge
+  inputs: &id001
+  - other_payer_remittance.payment_amount
+  - claim_header.patient_share
+  expression: Sum of payer payments + patient liability exceeds allowable charge
+  parameters: {}
+  exclusions:
+  - lawful_top_up
+  - benefit_coordination
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 82
+  disposition: POSTPAY_AUDIT
+  reason_code: MULTI_PAYER_OVERPAYMENT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: finance
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No other-payer payment amounts and no patient liability.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Sum of payer payments + patient liability exceeds allowable charge
+  catalogue_config_exclusions: Lawful top-up and benefit coordination
+  catalogue_disposition: Recovery case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-10-R03
+  name: Accident/liability indicator missing
+  version: 1.0.0
+  status: shadow
+  type: H/E
+  stage: PREPAY_SYNC
+  population: Diagnosis/encounter suggests road/work/third-party event but liable-party fields absent
+  inputs: &id003
+  - claim_header.accident_indicator
+  - third_party_liability.*
+  expression: Diagnosis/encounter suggests road/work/third-party event but liable-party fields absent
+  parameters: {}
+  exclusions:
+  - clinical_false_positive_list
+  grouping_key: *id002
+  score: 82
+  disposition: PREPAY_PEND
+  reason_code: LIABILITY_INDICATOR_MISSING
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: There are no liable-party fields to be absent, so every trauma claim would fire.
+    S06.3 and S72.0 are present in the data but flagging all of them would be a data-gap alert, not a
+    control.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Diagnosis/encounter suggests road/work/third-party event but liable-party fields
+    absent
+  catalogue_config_exclusions: Clinical false-positive list
+  catalogue_disposition: Pend for coordination data
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-10-R04
+  name: Duplicate recovery after settlement
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: POSTPAY_DAILY
+  population: Claim paid by health payer after documented third-party settlement without offset
+  inputs: &id004
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  - third_party_settlement.*
+  expression: Claim paid by health payer after documented third-party settlement without offset
+  parameters: {}
+  exclusions:
+  - subrogation
+  - recovery_policy
+  grouping_key: *id002
+  score: 82
+  disposition: POSTPAY_AUDIT
+  reason_code: DUPLICATE_RECOVERY
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: finance
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No settlements, no payments, no subrogation records.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Claim paid by health payer after documented third-party settlement without offset
+  catalogue_config_exclusions: Subrogation/recovery policy
+  catalogue_disposition: Recovery workflow
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

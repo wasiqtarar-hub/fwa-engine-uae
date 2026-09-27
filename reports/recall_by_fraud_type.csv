@@ -1,0 +1,7 @@
+fraud_type,labelled_claims,flagged_by_claim_control,recall_claim_level,also_under_an_entity_lead,top_claim_level_controls
+bill_inflation,27,15,0.5556,8,PAY-10-R01 (11); CLN-03-R01 (3); CLN-04-R02 (2); POL-01-R04 (2)
+unnecessary_procedure,27,15,0.5556,12,PAY-10-R01 (9); CLN-04-R02 (5); CLN-03-R01 (4); ENT-02-R03 (2)
+upcoding,25,13,0.52,14,PAY-10-R01 (9); CLN-04-R02 (4); POL-01-R04 (3); CLN-05-R03 (1)
+coordinated_ring,23,14,0.6087,14,PAY-10-R01 (7); CLN-04-R02 (5); CLN-04-R01 (3); ENT-02-R03 (2)
+phantom_billing,22,13,0.5909,7,PAY-10-R01 (7); CLN-04-R01 (4); ENT-02-R03 (4); CLN-04-R02 (2)
+identity_misuse,21,6,0.2857,7,PAY-10-R01 (5); CLN-03-R01 (1)

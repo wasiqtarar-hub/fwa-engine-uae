@@ -1,0 +1,67 @@
+# -----------------------------------------------------------------------------
+# Foreign-exchange reference data.
+#
+# AED is the INTERNAL EXPOSURE CURRENCY of this system. The shipped dataset
+# (the claim extract) is denominated in
+# INR, so every monetary value crossing the adapter boundary is converted here.
+#
+# There is NO hard-coded FX literal anywhere in src/. Every conversion resolves
+# through this effective-dated table using the CLAIM SERVICE DATE (as-of join,
+# ), never today's date.
+#
+# Each rate carries `source` because parameter governance requires every configuration
+# value to record its owner, rationale, source, approval and expiry.
+# -----------------------------------------------------------------------------
+base_currency: AED
+
+rates:
+  - from_currency: INR
+    to_currency: AED
+    rate: 0.0441
+    valid_from: "2023-01-01"
+    valid_to: "2023-12-31"
+    source: "Indicative period-average INR/AED rate, detection artefact placeholder. NOT a treasury-grade rate feed."
+    owner: finance_reference_data
+    approved_by: policy_owner
+    rationale: "Period-average rate used so that 2023 exposures are not restated at a later spot rate."
+
+  - from_currency: INR
+    to_currency: AED
+    rate: 0.0440
+    valid_from: "2024-01-01"
+    valid_to: "2024-12-31"
+    source: "Indicative period-average INR/AED rate, detection artefact placeholder."
+    owner: finance_reference_data
+    approved_by: policy_owner
+    rationale: "Period-average rate for 2024 service dates."
+
+  - from_currency: INR
+    to_currency: AED
+    rate: 0.0428
+    valid_from: "2025-01-01"
+    valid_to: "2025-12-31"
+    source: "Indicative period-average INR/AED rate, detection artefact placeholder."
+    owner: finance_reference_data
+    approved_by: policy_owner
+    rationale: "Period-average rate for 2025 service dates."
+
+  - from_currency: INR
+    to_currency: AED
+    rate: 0.0425
+    valid_from: "2026-01-01"
+    valid_to: "2099-12-31"
+    source: "Indicative period-average INR/AED rate, detection artefact placeholder."
+    owner: finance_reference_data
+    approved_by: policy_owner
+    rationale: "Open-ended rate for 2026 service dates; expires at review date below."
+    expires_on: "2026-12-31"
+
+  - from_currency: AED
+    to_currency: AED
+    rate: 1.0
+    valid_from: "1900-01-01"
+    valid_to: "2099-12-31"
+    source: "Identity."
+    owner: finance_reference_data
+    approved_by: policy_owner
+    rationale: "Identity conversion for claims already denominated in the internal currency."

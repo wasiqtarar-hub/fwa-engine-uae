@@ -1,0 +1,214 @@
+# =============================================================================
+# NET-03: Provider-member collusion and inducement · P1
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: NET-03
+  title: Provider-member collusion and inducement
+  priority: P1
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: NET-03-R01
+  name: Repeated high-value dyad
+  version: 1.0.0
+  status: shadow
+  type: S/N
+  stage: MODEL_MONTHLY
+  population: member-provider pairs with more than one claim
+  inputs:
+  - claim_header.member_sk
+  - claim_header.provider_sk
+  - claim_header.gross_amount_aed
+  expression: dyad claim count >= 2 and dyad total value exceeds the robust upper bound of the dyad-value
+    distribution
+  parameters: {}
+  exclusions:
+  - chronic_disease_pathway
+  - rare_disease_pathway
+  - oncology_pathway
+  - benefit_exhaustion_limb_unavailable
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - member_sk
+  - provider_sk
+  - scenario_id
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: HIGH_VALUE_DYAD
+  evidence_fields:
+  - member_sk
+  - provider_sk
+  - dyad_claim_count
+  - dyad_total_aed
+  - dyad_value_percentile
+  - robust_residual
+  - diagnoses
+  - limbs_evaluated
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: EXECUTABLE
+  data_support_reason: Member-provider pair frequency and total value are directly computable and are
+    compared against the distribution of all dyads. The BENEFIT-EXHAUSTION limb is unavailable (no benefit
+    limits) and the signal states that only two of the three conditions were evaluated.
+  required_canonical_fields:
+  - benefit_rule_version.covered
+  - benefit_rule_version.benefit_limit
+  - benefit_rule_version.authorization_required
+  - benefit accumulator for exhaustion
+  implementation: net_03_r01_repeated_high_value_dyad
+  catalogue_trigger: Member-provider pair has abnormal frequency/value and benefit exhaustion
+  catalogue_config_exclusions: Chronic/rare-disease pathways
+  catalogue_disposition: Case evidence
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: NET-03-R02
+  name: Small closed member group
+  version: 1.0.0
+  status: shadow
+  type: N
+  stage: NETWORK_WEEKLY
+  population: Provider activity concentrates in tightly connected member/employer group
+  inputs: &id001
+  - member.employer_id
+  - member.sponsor_id
+  - provider.emirate
+  - encounter.location
+  expression: Provider activity concentrates in tightly connected member/employer group
+  parameters: {}
+  exclusions:
+  - clinic_catchment
+  - employer_onsite_care
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - community_id
+  - scenario_id
+  - period_bucket
+  score: 55
+  disposition: SIU_LEAD
+  reason_code: CLOSED_MEMBER_GROUP
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No employer or group identifiers, and no catchment data to exclude a legitimate
+    local clinic. The general community-density control NET-02-R02 covers the graph-structural part of
+    this pattern.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Provider activity concentrates in tightly connected member/employer group
+  catalogue_config_exclusions: Clinic catchment and employer onsite care
+  catalogue_disposition: SIU graph
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: NET-03-R03
+  name: Inducement signature
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Zero patient share, non-medical substitution or repetitive profitable services co-occur
+  inputs: &id003
+  - claim_header.patient_share
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - prescription_dispense.billed_product
+  - prescription_dispense.days_supply
+  - prescription_dispense.prescriber_id
+  - prescription_dispense.pharmacy_id
+  expression: Zero patient share, non-medical substitution or repetitive profitable services co-occur
+  parameters: {}
+  exclusions:
+  - approved_programs
+  grouping_key: *id002
+  score: 58
+  disposition: SIU_LEAD
+  reason_code: INDUCEMENT_SIGNATURE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: 'All three limbs need absent data: patient share, item-level substitution and service
+    codes.'
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Zero patient share, non-medical substitution or repetitive profitable services co-occur
+  catalogue_config_exclusions: Approved programs
+  catalogue_disposition: High-priority lead
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: NET-03-R04
+  name: Complaint/confirmation corroboration
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: POSTPAY_DAILY
+  population: Authenticated member evidence corroborates service/item or charge mismatch
+  inputs: &id004
+  - complaint.*
+  - member_confirmation.*
+  expression: Authenticated member evidence corroborates service/item or charge mismatch
+  parameters: {}
+  exclusions:
+  - evidence_reliability
+  grouping_key: *id002
+  score: 58
+  disposition: SIU_LEAD
+  reason_code: COMPLAINT_CORROBORATION
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No complaints or member confirmations.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Authenticated member evidence corroborates service/item or charge mismatch
+  catalogue_config_exclusions: Evidence reliability
+  catalogue_disposition: Escalate case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

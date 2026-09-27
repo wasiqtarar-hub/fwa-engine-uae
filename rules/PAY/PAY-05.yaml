@@ -1,0 +1,199 @@
+# =============================================================================
+# PAY-05: Modifier, indicator and edit-bypass abuse · P1
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: PAY-05
+  title: Modifier, indicator and edit-bypass abuse
+  priority: P1
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: PAY-05-R01
+  name: Prohibited code-indicator pair
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: Pair absent/prohibited in effective policy table
+  inputs: &id001
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - claim_line.indicator
+  expression: Pair absent/prohibited in effective policy table
+  parameters: {}
+  exclusions:
+  - local_indicator_rules
+  - never_import_foreign_rules_blindly
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 82
+  disposition: RETURN
+  reason_code: PROHIBITED_INDICATOR_PAIR
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: coding_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No modifiers or indicators in the source.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Pair absent/prohibited in effective policy table
+  catalogue_config_exclusions: Local indicator rules; never import foreign rules blindly
+  catalogue_disposition: Return/reject
+  alternate_dispositions:
+  - REJECT
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-05-R02
+  name: Required support absent
+  version: 1.0.0
+  status: shadow
+  type: E/T
+  stage: PREPAY_ASYNC
+  population: Enabling indicator requires Observation/report/narrative and artifact is missing
+  inputs: &id003
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - observation.attachment_ref
+  - document.text
+  - document.language
+  expression: Enabling indicator requires Observation/report/narrative and artifact is missing
+  parameters: {}
+  exclusions:
+  - document_arrival_latency
+  grouping_key: *id002
+  score: 70
+  disposition: PREPAY_PEND
+  reason_code: INDICATOR_SUPPORT_MISSING
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No indicators and no documents.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Enabling indicator requires Observation/report/narrative and artifact is missing
+  catalogue_config_exclusions: Document arrival latency
+  catalogue_disposition: Pend
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-05-R03
+  name: Provider use-rate outlier
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Indicator rate exceeds shrunk specialty peer percentile
+  inputs: &id004
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - claim_line.indicator
+  expression: Indicator rate exceeds shrunk specialty peer percentile
+  parameters: {}
+  exclusions:
+  - minimum_denominator
+  - facility
+  - payment_model
+  grouping_key: *id002
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: INDICATOR_RATE_OUTLIER
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No indicators, so there is no indicator rate to compare.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Indicator rate exceeds shrunk specialty peer percentile
+  catalogue_config_exclusions: Minimum denominator, facility/payment model
+  catalogue_disposition: Postpay audit
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-05-R04
+  name: Post-edit migration
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Usage spikes after new edit and disproportionately converts denials to payment
+  inputs: &id005
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  expression: Usage spikes after new edit and disproportionately converts denials to payment
+  parameters: {}
+  exclusions:
+  - rule_launch
+  - provider_education_periods
+  grouping_key: *id002
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: POST_EDIT_MIGRATION
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Requires denial outcomes and an edit-launch timeline; neither exists.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: Usage spikes after new edit and disproportionately converts denials to payment
+  catalogue_config_exclusions: Rule launch and provider education periods
+  catalogue_disposition: Payment-integrity case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

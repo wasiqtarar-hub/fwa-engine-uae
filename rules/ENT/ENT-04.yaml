@@ -1,0 +1,200 @@
+# =============================================================================
+# ENT-04: Rendering identity and clinician activity integrity · P1
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: ENT-04
+  title: Rendering identity and clinician activity integrity
+  priority: P1
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: ENT-04-R01
+  name: Missing/invalid rendering clinician
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: Service family requires rendering clinician and ID is null, facility-only, or invalid
+  inputs: &id001
+  - claim_line.rendering_clinician_id
+  - claim_line.ordering_clinician_id
+  - provider.specialty
+  expression: Service family requires rendering clinician and ID is null, facility-only, or invalid
+  parameters: {}
+  exclusions:
+  - role_requirement_by_activity
+  - encounter
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - scenario_id
+  - period_bucket
+  score: 82
+  disposition: RETURN
+  reason_code: RENDERING_CLINICIAN_MISSING
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No clinician identifiers of any kind in the source.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Service family requires rendering clinician and ID is null, facility-only, or invalid
+  catalogue_config_exclusions: Role requirement by activity/encounter
+  catalogue_disposition: Return/pend
+  alternate_dispositions:
+  - PREPAY_PEND
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: ENT-04-R02
+  name: Billing-rendering role conflict
+  version: 1.0.0
+  status: shadow
+  type: H/E
+  stage: PREPAY_SYNC
+  population: Billing/rendering/ordering/supervising combination violates explicit role rule
+  inputs: &id003
+  - claim_line.rendering_clinician_id
+  - claim_line.ordering_clinician_id
+  - provider.specialty
+  expression: Billing/rendering/ordering/supervising combination violates explicit role rule
+  parameters: {}
+  exclusions:
+  - incident_to
+  - team_care
+  - supervision_policy
+  grouping_key: *id002
+  score: 82
+  disposition: PREPAY_PEND
+  reason_code: ROLE_CONFLICT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No clinician role fields.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Billing/rendering/ordering/supervising combination violates explicit role rule
+  catalogue_config_exclusions: Incident-to/team care and supervision policy
+  catalogue_disposition: Pend with role conflict
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: ENT-04-R03
+  name: Concurrent clinician services
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: POSTPAY_DAILY
+  population: Clinician has overlapping time-dependent services beyond cfg.max_concurrency
+  inputs: &id004
+  - claim_line.rendering_clinician_id
+  - claim_line.ordering_clinician_id
+  - provider.specialty
+  - claim_line.service_start_time
+  - claim_line.service_end_time
+  expression: Clinician has overlapping time-dependent services beyond cfg.max_concurrency
+  parameters: {}
+  exclusions:
+  - team_procedures
+  - anesthesia_concurrency
+  - date_only_records
+  grouping_key: *id002
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: CLINICIAN_CONCURRENCY
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: provider_network
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No clinician identifiers and no service times. The facility-level analogue is implemented
+    instead as CLN-07-R02.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Clinician has overlapping time-dependent services beyond cfg.max_concurrency
+  catalogue_config_exclusions: Team procedures, anesthesia concurrency, date-only records
+  catalogue_disposition: Provider case with timeline
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: ENT-04-R04
+  name: Geographic or leave impossibility
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: POSTPAY_DAILY
+  population: Clinician claims during confirmed leave/out-of-country period or impossible facility travel
+  inputs: &id005
+  - claim_line.rendering_clinician_id
+  - claim_line.ordering_clinician_id
+  - provider.specialty
+  - provider.emirate
+  - encounter.location
+  - clinician_roster.leave_periods
+  expression: Clinician claims during confirmed leave/out-of-country period or impossible facility travel
+  parameters: {}
+  exclusions:
+  - timestamp
+  - source_reliability
+  grouping_key: *id002
+  score: 58
+  disposition: SIU_LEAD
+  reason_code: CLINICIAN_IMPOSSIBILITY
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No clinicians, no rosters, no geography.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: Clinician claims during confirmed leave/out-of-country period or impossible facility
+    travel
+  catalogue_config_exclusions: Timestamp/source reliability
+  catalogue_disposition: SIU lead if repeated
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

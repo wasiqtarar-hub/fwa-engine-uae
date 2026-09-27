@@ -1,0 +1,232 @@
+# =============================================================================
+# NET-04: Broker, agent and employer-group concentration · P2
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: NET-04
+  title: Broker, agent and employer-group concentration
+  priority: P2
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: NET-04-R01
+  name: Confirmed-outcome rate
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Hierarchical model shows excess validated FWA/error outcomes by originator/group
+  inputs: &id001
+  - review_outcome.validated_category
+  - review_outcome.confirmed_amount_aed
+  expression: Hierarchical model shows excess validated FWA/error outcomes by originator/group
+  parameters: {}
+  exclusions:
+  - never_use_raw_system_flags_as_label
+  - control_portfolio_mix
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - community_id
+  - scenario_id
+  - period_bucket
+  score: 48
+  disposition: POSTPAY_AUDIT
+  reason_code: ORIGINATOR_OUTCOME_RATE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P2
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: This control requires CONFIRMED REVIEW OUTCOMES as its label, and the catalogue
+    is explicit that raw system flags must never be used as one. review_outcome is empty at load, and
+    fraud_label is held-out evaluation data that no detection component may read. Implementing it against
+    fraud_label would be precisely the leakage this artefact is built to prevent. It becomes executable
+    once the artefact has accumulated real reviewer dispositions.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Hierarchical model shows excess validated FWA/error outcomes by originator/group
+  catalogue_config_exclusions: Never use raw system flags as label; control portfolio mix
+  catalogue_disposition: Distribution review
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: NET-04-R02
+  name: Provider concentration
+  version: 1.0.0
+  status: shadow
+  type: S/N
+  stage: MODEL_MONTHLY
+  population: agents with at least cfg.min_entity_opportunities claims
+  inputs:
+  - claim_header.agent_id
+  - claim_header.provider_sk
+  - claim_header.member_sk
+  expression: the agent's members are concentrated into a provider set materially smaller than the peer
+    expectation for the agent's portfolio size
+  parameters: {}
+  exclusions:
+  - employer_onsite_clinic_unverifiable
+  - geographic_catchment_unavailable
+  - small_portfolio
+  - corporate_group_structure
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - agent_id
+  - scenario_id
+  - period_bucket
+  score: 48
+  disposition: POSTPAY_AUDIT
+  reason_code: ORIGINATOR_PROVIDER_CONCENTRATION
+  evidence_fields:
+  - agent_id
+  - distinct_providers
+  - expected_distinct_providers
+  - claim_count
+  - concentration_ratio
+  - top_provider_share
+  - exposure_aed
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P2
+  data_support: PARTIAL
+  data_support_reason: Agent (originator) → provider concentration is computable and is the structural
+    content of this control. Employer groups do not exist in the source, so only the agent limb runs,
+    and the employer-clinic exclusion cannot be applied — stated on every signal.
+  required_canonical_fields:
+  - member.employer_id
+  - provider.emirate
+  - encounter.location
+  implementation: net_04_r02_originator_provider_concentration
+  catalogue_trigger: Originator/group members disproportionately use a small provider network
+  catalogue_config_exclusions: Employer clinic and geography
+  catalogue_disposition: Network case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: NET-04-R03
+  name: Early-tenure high-risk cluster
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: agents with at least cfg.min_entity_opportunities claims
+  inputs:
+  - claim_header.agent_id
+  - claim_header.days_since_policy_start
+  - claim_header.gross_amount_aed
+  - diagnosis.code
+  expression: the agent's share of early-tenure claims whose value exceeds the diagnosis-peer median materially
+    exceeds the cross-agent rate
+  parameters:
+    early_tenure_days: cfg.early_tenure_days
+  exclusions:
+  - maternity_continuity
+  - chronic_condition_continuity
+  - guaranteed_issue_product
+  - morbidity_model_unavailable
+  - never_an_individual_denial
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - agent_id
+  - scenario_id
+  - period_bucket
+  score: 48
+  disposition: POSTPAY_AUDIT
+  reason_code: EARLY_TENURE_CLUSTER
+  evidence_fields:
+  - agent_id
+  - early_tenure_high_value_count
+  - agent_claim_count
+  - agent_rate
+  - overall_rate
+  - shrunk_rate
+  - posterior_interval
+  - exposure_aed
+  - never_individual_denial_notice
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P2
+  data_support: PARTIAL
+  data_support_reason: Early tenure (cfg.early_tenure_days) and claim value both exist, so clustering
+    of high-value early-tenure claims by AGENT is computable. 'Beyond morbidity expectation' is approximated
+    by the diagnosis-peer amount distribution rather than a morbidity model. The catalogue's instruction
+    — 'review, NEVER INDIVIDUAL DENIAL' — is reproduced on the signal.
+  required_canonical_fields:
+  - member.employer_id
+  - morbidity_model.*
+  implementation: net_04_r03_early_tenure_cluster
+  catalogue_trigger: High-cost claims shortly after enrollment cluster by originator/group beyond morbidity
+    expectation
+  catalogue_config_exclusions: Maternity/chronic continuity and guaranteed issue
+  catalogue_disposition: Review, never individual denial
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: NET-04-R04
+  name: Shared identifiers/actors
+  version: 1.0.0
+  status: shadow
+  type: N
+  stage: NETWORK_WEEKLY
+  population: Broker, employer, member and provider share suspicious contact/payment/device links
+  inputs: &id003
+  - provider.owner_entity_id
+  - provider.bank_account_token
+  - provider.phone_token
+  - provider.address_token
+  expression: Broker, employer, member and provider share suspicious contact/payment/device links
+  parameters: {}
+  exclusions:
+  - lawful_data
+  - known_corporate_links
+  grouping_key: *id002
+  score: 46
+  disposition: SIU_LEAD
+  reason_code: SHARED_IDENTIFIERS_ACTORS
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P2
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No contact, payment or device identifiers.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Broker, employer, member and provider share suspicious contact/payment/device links
+  catalogue_config_exclusions: Lawful data and known corporate links
+  catalogue_disposition: SIU graph
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

@@ -1,0 +1,212 @@
+# =============================================================================
+# ENT-01: Coverage, benefit and network eligibility · P0
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: ENT-01
+  title: Coverage, benefit and network eligibility
+  priority: P0
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: ENT-01-R01
+  name: Coverage inactive
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: service_time NOT BETWEEN coverage.valid_from AND coverage.valid_to
+  inputs: &id001
+  - coverage_period.valid_to
+  - coverage_period.status
+  - benefit_rule_version.covered
+  - benefit_rule_version.benefit_limit
+  - benefit_rule_version.authorization_required
+  expression: service_time NOT BETWEEN coverage.valid_from AND coverage.valid_to
+  parameters: {}
+  exclusions:
+  - grace
+  - newborn
+  - emergency
+  - retroactive_update_policy
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - scenario_id
+  - period_bucket
+  score: 90
+  disposition: REJECT
+  reason_code: COVERAGE_INACTIVE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Coverage END date is unknown in the claim extract — inception is derivable from days_since_policy_start
+    but termination is not, so the control could only ever evaluate to 'covered'. A control that cannot
+    fail is not a control.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: service_time NOT BETWEEN coverage.valid_from AND coverage.valid_to
+  catalogue_config_exclusions: Grace/newborn/emergency and retroactive-update policy
+  catalogue_disposition: Reject/pend; show coverage interval
+  alternate_dispositions:
+  - PREPAY_PEND
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: ENT-01-R02
+  name: Benefit not covered
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: expected_benefit(activity_family, product).covered = false
+  inputs: &id003
+  - benefit_rule_version.covered
+  - benefit_rule_version.benefit_limit
+  - benefit_rule_version.authorization_required
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  expression: expected_benefit(activity_family, product).covered = false
+  parameters: {}
+  exclusions:
+  - mandatory_benefits
+  - approved_exception
+  - medical_tourism
+  - self_pay_route
+  grouping_key: *id002
+  score: 90
+  disposition: REJECT
+  reason_code: BENEFIT_NOT_COVERED
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: 'No benefit schedule exists in the source: benefit_rule_version is NOT_POPULATED,
+    so there is nothing to evaluate ''covered = false'' against.'
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: expected_benefit(activity_family, product).covered = false
+  catalogue_config_exclusions: Mandatory benefits, approved exception, medical-tourism/self-pay route
+  catalogue_disposition: Reject with benefit version
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: ENT-01-R03
+  name: Benefit limit exceeded
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: paid_or_authorized_ytd + requested_payable > benefit_limit
+  inputs: &id004
+  - benefit_rule_version.covered
+  - benefit_rule_version.benefit_limit
+  - benefit_rule_version.authorization_required
+  - remittance.decision
+  - remittance.denial_code
+  - remittance.payment_amount
+  expression: paid_or_authorized_ytd + requested_payable > benefit_limit
+  parameters: {}
+  exclusions:
+  - reset_period
+  - family
+  - member_basis
+  - reversals
+  - pending_authorizations
+  grouping_key: *id002
+  score: 90
+  disposition: REPRICE
+  reason_code: BENEFIT_LIMIT_EXCEEDED
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No benefit limits and no paid-to-date accumulator in the source.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: paid_or_authorized_ytd + requested_payable > benefit_limit
+  catalogue_config_exclusions: Reset period, family/member basis, reversals, pending authorizations
+  catalogue_disposition: Reprice or pend excess only
+  alternate_dispositions:
+  - PREPAY_PEND
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: ENT-01-R04
+  name: Network/referral violation
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: Provider/route outside effective network or required referral missing
+  inputs: &id005
+  - coverage_period.network
+  - provider_status_period.status_value
+  expression: Provider/route outside effective network or required referral missing
+  parameters: {}
+  exclusions:
+  - emergency
+  - access_gap
+  - regulator_exceptions
+  grouping_key: *id002
+  score: 90
+  disposition: REJECT
+  reason_code: NETWORK_VIOLATION
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: provider_network
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No network membership, no referral records and no provider network status in the
+    source.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: Provider/route outside effective network or required referral missing
+  catalogue_config_exclusions: Emergency, access-gap and regulator exceptions
+  catalogue_disposition: Reject/pend with failed route
+  alternate_dispositions:
+  - PREPAY_PEND
+  governance_note: ''
+  shadow_since: '2026-01-01'

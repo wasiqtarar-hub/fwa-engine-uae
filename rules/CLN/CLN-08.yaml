@@ -1,0 +1,239 @@
+# =============================================================================
+# CLN-08: Laboratory, pathology and genetic-testing integrity · P1 *  (added by the specification's own coverage audit)
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: CLN-08
+  title: Laboratory, pathology and genetic-testing integrity
+  priority: P1
+  added_by_coverage_audit: true
+  control_count: 5
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: CLN-08-R01
+  name: No qualified order/relationship
+  version: 1.0.0
+  status: shadow
+  type: E
+  stage: PREPAY_ASYNC
+  population: Test lacks valid ordering clinician or qualifying encounter/indication
+  inputs: &id001
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - claim_line.rendering_clinician_id
+  - claim_line.ordering_clinician_id
+  - provider.specialty
+  expression: Test lacks valid ordering clinician or qualifying encounter/indication
+  parameters: {}
+  exclusions:
+  - screening_programs
+  - standing_orders
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - episode_id
+  - scenario_id
+  score: 70
+  disposition: PREPAY_PEND
+  reason_code: LAB_NO_QUALIFIED_ORDER
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No tests, no ordering clinicians.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Test lacks valid ordering clinician or qualifying encounter/indication
+  catalogue_config_exclusions: Screening programs, standing orders
+  catalogue_disposition: Clinical pend
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-08-R02
+  name: Panel/component inflation
+  version: 1.0.0
+  status: shadow
+  type: H/E
+  stage: PREPAY_SYNC
+  population: Components billed separately or panel substantially exceeds ordered tests
+  inputs: &id003
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - panel_definition.*
+  expression: Components billed separately or panel substantially exceeds ordered tests
+  parameters: {}
+  exclusions:
+  - reflex_testing
+  - local_panel_rules
+  grouping_key: *id002
+  score: 82
+  disposition: REPRICE
+  reason_code: PANEL_INFLATION
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No panels, components or orders.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Components billed separately or panel substantially exceeds ordered tests
+  catalogue_config_exclusions: Reflex testing and local panel rules
+  catalogue_disposition: Reprice/pend
+  alternate_dispositions:
+  - PREPAY_PEND
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-08-R03
+  name: Absent/duplicate result
+  version: 1.0.0
+  status: shadow
+  type: E/T
+  stage: PREPAY_ASYNC
+  population: Paid test lacks result/report or identical result appears across unrelated patients
+  inputs: &id004
+  - observation.value
+  - observation.event_time
+  expression: Paid test lacks result/report or identical result appears across unrelated patients
+  parameters: {}
+  exclusions:
+  - result_latency
+  - normal_templates
+  grouping_key: *id002
+  score: 70
+  disposition: POSTPAY_AUDIT
+  reason_code: LAB_RESULT_ABSENT_OR_DUPLICATE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: the claim extract carries no observations or result values, so neither the absence of
+    a result for a paid test nor a result repeated across patients is visible.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Paid test lacks result/report or identical result appears across unrelated patients
+  catalogue_config_exclusions: Result latency and normal templates
+  catalogue_disposition: Audit/SIU lead
+  alternate_dispositions:
+  - SIU_LEAD
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-08-R04
+  name: Reference-lab/pass-through spread
+  version: 1.0.0
+  status: shadow
+  type: S/N
+  stage: MODEL_MONTHLY
+  population: Billing entity adds abnormal markup or volume while test is performed by concentrated third
+    party
+  inputs: &id005
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - claim_line.performing_entity_id
+  expression: Billing entity adds abnormal markup or volume while test is performed by concentrated third
+    party
+  parameters: {}
+  exclusions:
+  - contract
+  - permitted_reference_arrangements
+  grouping_key: *id002
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: REFERENCE_LAB_SPREAD
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No performing-entity field and no test-level amounts.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: Billing entity adds abnormal markup or volume while test is performed by concentrated
+    third party
+  catalogue_config_exclusions: Contract and permitted reference arrangements
+  catalogue_disposition: Postpay/network case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-08-R05
+  name: High-complexity/genetic test outlier
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Provider ordering/rendering rate, panel size or cost exceeds risk-adjusted peers
+  inputs: &id006
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  expression: Provider ordering/rendering rate, panel size or cost exceeds risk-adjusted peers
+  parameters: {}
+  exclusions:
+  - specialty
+  - oncology
+  - rare_disease_centres
+  grouping_key: *id002
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: GENETIC_TEST_OUTLIER
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No test identification of any kind.
+  required_canonical_fields: *id006
+  implementation: null
+  catalogue_trigger: Provider ordering/rendering rate, panel size or cost exceeds risk-adjusted peers
+  catalogue_config_exclusions: Specialty/oncology/rare-disease centres
+  catalogue_disposition: Targeted record sample
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

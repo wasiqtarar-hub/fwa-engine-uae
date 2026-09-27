@@ -1,0 +1,263 @@
+# =============================================================================
+# ANL-01: Multivariate anomaly and behavioral change · P1
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: ANL-01
+  title: Multivariate anomaly and behavioral change
+  priority: P1
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: ANL-01-R01
+  name: Robust peer composite
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: providers with at least cfg.min_entity_opportunities claims
+  inputs:
+  - amount_residual
+  - amount_per_los_day_residual
+  - pharmacy_share_residual
+  - approval_ratio_residual
+  - utilisation_velocity_residual
+  - readmission_rate_residual
+  - coding_mismatch_rate_residual
+  expression: weighted sum of robust (median/MAD) residuals across scenario-aligned features > cfg.composite_flag_threshold
+  parameters:
+    threshold: cfg.composite_flag_threshold
+    weights: cfg.composite_feature_weights
+  exclusions:
+  - insufficient_peer_evidence
+  - posterior_interval_too_wide
+  - below_minimum_denominator
+  - specialty_setting_size_peer_mismatch
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - scenario_id
+  - period_bucket
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: ROBUST_PEER_COMPOSITE
+  evidence_fields:
+  - provider_sk
+  - composite_score
+  - per_feature_contributions
+  - per_feature_values_original_units
+  - per_feature_peer_medians
+  - weights
+  - peer_level_used
+  - peer_n
+  - threshold
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: EXECUTABLE
+  data_support_reason: Fully implemented and fully auditable. This is THE BENCHMARK every model must beat
+    and the system's explainable fallback when every model is switched off. Per-feature contributions
+    are stored in ORIGINAL UNITS so a reviewer can reconstruct the score by hand from the weights in config/parameters.yaml.
+  required_canonical_fields: []
+  implementation: anl_01_r01_robust_composite
+  catalogue_trigger: Weighted robust residuals across scenario-aligned features exceed calibrated threshold
+  catalogue_config_exclusions: Specialty/setting/size peer hierarchy
+  catalogue_disposition: Explainable entity lead
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: ANL-01-R02
+  name: Self-history changepoint
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: providers with at least cfg.min_history_periods monthly periods
+  inputs:
+  - claim_header.provider_sk
+  - claim_header.service_date
+  - claim_header.gross_amount_aed
+  expression: CUSUM statistic on the monthly normalised metric crosses cfg.cusum_h, or the EWMA statistic
+    exits ±cfg.ewma_L sigma, after cfg.min_history_periods
+  parameters:
+    k: cfg.cusum_k
+    h: cfg.cusum_h
+    lambda: cfg.ewma_lambda
+    L: cfg.ewma_L
+    min_history: cfg.min_history_periods
+  exclusions:
+  - known_tariff_change_segment
+  - contract_change_segment
+  - ownership_change_segment
+  - insufficient_history
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - scenario_id
+  - period_bucket
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: SELF_HISTORY_CHANGEPOINT
+  evidence_fields:
+  - provider_sk
+  - metric
+  - change_date
+  - pre_change_mean
+  - post_change_mean
+  - change_magnitude
+  - cusum_statistic
+  - ewma_statistic
+  - confidence
+  - periods_of_history
+  - declared_segments
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: EXECUTABLE
+  data_support_reason: CUSUM and EWMA on monthly normalised provider VALUE and FREQUENCY both run, with
+    cfg.min_history_periods enforced before a change point may be declared, and pre-change mean, post-change
+    mean, change date and confidence stored for every one. MIX and DENIAL behaviour are unavailable (no
+    codes, no remittance) and the signal names which metrics were evaluated.
+  required_canonical_fields:
+  - contract.effective_dates (to segment known structural change)
+  implementation: anl_01_r02_self_history_changepoint
+  catalogue_trigger: CUSUM/Bayesian changepoint on value, mix, frequency or denial behavior
+  catalogue_config_exclusions: Segment tariff/contract/ownership changes
+  catalogue_disposition: Entity lead
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: ANL-01-R03
+  name: Unsupervised incremental anomaly
+  version: 1.0.0
+  status: shadow
+  type: M
+  stage: MODEL_MONTHLY
+  population: entities in the scoring period that were not used for training
+  inputs:
+  - model_matrix (identifiers and protected attributes excluded)
+  expression: model score exceeds the capacity-calibrated threshold AND the entity is not already surfaced
+    by ANL-01-R01 or ANL-01-R02
+  parameters:
+    contamination: cfg.isolation_forest_contamination
+    n_estimators: cfg.isolation_forest_n_estimators
+    n_neighbors: cfg.lof_n_neighbors
+  exclusions:
+  - entity_in_training_period
+  - already_flagged_by_transparent_composite
+  - model_in_shadow_status
+  - drift_breach_active
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - scenario_id
+  - period_bucket
+  score: 48
+  disposition: MONITOR_ONLY
+  reason_code: UNSUPERVISED_INCREMENTAL_ANOMALY
+  evidence_fields:
+  - provider_sk
+  - model_name
+  - model_version
+  - score
+  - score_percentile
+  - shap_top_features_original_units
+  - peer_comparison_values
+  - capacity_threshold
+  - incremental_over_composite
+  - training_period
+  - scoring_period
+  - feature_set_hash
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: EXECUTABLE
+  data_support_reason: Isolation Forest and Local Outlier Factor are trained on a strictly earlier period
+    with entity isolation, scored on a later one, explained with SHAP in original units beside the peer
+    value, and monitored for drift. The disposition is MONITOR_ONLY — the catalogue's own choice — and
+    the safety boundary makes it impossible for this control to be anything else. Whether it adds lift
+    beyond R01/R02 is DECIDED BY THE PROMOTION GATE at run time and reported honestly either way.
+  required_canonical_fields: []
+  implementation: anl_01_r03_unsupervised_incremental
+  catalogue_trigger: Benchmarked model flags entity and adds lift beyond R01/R02
+  catalogue_config_exclusions: Temporal validation, feature attribution, drift
+  catalogue_disposition: Monitor/SIU only
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: ANL-01-R04
+  name: Novel-cluster discovery
+  version: 1.0.0
+  status: shadow
+  type: M
+  stage: MODEL_MONTHLY
+  population: the residual space of entities scored in the current period
+  inputs:
+  - residual_matrix
+  expression: HDBSCAN cluster of at least cfg.novel_cluster_min_size members with coherent top residual
+    features and material aggregate exposure
+  parameters:
+    min_cluster_size: cfg.novel_cluster_min_size
+  exclusions:
+  - exploratory_only_no_production_action
+  - below_minimum_cluster_size
+  - noise_points_excluded
+  - requires_analyst_review_before_rule_authoring
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - cluster_id
+  - scenario_id
+  - period_bucket
+  score: 48
+  disposition: MONITOR_ONLY
+  reason_code: NOVEL_CLUSTER_DISCOVERY
+  evidence_fields:
+  - cluster_id
+  - cluster_size
+  - top_residual_features
+  - feature_means
+  - aggregate_exposure_aed
+  - candidate_typology_name
+  - unvalidated_hypothesis_notice
+  owner: policy_owner
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: EXECUTABLE
+  data_support_reason: HDBSCAN over the residual space produces candidate clusters for the quarterly typology
+    review. Disposition is MONITOR_ONLY only, and no production action follows until a human converts
+    a cluster into an authored rule — which itself enters the registry in shadow status and requires a
+    separate approver.
+  required_canonical_fields: []
+  implementation: anl_01_r04_novel_cluster
+  catalogue_trigger: Analyst-reviewed cluster exhibits coherent new typology and material exposure
+  catalogue_config_exclusions: Exploratory; no production action until converted to rule
+  catalogue_disposition: Rule-development candidate
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

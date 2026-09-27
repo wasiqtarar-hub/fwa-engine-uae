@@ -1,0 +1,240 @@
+# =============================================================================
+# CLN-05: Length-of-stay, admission and readmission irregularity · P1
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: CLN-05
+  title: Length-of-stay, admission and readmission irregularity
+  priority: P1
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: CLN-05-R01
+  name: LOS high/low residual
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: POSTPAY_DAILY
+  population: claim_header with non-null length of stay and a resolvable diagnosis peer group
+  inputs:
+  - encounter.length_of_stay_days
+  - diagnosis.code
+  expression: abs(robust_residual(length_of_stay_days, diagnosis_peer_group)) > cfg.los_residual_threshold
+  parameters:
+    threshold: cfg.los_residual_threshold
+  exclusions:
+  - transfer_case
+  - death_in_hospital
+  - icu_stay
+  - outlier_payment_case
+  - insufficient_peer_evidence
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - episode_id
+  - scenario_id
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: LOS_RESIDUAL
+  evidence_fields:
+  - length_of_stay_days
+  - peer_median_los
+  - peer_mad
+  - robust_residual
+  - direction
+  - diagnosis_code
+  - peer_level_used
+  - peer_n
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: EXECUTABLE
+  data_support_reason: Runs as specified. Length of stay and primary diagnosis both exist, so the diagnosis-peer
+    robust residual is exactly the control the catalogue describes. Risk adjustment is by diagnosis rather
+    than DRG, which the catalogue permits ('DRG/diagnosis').
+  required_canonical_fields:
+  - drg_grouper.*
+  - encounter.icu_flag
+  - member.death_date
+  implementation: cln_05_r01_los_residual
+  catalogue_trigger: LOS outside risk-adjusted DRG/diagnosis prediction interval
+  catalogue_config_exclusions: Transfers, deaths, ICU and outlier payment
+  catalogue_disposition: Utilization review
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-05-R02
+  name: Same/related readmission
+  version: 1.0.0
+  status: shadow
+  type: E/S
+  stage: POSTPAY_DAILY
+  population: claim_header with a non-null discharge_readmit_gap_days
+  inputs:
+  - claim_header.discharge_readmit_gap_days
+  - claim_header.gross_amount_aed
+  - diagnosis.code
+  expression: discharge_readmit_gap_days < cfg.readmit_window_days
+  parameters:
+    window_days: cfg.readmit_window_days
+  exclusions:
+  - planned_or_staged_care
+  - unrelated_trauma
+  - obstetric_pathway
+  - oncology_treatment_cycle
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 70
+  disposition: POSTPAY_AUDIT
+  reason_code: RELATED_READMISSION
+  evidence_fields:
+  - discharge_readmit_gap_days
+  - readmit_window_days
+  - gross_amount_aed
+  - diagnosis_code
+  - provider_sk
+  - not_a_fraud_label_notice
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: EXECUTABLE
+  data_support_reason: 'Runs as specified: discharge_readmit_gap_days is present for every claim and is
+    compared against cfg.readmit_window_days, with the episode''s payment impact attached. The catalogue''s
+    own words — ''Episode review, NOT FRAUD LABEL'' — are reproduced on the signal so a reviewer sees
+    them.'
+  required_canonical_fields:
+  - diagnosis relatedness map (to distinguish related from unrelated readmission)
+  implementation: cln_05_r02_related_readmission
+  catalogue_trigger: Related admission inside cfg.readmit_days with payment impact
+  catalogue_config_exclusions: Planned/staged care, unrelated trauma
+  catalogue_disposition: Episode review, not fraud label
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-05-R03
+  name: Discharge-readmit split
+  version: 1.0.0
+  status: shadow
+  type: H/E
+  stage: POSTPAY_DAILY
+  population: multi-claim episodes at a single provider
+  inputs:
+  - episode.claim_sks
+  - encounter.discharge_date
+  - encounter.admission_date
+  - claim_header.gross_amount_aed
+  expression: episode contains two or more claims at the SAME provider with a gap of 0 to cfg.readmit_window_days
+    days between discharge and next admission
+  parameters:
+    window_days: cfg.readmit_window_days
+  exclusions:
+  - cross_provider_transfer
+  - genuine_clinical_deterioration
+  - planned_staged_procedure
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 82
+  disposition: PREPAY_PEND
+  reason_code: DISCHARGE_READMIT_SPLIT
+  evidence_fields:
+  - episode_id
+  - claim_sks
+  - gap_days
+  - combined_gross_aed
+  - provider_sk
+  - linkage_reason
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: PARTIAL
+  data_support_reason: Multi-claim episodes at the same provider with a short gap are detectable. The
+    disposition is PENDED rather than REPRICED because the correct combined payable amount is not computable
+    without a payment policy or tariff, and reserves REPRICE for the case where it is.
+  required_canonical_fields:
+  - payment_policy.continuous_stay_rule
+  - encounter.transfer_indicator
+  implementation: cln_05_r03_discharge_readmit_split
+  catalogue_trigger: Two stays likely constitute one continuous episode under payment policy
+  catalogue_config_exclusions: Transfers and genuine clinical deterioration
+  catalogue_disposition: Reprice/pend
+  alternate_dispositions:
+  - REPRICE
+  governance_note: Catalogue says 'Reprice/pend'. The pend limb is used because repricing requires a payment
+    policy this dataset does not contain.
+  shadow_since: '2026-01-01'
+- rule_id: CLN-05-R04
+  name: Admission-rate outlier
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Provider admits unusually high share of comparable presentations
+  inputs: &id001
+  - encounter.encounter_type (outpatient presentations)
+  - encounter.observation_status
+  expression: Provider admits unusually high share of comparable presentations
+  parameters: {}
+  exclusions:
+  - severity
+  - referral_mix
+  - observation_status
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - episode_id
+  - scenario_id
+  score: 58
+  disposition: POSTPAY_AUDIT
+  reason_code: ADMISSION_RATE_OUTLIER
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: The denominator — comparable PRESENTATIONS — does not exist. the claim extract contains
+    only admitted inpatient claims, so the admission RATE is 100% for every provider by construction.
+    Computing it anyway would produce a number that means nothing.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Provider admits unusually high share of comparable presentations
+  catalogue_config_exclusions: Severity, referral mix and observation status
+  catalogue_disposition: Postpay audit
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

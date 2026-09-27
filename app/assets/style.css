@@ -1,0 +1,434 @@
+/* =============================================================================
+   uae-fwa-engine — one stylesheet, injected on every render
+   =============================================================================
+   The design bar here is not decoration: a reviewer must be able to open a case
+   and reach a defensible disposition in under a minute, without training.
+   Everything below serves that.
+
+   Principles applied here:
+   - A restrained palette with MEANING attached. Disposition colour is
+     consistent on every page, and colour is never the sole carrier of meaning —
+     every coloured chip also carries its label in text.
+   - AI panels are visually distinct from evidence panels: different background,
+     a dashed border, an icon and an explicit label. A reviewer must never have
+     to work out whether they are reading evidence or a generated summary.
+   - Legible in BOTH light and dark Streamlit themes. Every colour is a token,
+     and the dark values live in `style-dark.css`, which is appended only when
+     Streamlit reports that its own theme is dark. Nothing here asks the
+     operating system what it prefers: that is a different question from what
+     theme the application is running, and answering the wrong one is what
+     paints dark text on a dark background.
+   - Accessible contrast. Text on chips is checked against its own background
+     rather than against the page.
+
+   The visual language is editorial rather than dashboard: white ground, a
+   serif for display headings, generous whitespace, and structure carried by
+   rules and spacing instead of boxes inside boxes. A tool whose job is to make
+   a reader weigh evidence should read like a document, not like a cockpit.
+
+   The serif is a SYSTEM stack, not a web font. This artefact must run with no
+   network access, so a Google Fonts link would either be blocked outright or
+   silently fall back — and a layout tuned against a font that never arrives is
+   a layout nobody has actually seen.
+   ========================================================================== */
+
+:root {
+    --fwa-bg:            #ffffff;
+    --fwa-surface:       #fbf9fa;
+    --fwa-surface-alt:   #f5f1f3;
+    --fwa-fg:            #211d24;
+    --fwa-fg-muted:      #6b6470;
+    --fwa-line:          #ece7ea;
+    --fwa-line-strong:   #d8d0d5;
+    --fwa-accent:        #6d3560;
+    --fwa-accent-soft:   #f6eef4;
+
+    /* Disposition palette, in severity order */
+    --d-reject:      #a32d2d;
+    --d-reprice:     #9d6210;
+    --d-return:      #55606c;
+    --d-pend:        #1f5f9c;
+    --d-audit:       #6b4796;
+    --d-siu:         #8e2b52;
+    --d-education:   #1c6f63;
+    --d-monitor:     #6c7580;
+
+    --fwa-ok:        #1c6f4a;
+    --fwa-warn:      #9d6210;
+    --fwa-bad:       #a32d2d;
+
+    --fwa-ai-bg:     #f4f1fa;
+    --fwa-ai-line:   #7d6cb0;
+
+    --fwa-radius:    12px;
+    --fwa-gap:       1rem;
+
+    --fwa-serif: ui-serif, Georgia, "Iowan Old Style", "Palatino Linotype",
+                 "Book Antiqua", "Times New Roman", serif;
+    --fwa-sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto,
+                "Helvetica Neue", sans-serif;
+    --fwa-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* --- typography and page frame ------------------------------------------ */
+
+html, body, [class*="st-"], .stApp { font-family: var(--fwa-sans); }
+
+.stApp { background: var(--fwa-bg); }
+
+/* Streamlit pins its own toolbar — the three-dot menu, the running indicator —
+   to the top-right of the viewport, ABOVE the page content. With the default
+   top padding the first control on a page sits underneath it, so the button a
+   page most wants you to press is the one you cannot press. The padding below
+   is set to clear the toolbar's height and no more: enough that nothing is
+   ever covered, little enough that the page does not open on a band of empty
+   white. */
+.block-container {
+    padding-top: 3.2rem;
+    padding-bottom: 4.5rem;
+    max-width: 76rem;
+}
+
+header[data-testid="stHeader"] {
+    background: transparent;
+    height: 2.6rem;
+}
+
+/* Scoped to .stApp, not bare element selectors. Streamlit colours its own
+   headings through an emotion class, which outranks a bare `h1 { color: … }`
+   — so the token below has to be at least as specific or it simply loses, and
+   a heading loses its colour while the paragraph beneath it keeps one. */
+.stApp h1, .stApp h2, .stApp h3, .stApp h4,
+.stApp [data-testid="stMarkdownContainer"] h1,
+.stApp [data-testid="stMarkdownContainer"] h2,
+.stApp [data-testid="stMarkdownContainer"] h3,
+.stApp [data-testid="stMarkdownContainer"] h4 { color: var(--fwa-fg); }
+.stApp h1, .stApp h2, .stApp h3 {
+    font-family: var(--fwa-serif); font-weight: 600; letter-spacing: -0.005em;
+}
+h1 { font-size: 2.05rem; line-height: 1.15; margin-bottom: .35rem; }
+h2 { font-size: 1.38rem; margin-top: 2.4rem; margin-bottom: .5rem; }
+h3 { font-size: 1.08rem; margin-top: 1.6rem; }
+h4 { font-family: var(--fwa-sans); font-size: .95rem; font-weight: 640; }
+
+/* A hairline under every section heading. It is what carries the structure of
+   a long page once the boxes are taken away. */
+h2 { padding-bottom: .45rem; border-bottom: 1px solid var(--fwa-line); }
+
+.stApp p, .stApp li, .stApp [data-testid="stMarkdownContainer"] {
+    color: var(--fwa-fg); line-height: 1.62;
+}
+/* Streamlit's own body colour comes from its theme. When the two themes agree
+   this is a no-op; it is here so that they cannot come apart again. */
+.stApp, body { color: var(--fwa-fg); }
+
+.stApp a { color: var(--fwa-accent); }
+
+/* --- the persistent dataset strip ---------------------------------------- */
+
+.fwa-dataset {
+    display: flex; align-items: baseline; gap: .6rem; flex-wrap: wrap;
+    border-left: 3px solid var(--fwa-accent);
+    padding: .1rem 0 .1rem .75rem;
+    margin: .1rem 0 1.25rem 0;
+    font-size: .82rem;
+}
+.fwa-dataset .fwa-dataset-name {
+    font-weight: 640; color: var(--fwa-fg); font-family: var(--fwa-mono);
+    font-size: .8rem;
+}
+.fwa-dataset .fwa-dataset-meta { color: var(--fwa-fg-muted); }
+
+.fwa-sidebar-dataset {
+    margin-top: 1rem; padding-top: .75rem; border-top: 1px solid var(--fwa-line);
+    font-size: .72rem; color: var(--fwa-fg-muted); line-height: 1.5;
+}
+.fwa-sidebar-dataset span { display: block; }
+.fwa-sidebar-dataset span:first-child {
+    text-transform: uppercase; letter-spacing: .07em; font-size: .64rem;
+}
+.fwa-sidebar-dataset strong {
+    display: block; color: var(--fwa-fg); font-family: var(--fwa-mono);
+    font-size: .73rem; word-break: break-all;
+}
+
+.fwa-boundary {
+    border-top: 1px solid var(--fwa-line);
+    border-bottom: 1px solid var(--fwa-line);
+    padding: .7rem 0;
+    margin: 0 0 1.4rem 0;
+    font-size: .82rem;
+    line-height: 1.6;
+    color: var(--fwa-fg-muted);
+}
+.fwa-boundary strong { color: var(--fwa-accent); font-weight: 640; }
+
+/* --- session banner ------------------------------------------------------ */
+
+.fwa-session {
+    display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+    font-size: .75rem; color: var(--fwa-fg-muted);
+    padding-bottom: .5rem; margin-bottom: 1.4rem;
+    border-bottom: 1px solid var(--fwa-line);
+}
+.fwa-session .fwa-who { color: var(--fwa-fg); font-weight: 640; }
+
+/* --- cards --------------------------------------------------------------- */
+
+.fwa-card {
+    background: var(--fwa-surface);
+    border-radius: var(--fwa-radius);
+    padding: 1.1rem 1.25rem;
+    margin-bottom: .8rem;
+}
+.fwa-card h4 { margin: 0 0 .45rem 0; font-size: .95rem; }
+.fwa-card p  { margin: .3rem 0; color: var(--fwa-fg); font-size: .89rem; line-height: 1.6; }
+.fwa-card .fwa-sub { color: var(--fwa-fg-muted); font-size: .81rem; }
+
+.fwa-verdict {
+    background: var(--fwa-surface);
+    border-radius: var(--fwa-radius);
+    border-left: 3px solid var(--fwa-accent);
+    padding: 1.2rem 1.35rem;
+    margin-bottom: 1.1rem;
+}
+.fwa-verdict .fwa-line {
+    font-family: var(--fwa-serif);
+    font-size: 1.12rem; line-height: 1.5; color: var(--fwa-fg); margin-bottom: .55rem;
+}
+.fwa-verdict .fwa-ask {
+    font-size: .88rem; color: var(--fwa-fg-muted); border-top: 1px solid var(--fwa-line);
+    padding-top: .6rem; margin-top: .7rem;
+}
+
+/* --- chips --------------------------------------------------------------- */
+
+.fwa-chip {
+    display: inline-flex; align-items: center; gap: .35rem;
+    border-radius: 999px; padding: .15rem .6rem;
+    font-size: .74rem; font-weight: 620; letter-spacing: .012em;
+    border: 1px solid currentColor; white-space: nowrap;
+}
+.fwa-chip::before {
+    content: ""; width: .42rem; height: .42rem; border-radius: 50%;
+    background: currentColor; flex: 0 0 auto;
+}
+
+.d-REJECT              { color: var(--d-reject); }
+.d-REPRICE             { color: var(--d-reprice); }
+.d-RETURN              { color: var(--d-return); }
+.d-PREPAY_PEND         { color: var(--d-pend); }
+.d-POSTPAY_AUDIT       { color: var(--d-audit); }
+.d-SIU_LEAD            { color: var(--d-siu); }
+.d-PROVIDER_EDUCATION  { color: var(--d-education); }
+.d-MONITOR_ONLY        { color: var(--d-monitor); }
+
+.p-P1 { color: var(--d-reject); }
+.p-P2 { color: var(--d-reprice); }
+.p-P3 { color: var(--d-pend); }
+.p-P4 { color: var(--d-education); }
+.p-P5 { color: var(--d-monitor); }
+
+.s-ok   { color: var(--fwa-ok); }
+.s-warn { color: var(--fwa-warn); }
+.s-bad  { color: var(--fwa-bad); }
+.s-neutral { color: var(--fwa-fg-muted); }
+
+.fwa-tag {
+    display: inline-block; border-radius: 5px; padding: .08rem .42rem;
+    font-family: var(--fwa-mono);
+    font-size: .72rem; background: var(--fwa-surface-alt);
+    color: var(--fwa-fg-muted);
+}
+
+/* --- the AI panel — deliberately NOT like an evidence panel ------------- */
+
+.fwa-ai {
+    background: var(--fwa-ai-bg);
+    border: 1px dashed var(--fwa-ai-line);
+    border-radius: var(--fwa-radius);
+    padding: 1rem 1.15rem;
+    margin: .7rem 0 1.1rem 0;
+}
+.fwa-ai .fwa-ai-label {
+    display: inline-flex; align-items: center; gap: .4rem;
+    font-size: .7rem; font-weight: 700; letter-spacing: .07em;
+    text-transform: uppercase; color: var(--fwa-ai-line); margin-bottom: .55rem;
+}
+.fwa-ai .fwa-ai-body {
+    font-size: .89rem; line-height: 1.62; color: var(--fwa-fg); white-space: pre-wrap;
+}
+.fwa-ai .fwa-ai-foot {
+    margin-top: .7rem; padding-top: .55rem; border-top: 1px dashed var(--fwa-ai-line);
+    font-size: .77rem; color: var(--fwa-fg-muted);
+}
+
+/* --- metric tiles: borderless, on a hairline ---------------------------- */
+
+.fwa-tiles {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+    gap: 1.3rem 1.8rem;
+    align-items: start;
+    border-top: 1px solid var(--fwa-line);
+    border-bottom: 1px solid var(--fwa-line);
+    padding: 1rem 0 1.05rem 0;
+    margin: .3rem 0 1.4rem 0;
+}
+.fwa-tile { padding: 0; }
+.fwa-tile .fwa-tile-label {
+    font-size: .7rem; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--fwa-fg-muted); margin-bottom: .35rem;
+}
+.fwa-tile .fwa-tile-value {
+    font-family: var(--fwa-serif);
+    font-size: 1.72rem; font-weight: 600; color: var(--fwa-fg);
+    font-variant-numeric: tabular-nums; line-height: 1.1;
+}
+.fwa-tile .fwa-tile-note {
+    font-size: .74rem; color: var(--fwa-fg-muted); margin-top: .35rem; line-height: 1.45;
+}
+
+/* --- evidence and arithmetic -------------------------------------------- */
+
+.fwa-mono {
+    font-family: var(--fwa-mono);
+    font-size: .79rem; line-height: 1.68; white-space: pre;
+    background: var(--fwa-surface); border-radius: 10px;
+    padding: .85rem 1rem; overflow-x: auto; color: var(--fwa-fg);
+}
+
+.fwa-span {
+    background: var(--fwa-accent-soft); border-left: 3px solid var(--fwa-accent);
+    padding: .6rem .85rem; border-radius: 0 10px 10px 0; font-size: .87rem;
+    line-height: 1.6; color: var(--fwa-fg); margin: .45rem 0;
+}
+
+.fwa-note {
+    font-size: .81rem; color: var(--fwa-fg-muted); line-height: 1.58;
+    border-left: 2px solid var(--fwa-line-strong); padding-left: .8rem; margin: .7rem 0;
+}
+
+.fwa-empty {
+    border: 1px dashed var(--fwa-line-strong); border-radius: var(--fwa-radius);
+    padding: 2.4rem 1.5rem; text-align: center; color: var(--fwa-fg-muted);
+    background: var(--fwa-surface);
+}
+.fwa-empty .fwa-empty-title {
+    font-family: var(--fwa-serif); font-size: 1.1rem; font-weight: 600;
+    color: var(--fwa-fg); margin-bottom: .4rem;
+}
+
+/* --- Streamlit surfaces -------------------------------------------------- */
+
+section[data-testid="stSidebar"] {
+    background: var(--fwa-surface);
+    border-right: 1px solid var(--fwa-line);
+}
+section[data-testid="stSidebar"] .block-container { padding-top: 1.2rem; }
+section[data-testid="stSidebar"] h3 { font-size: .98rem; margin-top: .2rem; }
+
+/* Navigation: the active page is marked with a rule, not a filled pill. */
+section[data-testid="stSidebarNav"] a,
+section[data-testid="stSidebar"] a[data-testid="stSidebarNavLink"] {
+    border-radius: 6px;
+}
+section[data-testid="stSidebar"] a[aria-current="page"],
+section[data-testid="stSidebar"] li a[aria-current="true"] {
+    background: transparent !important;
+    box-shadow: inset 2px 0 0 var(--fwa-accent);
+    font-weight: 640;
+}
+
+div[data-testid="stExpander"] details {
+    border: 1px solid var(--fwa-line) !important;
+    border-radius: var(--fwa-radius) !important;
+    background: var(--fwa-surface) !important;
+}
+div[data-testid="stExpander"] summary { font-size: .87rem; font-weight: 560; }
+
+div[data-testid="stDataFrame"] { border: 1px solid var(--fwa-line); border-radius: 10px; }
+
+div[data-baseweb="tab-list"] { gap: 1.4rem; border-bottom: 1px solid var(--fwa-line); }
+button[data-baseweb="tab"] { padding-left: 0; padding-right: 0; }
+button[data-baseweb="tab"][aria-selected="true"] { color: var(--fwa-accent); }
+
+.stButton > button {
+    border-radius: 8px; font-weight: 570; border: 1px solid var(--fwa-line-strong);
+}
+.stButton > button[kind="primary"] {
+    background: var(--fwa-accent); border-color: var(--fwa-accent); color: #fff;
+}
+.stButton > button[kind="primary"]:hover { filter: brightness(1.12); }
+
+hr { border-color: var(--fwa-line); }
+
+/* One primary action per screen: the disposition form is visually the obvious
+   next thing to do. */
+.fwa-primary-action,
+.st-key-fwa_primary_action {
+    border-left: 3px solid var(--fwa-accent);
+    background: var(--fwa-accent-soft);
+    border-radius: 0 var(--fwa-radius) var(--fwa-radius) 0;
+    padding: 1.1rem 1.25rem; margin-top: 1.2rem;
+}
+.fwa-primary-action h4,
+.st-key-fwa_primary_action h4 { margin-top: 0; color: var(--fwa-accent); }
+
+/* --- guided demo --------------------------------------------------------- */
+
+.fwa-guide {
+    border-left: 3px solid var(--fwa-accent);
+    background: var(--fwa-accent-soft);
+    border-radius: 0 var(--fwa-radius) var(--fwa-radius) 0;
+    padding: .8rem 1rem; margin: .6rem 0 1rem 0; font-size: .86rem; line-height: 1.6;
+}
+.fwa-guide .fwa-guide-step {
+    font-size: .68rem; text-transform: uppercase; letter-spacing: .08em;
+    font-weight: 700; color: var(--fwa-accent); display: block; margin-bottom: .28rem;
+}
+
+/* --- screenshots in the user guide --------------------------------------- */
+
+.fwa-shot-caption {
+    font-size: .78rem; color: var(--fwa-fg-muted); margin: .35rem 0 1.5rem 0;
+    padding-left: .75rem; border-left: 2px solid var(--fwa-line-strong); line-height: 1.55;
+}
+
+@media (max-width: 640px) {
+    .block-container { padding-left: 1rem; padding-right: 1rem; padding-top: 3.4rem; }
+    .fwa-tiles { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1rem; }
+    h1 { font-size: 1.62rem; }
+}
+
+/* --- offline icon fallback ------------------------------------------------
+   Streamlit renders its own control icons as Material Symbols LIGATURES. When
+   that icon font is unavailable — which is exactly the case this artefact is
+   built for, since it must run with no network access — the browser falls back
+   to rendering the ligature NAME as text, so "visibility" and "arrow_right"
+   leak next to form controls. Clipping the glyph box keeps the layout intact
+   either way: with the font present the icon fits, without it the stray text
+   is contained instead of overlapping the label beside it. */
+
+span[data-testid="stIconMaterial"],
+span[data-testid="stExpanderIcon"],
+.material-icons, .material-symbols-rounded, .material-symbols-outlined {
+    display: inline-block;
+    width: 1.25em;
+    max-height: 1.35em;
+    overflow: hidden;
+    vertical-align: middle;
+    line-height: 1.3;
+    /* Clipping alone still leaves the first two letters of the ligature name
+       showing — an expander labelled "ke Priority score" rather than
+       "▸ Priority score". Collapsing the text to zero and drawing the glyph
+       from a pseudo-element gives the same affordance with no font at all. */
+    font-size: 0 !important;
+}
+
+details > summary span[data-testid="stExpanderIcon"]::after {
+    content: "\25B8";                 /* ▸ collapsed */
+    font-size: .8rem; color: var(--fwa-fg-muted);
+}
+details[open] > summary span[data-testid="stExpanderIcon"]::after {
+    content: "\25BE";                 /* ▾ expanded */
+}

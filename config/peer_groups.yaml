@@ -1,0 +1,164 @@
+# =============================================================================
+# PEER-GROUP HIERARCHY
+# =============================================================================
+# "Providers are compared to peers through the six-level hierarchy the
+#  specification defines: activity/code family, specialty, encounter/facility
+#  type, payment-method/contract family, geography, and provider size/volume
+#  band. A granular peer group that is too sparse to support a stable estimate
+#  BACKS OFF to its parent level, and the peer_level_used is ALWAYS RECORDED."
+#                                          — the peer-comparison design
+#
+# Levels are ordered MOST GRANULAR FIRST. The peer service walks this list from
+# the top, and the first level whose group satisfies `cfg.min_peer_group_n`
+# wins. Whichever level is used is stamped onto the signal as `peer_level_used`
+# — reproducibility depends on it, and the UI shows it beside every peer
+# comparison.
+#
+# `availability` is HONEST about this dataset. Where a canonical level has no
+# column in the claim extract it is marked NOT_POPULATED and is SKIPPED at runtime
+# rather than silently substituted. The rule is:
+# populate the canonical model to the depth the data allows and mark the rest.
+# =============================================================================
+
+hierarchy:
+
+  - level: 1
+    canonical_name: activity_code_family
+    dataset_mapping: diagnosis_primary
+    description: >
+      Canonical level 1 is the activity/code family. the claim extract is claim-header
+      level with no activity codes, so the finest available proxy is the primary
+      ICD-10 diagnosis code (20 distinct values). This is a PROXY and the
+      coverage matrix says so: a real Shafafiya/eClaimLink feed would group by
+      CPT/HCPCS activity family, which is a materially finer partition.
+    availability: PROXY
+    proxy_note: "ICD-10 primary diagnosis stands in for activity/code family. 20 groups over 5,000 claims."
+
+  - level: 2
+    canonical_name: specialty
+    dataset_mapping: diagnosis_chapter
+    description: >
+      Canonical level 2 is provider specialty. the claim extract has no provider
+      specialty field, so the ICD-10 chapter of the primary diagnosis is used as
+      a service-line proxy (cardiovascular, oncology, obstetric, and so on).
+      A provider that treats several chapters therefore appears in several peer
+      groups, which is correct for a service-line comparison but is NOT the same
+      thing as a licensed specialty.
+    availability: PROXY
+    proxy_note: "ICD-10 chapter stands in for specialty. Derived, not sourced."
+
+  - level: 3
+    canonical_name: encounter_facility_type
+    dataset_mapping: policy_type
+    description: >
+      Canonical level 3 is encounter/facility type (inpatient, day case,
+      outpatient, ICU). the claim extract has no encounter-type field. `policy_type`
+      (individual / family / group_corporate) is used as the coarse
+      case-mix-adjacent partition at this level, which is an ADMITTEDLY WEAK
+      substitute and is classified as such.
+    availability: WEAK_PROXY
+    proxy_note: "policy_type is a product partition, not an encounter-type partition. Flagged in control_coverage_matrix.csv."
+
+  - level: 4
+    canonical_name: payment_method_contract_family
+    dataset_mapping: tpa
+    description: >
+      Canonical level 4 is the payment-method/contract family. The TPA
+      administering the claim (10 distinct) is the closest available contract
+      partition and is a defensible one: different TPAs adjudicate differently,
+      which is exactly the confound this level exists to remove before a
+      provider is compared to a peer.
+    availability: PROXY
+    proxy_note: "TPA stands in for contract family."
+
+  - level: 5
+    canonical_name: geography
+    dataset_mapping: null
+    description: >
+      Canonical level 5 is geography (emirate, catchment). the claim extract contains
+      NO geographic field of any kind. This level is NOT_POPULATED. It is not
+      approximated, not imputed and not silently dropped: the peer service
+      records that level 5 was skipped, the coverage matrix names the canonical
+      fields that would populate it, and every control whose logic depends on
+      geography (ENT-02-R03 travel impossibility, ENT-02-R04 geographic
+      clustering, NET-01-R01 geographic peer comparison, PHR-04-R01) is
+      classified NOT_EXECUTABLE_ON_THIS_DATASET rather than implemented against
+      a fabricated location.
+    availability: NOT_POPULATED
+    required_canonical_fields: ["provider.emirate", "provider.catchment_area", "encounter.facility_location"]
+
+  - level: 6
+    canonical_name: provider_volume_band
+    dataset_mapping: provider_volume_band
+    description: >
+      Canonical level 6 is provider size/volume band. Derived from the claim
+      count per hospital_id over the reference period and cut into the bands
+      below. This is the level that makes the shrinkage demonstration
+      possible — a 5-claim provider and a 5,000-claim provider land in different
+      bands and are shrunk toward their own band's prior.
+    availability: DERIVED
+    bands:
+      - { name: micro, min_claims: 0, max_claims: 9 }
+      - { name: small, min_claims: 10, max_claims: 24 }
+      - { name: medium, min_claims: 25, max_claims: 49 }
+      - { name: large, min_claims: 50, max_claims: 99 }
+      - { name: major, min_claims: 100, max_claims: 999999 }
+
+# -----------------------------------------------------------------------------
+# Back-off order actually used at runtime.
+#
+# The peer service tries the most specific COMBINATION first and removes one
+# level at a time until the group is large enough (cfg.min_peer_group_n) or the
+# list is exhausted. Level 5 never appears because it is NOT_POPULATED.
+#
+# If every combination is too sparse, the entity is NOT flagged on a small-group
+# estimate: it is reported as `INSUFFICIENT_PEER_EVIDENCE`, which is a distinct
+# outcome from "not anomalous".
+# -----------------------------------------------------------------------------
+backoff_order:
+  - name: L1_L2_L4_L6
+    levels: [activity_code_family, specialty, payment_method_contract_family, provider_volume_band]
+  - name: L1_L2_L6
+    levels: [activity_code_family, specialty, provider_volume_band]
+  - name: L1_L2
+    levels: [activity_code_family, specialty]
+  - name: L1
+    levels: [activity_code_family]
+  - name: L2
+    levels: [specialty]
+  - name: GLOBAL
+    levels: []
+
+# -----------------------------------------------------------------------------
+# ICD-10 chapter map for the 20 codes present in the claim extract.
+# Used to derive the `specialty` (level 2) proxy. Effective-dated like every
+# other reference table: the map itself is versioned so a peer comparison run in
+# 2026 can be reproduced exactly in 2028 (the reproducibility requirement).
+# -----------------------------------------------------------------------------
+icd_chapter_map:
+  version: "1.0.0"
+  valid_from: "1900-01-01"
+  valid_to: "2099-12-31"
+  source: "ICD-10 chapter assignment by code prefix. Prepared for this artefact."
+  owner: coding_policy
+  codes:
+    C34.9: { chapter: "II_neoplasms", label: "Neoplasms" }
+    Z51.1: { chapter: "II_neoplasms", label: "Neoplasms (chemotherapy encounter)" }
+    E11.9: { chapter: "IV_endocrine_metabolic", label: "Endocrine, nutritional and metabolic" }
+    G35: { chapter: "VI_nervous_system", label: "Nervous system" }
+    H26.9: { chapter: "VII_eye_adnexa", label: "Eye and adnexa" }
+    I10: { chapter: "IX_circulatory", label: "Circulatory system" }
+    I21.9: { chapter: "IX_circulatory", label: "Circulatory system" }
+    I63.9: { chapter: "IX_circulatory", label: "Circulatory system" }
+    J18.9: { chapter: "X_respiratory", label: "Respiratory system" }
+    J44.1: { chapter: "X_respiratory", label: "Respiratory system" }
+    K35.2: { chapter: "XI_digestive", label: "Digestive system" }
+    K57.3: { chapter: "XI_digestive", label: "Digestive system" }
+    K80.2: { chapter: "XI_digestive", label: "Digestive system" }
+    K92.1: { chapter: "XI_digestive", label: "Digestive system" }
+    M16.9: { chapter: "XIII_musculoskeletal", label: "Musculoskeletal and connective tissue" }
+    N18.9: { chapter: "XIV_genitourinary", label: "Genitourinary system" }
+    N20.0: { chapter: "XIV_genitourinary", label: "Genitourinary system" }
+    O80: { chapter: "XV_pregnancy_childbirth", label: "Pregnancy, childbirth and the puerperium" }
+    S06.3: { chapter: "XIX_injury_poisoning", label: "Injury, poisoning and external causes" }
+    S72.0: { chapter: "XIX_injury_poisoning", label: "Injury, poisoning and external causes" }

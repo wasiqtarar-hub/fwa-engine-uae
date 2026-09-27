@@ -1,0 +1,203 @@
+# =============================================================================
+# PHR-04: Prescriber-pharmacy steering and reciprocal concentration · P1
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: PHR-04
+  title: Prescriber-pharmacy steering and reciprocal concentration
+  priority: P1
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: PHR-04-R01
+  name: Top-pharmacy concentration
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Prescriber's share to top pharmacy exceeds geographic/specialty peers
+  inputs: &id001
+  - prescription_dispense.billed_product
+  - prescription_dispense.days_supply
+  - prescription_dispense.prescriber_id
+  - prescription_dispense.pharmacy_id
+  - provider.emirate
+  - encounter.location
+  expression: Prescriber's share to top pharmacy exceeds geographic/specialty peers
+  parameters: {}
+  exclusions:
+  - on_site
+  - specialty
+  - narrow_network
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - scenario_id
+  - period_bucket
+  score: 58
+  disposition: SIU_LEAD
+  reason_code: TOP_PHARMACY_CONCENTRATION
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No prescribers, no pharmacies and no geography for the peer comparison. The structurally
+    identical AGENT→PROVIDER concentration control is implemented as NET-04-R02.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Prescriber's share to top pharmacy exceeds geographic/specialty peers
+  catalogue_config_exclusions: On-site, specialty and narrow network
+  catalogue_disposition: Network lead
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PHR-04-R02
+  name: Reciprocal value loop
+  version: 1.0.0
+  status: shadow
+  type: N
+  stage: NETWORK_WEEKLY
+  population: Concentrated prescriber-pharmacy flow aligns with referrals/ownership/shared IDs
+  inputs: &id003
+  - prescription_dispense.billed_product
+  - prescription_dispense.days_supply
+  - prescription_dispense.prescriber_id
+  - prescription_dispense.pharmacy_id
+  - provider.owner_entity_id
+  - provider.bank_account_token
+  - provider.phone_token
+  - provider.address_token
+  expression: Concentrated prescriber-pharmacy flow aligns with referrals/ownership/shared IDs
+  parameters: {}
+  exclusions:
+  - known_corporate_relationships
+  grouping_key: *id002
+  score: 55
+  disposition: SIU_LEAD
+  reason_code: RECIPROCAL_VALUE_LOOP
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No prescriber-pharmacy edges, no ownership and no shared identifiers.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Concentrated prescriber-pharmacy flow aligns with referrals/ownership/shared IDs
+  catalogue_config_exclusions: Known corporate relationships
+  catalogue_disposition: SIU graph
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PHR-04-R03
+  name: High-cost steering
+  version: 1.0.0
+  status: shadow
+  type: S/N
+  stage: NETWORK_WEEKLY
+  population: Concentration is materially stronger for profitable/high-cost drugs
+  inputs: &id004
+  - prescription_dispense.billed_product
+  - prescription_dispense.days_supply
+  - prescription_dispense.prescriber_id
+  - prescription_dispense.pharmacy_id
+  expression: Concentration is materially stronger for profitable/high-cost drugs
+  parameters: {}
+  exclusions:
+  - product_availability
+  grouping_key: *id002
+  score: 58
+  disposition: SIU_LEAD
+  reason_code: HIGH_COST_STEERING
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: the claim extract has a single pharmacy_bill_ratio per claim and no drug-level lines or
+    prices, so high-cost products cannot be separated from the rest of the basket.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Concentration is materially stronger for profitable/high-cost drugs
+  catalogue_config_exclusions: Product availability
+  catalogue_disposition: Prioritized lead
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PHR-04-R04
+  name: Rapid relationship formation
+  version: 1.0.0
+  status: shadow
+  type: N
+  stage: NETWORK_WEEKLY
+  population: New prescriber-pharmacy edge rapidly becomes dominant
+  inputs: &id005
+  - prescription_dispense.billed_product
+  - prescription_dispense.days_supply
+  - prescription_dispense.prescriber_id
+  - prescription_dispense.pharmacy_id
+  expression: New prescriber-pharmacy edge rapidly becomes dominant
+  parameters: {}
+  exclusions:
+  - new_site
+  - contract_launch
+  grouping_key: *id002
+  score: 55
+  disposition: MONITOR_ONLY
+  reason_code: RAPID_RELATIONSHIP_FORMATION
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No prescriber-pharmacy edges. The analogous agent-provider edge-formation pattern
+    is covered by NET-02-R04's structural-change logic, which is itself NOT_EXECUTABLE for want of typed
+    relationship edges.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: New prescriber-pharmacy edge rapidly becomes dominant
+  catalogue_config_exclusions: New site/contract launch
+  catalogue_disposition: Monitor/SIU
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

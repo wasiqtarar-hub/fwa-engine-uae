@@ -1,0 +1,240 @@
+# =============================================================================
+# PAY-06: Tariff, contract and billed-amount manipulation · P0
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: PAY-06
+  title: Tariff, contract and billed-amount manipulation
+  priority: P0
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: PAY-06-R01
+  name: Tariff/contract price variance
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: Submitted price basis differs from effective allowed price outside rounding tolerance
+  inputs: &id001
+  - tariff.allowed_price
+  - contract.*
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  expression: Submitted price basis differs from effective allowed price outside rounding tolerance
+  parameters: {}
+  exclusions:
+  - negotiated_carve_outs
+  - vat
+  - currency_policy
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 90
+  disposition: REPRICE
+  reason_code: TARIFF_VARIANCE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No tariff or contract price table, so there is no allowed price to compare against.
+    The peer-relative analogue is PAY-06-R03, which is a statistical control and therefore may not reprice.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Submitted price basis differs from effective allowed price outside rounding tolerance
+  catalogue_config_exclusions: Negotiated carve-outs, VAT and currency policy
+  catalogue_disposition: Reprice
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-06-R02
+  name: Gross/net/share arithmetic failure
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: INGEST
+  population: every claim_header at ingest
+  inputs:
+  - claim_header.gross_amount
+  - claim_header.approved_amount
+  expression: approved_amount > gross_amount or gross_amount < 0 or approved_amount < 0
+  parameters: {}
+  exclusions:
+  - approved_adjustment_uplift
+  - other_insurer_amount_included
+  - contractual_true_up
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - claim_sk
+  - scenario_id
+  score: 90
+  disposition: RETURN
+  reason_code: AMOUNT_ARITHMETIC_FAILURE
+  evidence_fields:
+  - gross_amount_aed
+  - approved_amount_aed
+  - difference_aed
+  - equation_checked
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: PARTIAL
+  data_support_reason: 'The full equation (gross − discount − patient_share = net) cannot be checked because
+    patient_share is absent. The one limb that CAN be checked is checked: approved must not exceed requested,
+    and neither may be negative. That is a genuine transaction-integrity edit and it runs at INGEST.'
+  required_canonical_fields:
+  - claim_header.patient_share
+  - claim_header.discount
+  implementation: pay_06_r02_amount_arithmetic
+  catalogue_trigger: Amount relationships violate transaction or contract equation
+  catalogue_config_exclusions: Approved adjustments and other-insurer amounts
+  catalogue_disposition: Return
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-06-R03
+  name: Billed amount peer outlier
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: POSTPAY_DAILY
+  population: claim_header with a resolvable peer group
+  inputs:
+  - claim_header.gross_amount_aed
+  - diagnosis.code
+  - claim_header.tpa
+  - claim_header.policy_type
+  - provider.volume_band
+  expression: robust_residual(gross_amount_aed, peer_group) > cfg.robust_residual_flag_threshold and exposure
+    is material
+  parameters:
+    threshold: cfg.robust_residual_flag_threshold
+  exclusions:
+  - case_mix_difference
+  - units_not_available
+  - implant_carve_out
+  - insufficient_peer_evidence
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - scenario_id
+  - period_bucket
+  score: 62
+  disposition: PREPAY_PEND
+  reason_code: BILLED_AMOUNT_PEER_OUTLIER
+  evidence_fields:
+  - gross_amount_aed
+  - peer_median_aed
+  - peer_mad
+  - robust_residual
+  - peer_level_used
+  - peer_n
+  - diagnosis_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: EXECUTABLE
+  data_support_reason: Runs as specified except that the peer comparison is at PRIMARY-DIAGNOSIS level
+    rather than activity-code level, because there are no activity codes. Robust median/MAD residuals
+    are used, not mean/SD z-scores, because claim amounts are heavily right-skewed.
+  required_canonical_fields:
+  - claim_line.activity_code (for code-level rather than diagnosis-level peers)
+  - tariff.allowed_price
+  implementation: pay_06_r03_billed_amount_peer_outlier
+  catalogue_trigger: Code-level amount above contract-adjusted peer threshold
+  catalogue_config_exclusions: Case mix, units, implant carve-out
+  catalogue_disposition: Pend only with material exposure
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-06-R04
+  name: Approved-to-billed pattern
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: provider-month with at least cfg.min_entity_opportunities claims
+  inputs:
+  - claim_header.gross_amount_aed
+  - claim_header.approved_amount_aed
+  - claim_header.provider_sk
+  expression: shrunk_mean_approval_ratio < quantile(peer shrunk_approval_ratio, cfg.approval_ratio_peer_percentile)
+    or variance(approval_ratio) < quantile(peer approval_ratio variance, cfg.approval_ratio_invariance_percentile)
+  parameters:
+    low_percentile: cfg.approval_ratio_peer_percentile
+    invariance_percentile: cfg.approval_ratio_invariance_percentile
+    min_claims: cfg.min_entity_opportunities
+    interval_mass: cfg.posterior_interval_mass
+    max_posterior_width: cfg.max_posterior_width
+  exclusions:
+  - adjudication_model_difference
+  - contract_difference
+  - insufficient_peer_evidence
+  - single_claim_provider
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - scenario_id
+  - period_bucket
+  score: 62
+  disposition: PROVIDER_EDUCATION
+  reason_code: APPROVAL_RATIO_PATTERN
+  evidence_fields:
+  - provider_sk
+  - shrunk_approval_ratio
+  - posterior_interval
+  - peer_mean
+  - approval_ratio_variance
+  - claim_count
+  - peer_level_used
+  - limb_fired
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: EXECUTABLE
+  data_support_reason: 'Both limbs run: requested and approved amounts exist for every claim, so a provider''s
+    approval-ratio level and its VARIANCE are both computable against shrunk peers.'
+  required_canonical_fields:
+  - remittance.decision (to separate adjudication effects from billing behaviour)
+  implementation: pay_06_r04_approval_ratio_pattern
+  catalogue_trigger: Persistent low approval ratio or suspiciously invariant full approval versus peers
+  catalogue_config_exclusions: Adjudication model and contract differences
+  catalogue_disposition: Education, audit or PAY-11 link
+  alternate_dispositions:
+  - POSTPAY_AUDIT
+  governance_note: ''
+  shadow_since: '2026-01-01'

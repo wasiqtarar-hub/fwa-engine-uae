@@ -1,0 +1,279 @@
+# =============================================================================
+# CLN-06: Phantom billing/service not rendered · P0
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: CLN-06
+  title: Phantom billing/service not rendered
+  priority: P0
+  added_by_coverage_audit: false
+  control_count: 5
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: CLN-06-R01
+  name: Missing expected order/result trail
+  version: 1.0.0
+  status: shadow
+  type: E
+  stage: PREPAY_ASYNC
+  population: Billed diagnostic/therapy lacks required order, result, Observation or administration evidence
+  inputs: &id001
+  - observation.*
+  - claim_line.*
+  expression: Billed diagnostic/therapy lacks required order, result, Observation or administration evidence
+  parameters: {}
+  exclusions:
+  - artifact_latency
+  - service_specific_requirements
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - episode_id
+  - scenario_id
+  score: 78
+  disposition: PREPAY_PEND
+  reason_code: MISSING_ORDER_TRAIL
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: There is no order or result trail for any claim, so the control would fire on all
+    5,000 rows. That is a data-completeness finding, which the canonical population report already states,
+    not a detection signal.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Billed diagnostic/therapy lacks required order, result, Observation or administration
+    evidence
+  catalogue_config_exclusions: Artifact latency and service-specific requirements
+  catalogue_disposition: Pend
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-06-R02
+  name: Closed/non-operational facility service
+  version: 1.0.0
+  status: shadow
+  type: H/S
+  stage: POSTPAY_DAILY
+  population: providers flagged on the exclusion list or with a thin, concentrated footprint
+  inputs:
+  - claim_header.provider_sk
+  - provider_status_period.status_value
+  - claim_header.service_date
+  - claim_header.gross_amount_aed
+  expression: provider is exclusion-listed OR (provider claim count is low AND claims concentrate into
+    few days AND mean claim value exceeds the peer median)
+  parameters: {}
+  exclusions:
+  - 24_hour_or_emergency_service
+  - outreach_service
+  - new_provider_onboarding
+  - operating_period_unverifiable
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - scenario_id
+  - period_bucket
+  score: 90
+  disposition: SIU_LEAD
+  reason_code: NON_OPERATIONAL_FACILITY
+  evidence_fields:
+  - provider_sk
+  - exclusion_listed
+  - claim_count
+  - active_days
+  - claims_per_active_day
+  - mean_gross_aed
+  - peer_median_gross_aed
+  - limb_fired
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: PARTIAL
+  data_support_reason: The 'verified operating period' limb cannot run (no operating periods). The 'no
+    credible operating footprint' limb is implemented as a composite of the undated blacklist flag plus
+    a thin, bursty claim footprint, and the signal states which limb fired. SIU_LEAD is the catalogue
+    disposition and is retained — this control never denies.
+  required_canonical_fields:
+  - provider_status_period.valid_from/valid_to (operating periods)
+  - provider.facility_type
+  implementation: cln_06_r02_non_operational_facility
+  catalogue_trigger: Service occurs outside verified operating period or facility shows no credible operating
+    footprint
+  catalogue_config_exclusions: 24-hour/emergency and outreach service
+  catalogue_disposition: SIU lead
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-06-R03
+  name: Repeated synthetic encounter signature
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: POSTPAY_DAILY
+  population: providers with at least cfg.min_entity_opportunities claims
+  inputs:
+  - claim_header.provider_sk
+  - claim_header.member_sk
+  - diagnosis.code
+  - encounter.length_of_stay_days
+  - claim_header.gross_amount
+  expression: a (diagnosis, length_of_stay, gross_amount) triple recurs across two or more DISTINCT members
+    at the same provider
+  parameters: {}
+  exclusions:
+  - standard_package_pricing
+  - batch_timestamp_artefact
+  - capitated_arrangement
+  - single_member_repeat
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - scenario_id
+  - period_bucket
+  score: 62
+  disposition: POSTPAY_AUDIT
+  reason_code: SYNTHETIC_ENCOUNTER_SIGNATURE
+  evidence_fields:
+  - provider_sk
+  - signature
+  - distinct_members
+  - claim_sks
+  - repeat_count
+  - gross_amount_aed
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: PARTIAL
+  data_support_reason: 'Implemented on the signature available: identical (primary diagnosis, length of
+    stay, requested amount) triples recurring across DIFFERENT members at one provider. Codes and notes
+    are unavailable, so the signature is coarser than the catalogue''s and can be produced by a genuine
+    standard package — which is why ''standard_package'' is a declared exclusion and the disposition is
+    an audit, not a denial.'
+  required_canonical_fields:
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - observation.attachment_ref
+  - document.text
+  - document.language
+  implementation: cln_06_r03_synthetic_encounter_signature
+  catalogue_trigger: High rate of identical code/time/amount/note patterns across unrelated members
+  catalogue_config_exclusions: Standard packages and batch timestamps
+  catalogue_disposition: Provider case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-06-R04
+  name: Member denial/attendance mismatch
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: POSTPAY_DAILY
+  population: Reliable member confirmation or attendance record says service not received
+  inputs: &id003
+  - member_confirmation.*
+  - attendance_record.*
+  expression: Reliable member confirmation or attendance record says service not received
+  parameters: {}
+  exclusions:
+  - contact
+  - authentication_quality
+  - recall
+  grouping_key: *id002
+  score: 62
+  disposition: SIU_LEAD
+  reason_code: MEMBER_ATTENDANCE_MISMATCH
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No member confirmations or attendance records.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Reliable member confirmation or attendance record says service not received
+  catalogue_config_exclusions: Contact/authentication quality and recall
+  catalogue_disposition: High-priority SIU lead
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-06-R05
+  name: No longitudinal clinical footprint
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Claimed high-impact service lacks expected follow-up, medication, result or episode consequences
+    versus peers
+  inputs: &id004
+  - prescription_dispense.billed_product
+  - prescription_dispense.days_supply
+  - prescription_dispense.prescriber_id
+  - prescription_dispense.pharmacy_id
+  - observation.*
+  - claim_line.*
+  expression: Claimed high-impact service lacks expected follow-up, medication, result or episode consequences
+    versus peers
+  parameters: {}
+  exclusions:
+  - out_of_network_follow_up
+  - data_completeness
+  grouping_key: *id002
+  score: 62
+  disposition: MONITOR_ONLY
+  reason_code: NO_LONGITUDINAL_FOOTPRINT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Follow-up medication and results are absent for every claim, so 'expected consequences'
+    has no observable form. The catalogue already marks this control 'supporting evidence only'; on this
+    data it would be no evidence.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Claimed high-impact service lacks expected follow-up, medication, result or episode
+    consequences versus peers
+  catalogue_config_exclusions: Out-of-network follow-up and data completeness
+  catalogue_disposition: Supporting evidence only
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

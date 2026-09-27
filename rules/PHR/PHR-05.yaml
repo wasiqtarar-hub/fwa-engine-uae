@@ -1,0 +1,207 @@
+# =============================================================================
+# PHR-05: Equipment, implant, consumable and supply integrity · P1 *  (added by the specification's own coverage audit)
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: PHR-05
+  title: Equipment, implant, consumable and supply integrity
+  priority: P1
+  added_by_coverage_audit: true
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: PHR-05-R01
+  name: New/used/rental/purchase mismatch
+  version: 1.0.0
+  status: shadow
+  type: H/E
+  stage: PREPAY_SYNC
+  population: Billed condition or payment method conflicts with authorization, serial/inventory or contract
+  inputs: &id001
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - device_inventory.*
+  - authorization.*
+  - authorization_line.*
+  - claim_line.authorization_id
+  expression: Billed condition or payment method conflicts with authorization, serial/inventory or contract
+  parameters: {}
+  exclusions:
+  - refurbishment
+  - rent_to_own_policy
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - scenario_id
+  - period_bucket
+  score: 82
+  disposition: REPRICE
+  reason_code: DEVICE_CONDITION_MISMATCH
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No devices, serials, inventory or contracts.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Billed condition or payment method conflicts with authorization, serial/inventory
+    or contract
+  catalogue_config_exclusions: Refurbishment and rent-to-own policy
+  catalogue_disposition: Reprice/pend
+  alternate_dispositions:
+  - PREPAY_PEND
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PHR-05-R02
+  name: Implant/device not linked to procedure
+  version: 1.0.0
+  status: shadow
+  type: E
+  stage: PREPAY_SYNC
+  population: Device/implant lacks qualifying procedure, laterality or operative record
+  inputs: &id003
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - observation.attachment_ref
+  - document.text
+  - document.language
+  expression: Device/implant lacks qualifying procedure, laterality or operative record
+  parameters: {}
+  exclusions:
+  - replacement
+  - spare_policy
+  grouping_key: *id002
+  score: 70
+  disposition: PREPAY_PEND
+  reason_code: DEVICE_NOT_LINKED
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No devices and no procedures.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Device/implant lacks qualifying procedure, laterality or operative record
+  catalogue_config_exclusions: Replacement/spare policy
+  catalogue_disposition: Clinical pend
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PHR-05-R03
+  name: Supply quantity/consumption excess
+  version: 1.0.0
+  status: shadow
+  type: E/S
+  stage: POSTPAY_DAILY
+  population: Units exceed procedure/episode norm or repeat too soon for useful life
+  inputs: &id004
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - device_inventory.useful_life
+  expression: Units exceed procedure/episode norm or repeat too soon for useful life
+  parameters: {}
+  exclusions:
+  - member_growth
+  - damage
+  - clinical_change
+  grouping_key: *id002
+  score: 70
+  disposition: POSTPAY_AUDIT
+  reason_code: SUPPLY_CONSUMPTION_EXCESS
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: the claim extract records no supply or device lines and no quantities, so neither units
+    per episode nor replacement interval against useful life can be computed.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Units exceed procedure/episode norm or repeat too soon for useful life
+  catalogue_config_exclusions: Member growth/damage/clinical change
+  catalogue_disposition: Reprice/audit
+  alternate_dispositions: []
+  governance_note: 'SUBSTITUTION: the catalogue''s first-named disposition for this E/S control is ''Reprice''.
+    A control that is part STATISTICAL may never reprice, so the governed disposition is the catalogue''s
+    second option, POSTPAY_AUDIT. This is the ONLY control in the catalogue whose disposition the type
+    rule forces down; the other four recorded downgrades are driven by what this DATASET can support,
+    not by the control''s type. All five are listed in the README.'
+  shadow_since: '2026-01-01'
+- rule_id: PHR-05-R04
+  name: Serial/inventory duplication
+  version: 1.0.0
+  status: shadow
+  type: H/N
+  stage: POSTPAY_DAILY
+  population: Same serial/batch billed for multiple members or claimed stock exceeds inventory/acquisition
+  inputs: &id005
+  - device_inventory.serial_number
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  expression: Same serial/batch billed for multiple members or claimed stock exceeds inventory/acquisition
+  parameters: {}
+  exclusions:
+  - bulk
+  - non_serialized_consumables
+  grouping_key: *id002
+  score: 82
+  disposition: SIU_LEAD
+  reason_code: SERIAL_DUPLICATION
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No serials, batches or inventory.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: Same serial/batch billed for multiple members or claimed stock exceeds inventory/acquisition
+  catalogue_config_exclusions: Bulk/non-serialized consumables
+  catalogue_disposition: SIU lead
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

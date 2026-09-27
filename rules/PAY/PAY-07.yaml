@@ -1,0 +1,193 @@
+# =============================================================================
+# PAY-07: Patient-share, copay, deductible and balance billing · P0
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: PAY-07
+  title: Patient-share, copay, deductible and balance billing
+  priority: P0
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: PAY-07-R01
+  name: Expected-share mismatch
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: Submitted claim/Activity share differs from benefit calculation
+  inputs: &id001
+  - claim_header.patient_share
+  - benefit_rule_version.covered
+  - benefit_rule_version.benefit_limit
+  - benefit_rule_version.authorization_required
+  expression: Submitted claim/Activity share differs from benefit calculation
+  parameters: {}
+  exclusions:
+  - deductible_accumulator
+  - exemptions
+  - rounding
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - episode_id
+  - scenario_id
+  score: 90
+  disposition: REPRICE
+  reason_code: PATIENT_SHARE_MISMATCH
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: 'patient_share is absent from the claim extract and there is no benefit calculation to
+    compare it against. NOTE: PAY-07 is sometimes described as an ''approval-ratio anomaly''; the control
+    catalogue defines it as patient-share/copay/balance billing. The catalogue is followed, and the approval-ratio
+    control is implemented where the catalogue actually places it, at PAY-06-R04.'
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Submitted claim/Activity share differs from benefit calculation
+  catalogue_config_exclusions: Deductible accumulator, exemptions, rounding
+  catalogue_disposition: Reprice/return
+  alternate_dispositions:
+  - RETURN
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-07-R02
+  name: Share shifted to payer
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: gross - valid_discount - patient_share != net or waived share included in net
+  inputs: &id003
+  - claim_header.patient_share
+  - claim_header.discount
+  expression: gross - valid_discount - patient_share != net or waived share included in net
+  parameters: {}
+  exclusions:
+  - approved_discount
+  - hardship
+  grouping_key: *id002
+  score: 90
+  disposition: REPRICE
+  reason_code: SHARE_SHIFTED_TO_PAYER
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: The equation needs patient_share and discount, both absent.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: gross - valid_discount - patient_share != net or waived share included in net
+  catalogue_config_exclusions: Approved discount/hardship
+  catalogue_disposition: Reprice
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-07-R03
+  name: Systematic zero/rounded share
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Provider zero-share or repeated-rounding rate exceeds product-adjusted peers
+  inputs: &id004
+  - claim_header.patient_share
+  expression: Provider zero-share or repeated-rounding rate exceeds product-adjusted peers
+  parameters: {}
+  exclusions:
+  - zero_share_benefits
+  - regulator_programs
+  grouping_key: *id002
+  score: 62
+  disposition: POSTPAY_AUDIT
+  reason_code: SYSTEMATIC_ZERO_SHARE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No patient share to be systematically zero.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Provider zero-share or repeated-rounding rate exceeds product-adjusted peers
+  catalogue_config_exclusions: Zero-share benefits and regulator programs
+  catalogue_disposition: Postpay audit
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: PAY-07-R04
+  name: Excess patient charge/balance bill
+  version: 1.0.0
+  status: shadow
+  type: H/S
+  stage: POSTPAY_DAILY
+  population: Receipt/complaint/collection data exceeds approved patient liability
+  inputs: &id005
+  - member_receipt.*
+  - complaint.*
+  - claim_header.patient_share
+  expression: Receipt/complaint/collection data exceeds approved patient liability
+  parameters: {}
+  exclusions:
+  - non_covered_elective_items_with_documented_consent
+  grouping_key: *id002
+  score: 90
+  disposition: PREPAY_PEND
+  reason_code: BALANCE_BILLING
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: claims_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No receipts, complaints or patient-liability records.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: Receipt/complaint/collection data exceeds approved patient liability
+  catalogue_config_exclusions: Non-covered elective items with documented consent
+  catalogue_disposition: Member protection/provider case
+  alternate_dispositions:
+  - POSTPAY_AUDIT
+  governance_note: ''
+  shadow_since: '2026-01-01'

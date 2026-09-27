@@ -1,0 +1,252 @@
+# =============================================================================
+# CLN-01: Upcoding and code-intensity inflation · P0
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: CLN-01
+  title: Upcoding and code-intensity inflation
+  priority: P0
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: CLN-01-R01
+  name: High-level code share
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: provider with at least cfg.min_entity_opportunities claims
+  inputs:
+  - claim_header.icd_code_matches_procedure
+  - claim_header.provider_sk
+  - diagnosis.chapter
+  expression: shrunk_rate(coding_mismatch, provider, peer_group) > quantile(peer shrunk_rate, cfg.coding_mismatch_peer_percentile)
+    and posterior_interval_width <= cfg.max_posterior_width
+  parameters:
+    peer_percentile: cfg.coding_mismatch_peer_percentile
+    min_claims: cfg.min_entity_opportunities
+    interval_mass: cfg.posterior_interval_mass
+    max_posterior_width: cfg.max_posterior_width
+  exclusions:
+  - case_mix_difference
+  - specialty_difference
+  - setting_difference
+  - below_minimum_denominator
+  - posterior_interval_too_wide
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - scenario_id
+  - period_bucket
+  score: 62
+  disposition: POSTPAY_AUDIT
+  reason_code: HIGH_LEVEL_CODE_SHARE
+  evidence_fields:
+  - provider_sk
+  - observed_rate
+  - shrunk_rate
+  - posterior_interval
+  - peer_mean
+  - peer_level_used
+  - peer_n
+  - claim_count
+  - proxy_note
+  owner: coding_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: PARTIAL
+  data_support_reason: There are no code levels to take a share of. The implemented PROXY is the provider's
+    rate of icd_code_matches_procedure = False, shrunk toward the diagnosis-chapter peer mean by empirical
+    Bayes. That measures coding-integrity pressure, not level intensity, and the signal says so on its
+    face; it is a weaker fact than the catalogue control and is classified PARTIAL for that reason.
+  required_canonical_fields:
+  - claim_line.activity_code (code family and level)
+  - provider.specialty
+  implementation: cln_01_r01_coding_mismatch_rate
+  catalogue_trigger: Highest-paid level share in code family exceeds shrunk peer percentile
+  catalogue_config_exclusions: Specialty, setting, case mix, minimum n
+  catalogue_disposition: Provider coding case
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-01-R02
+  name: Expected-level residual
+  version: 1.0.0
+  status: shadow
+  type: S/M
+  stage: POSTPAY_DAILY
+  population: claim_header with a resolvable peer group and non-null LOS
+  inputs:
+  - claim_header.gross_amount_aed
+  - encounter.length_of_stay_days
+  - diagnosis.code
+  - claim_header.policy_type
+  expression: robust_residual(amount_per_los_day, diagnosis_peer_group) > cfg.robust_residual_flag_threshold
+  parameters:
+    threshold: cfg.robust_residual_flag_threshold
+  exclusions:
+  - case_mix_difference
+  - no_document_features_available
+  - los_zero_or_missing
+  - insufficient_peer_evidence
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - episode_id
+  - scenario_id
+  score: 62
+  disposition: PREPAY_PEND
+  reason_code: EXPECTED_LEVEL_RESIDUAL
+  evidence_fields:
+  - amount_per_los_day
+  - peer_median
+  - peer_mad
+  - robust_residual
+  - expected_amount_aed
+  - excess_amount_aed
+  - peer_level_used
+  - proxy_note
+  owner: coding_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: PARTIAL
+  data_support_reason: 'Implemented as an interpretable EXPECTED-AMOUNT residual rather than an expected-LEVEL
+    residual: the expectation is built from primary diagnosis, length of stay and policy type (age and
+    setting are unavailable), and the residual is robust (median/MAD). This is the same shape of control
+    against a coarser target, and it is classified PARTIAL because ''level'' does not exist in the source.'
+  required_canonical_fields:
+  - claim_line.activity_code
+  - member.date_of_birth
+  - encounter.encounter_type
+  implementation: cln_01_r02_expected_level_residual
+  catalogue_trigger: Billed level exceeds level predicted from diagnoses, age, setting and prior utilization
+    by cfg.delta
+  catalogue_config_exclusions: Interpretable ordinal model; no document features at scoring time if unavailable
+  catalogue_disposition: Prepay sample
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-01-R03
+  name: Documentation-level conflict
+  version: 1.0.0
+  status: shadow
+  type: E/T
+  stage: PREPAY_ASYNC
+  population: claims with a generated synthetic discharge summary
+  inputs:
+  - document.text
+  - document.language
+  - encounter.length_of_stay_days
+  - diagnosis.code
+  - claim_header.gross_amount_aed
+  expression: extracted stay length or extracted diagnosis conflicts with the billed claim and extraction_confidence
+    >= cfg.nlp_min_extraction_confidence and a source span exists
+  parameters:
+    min_confidence: cfg.nlp_min_extraction_confidence
+  exclusions:
+  - extraction_confidence_below_threshold
+  - no_source_span_finding_discarded
+  - language_not_validated
+  - human_review_required_before_action
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - claim_sk
+  - scenario_id
+  score: 78
+  disposition: PREPAY_PEND
+  reason_code: DOCUMENTATION_LEVEL_CONFLICT
+  evidence_fields:
+  - source_span_text
+  - span_offsets
+  - extracted_value
+  - billed_value
+  - extraction_confidence
+  - ocr_confidence
+  - document_language
+  - synthetic_document_marker
+  owner: clinical_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: PARTIAL
+  data_support_reason: Runs ONLY against clearly-labelled SYNTHETIC discharge summaries generated by this
+    artefact (data/synthetic_documents/, every filename and body marked SYNTHETIC). the claim extract contains
+    no documents. Every finding carries a source span, and a finding without a span is discarded by the
+    pipeline rather than shown with a caveat.
+  required_canonical_fields:
+  - observation.attachment_ref
+  - document.text
+  - document.language
+  - real clinical documentation with OCR confidence
+  implementation: cln_01_r03_documentation_level_conflict
+  catalogue_trigger: Extracted work/severity/time elements do not meet policy for billed level
+  catalogue_config_exclusions: Validated Arabic/English extraction and human review
+  catalogue_disposition: Coding pend
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: CLN-01-R04
+  name: Level migration changepoint
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: MODEL_MONTHLY
+  population: Provider abruptly shifts to higher code levels absent case-mix/contract change
+  inputs: &id001
+  - claim_line.activity_code
+  expression: Provider abruptly shifts to higher code levels absent case-mix/contract change
+  parameters: {}
+  exclusions:
+  - segment_known_structural_changes
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - episode_id
+  - scenario_id
+  score: 62
+  disposition: POSTPAY_AUDIT
+  reason_code: LEVEL_MIGRATION_CHANGEPOINT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No code levels to migrate between. The analogous self-history changepoint on billed
+    AMOUNT is implemented as ANL-01-R02.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Provider abruptly shifts to higher code levels absent case-mix/contract change
+  catalogue_config_exclusions: Segment known structural changes
+  catalogue_disposition: Postpay sample audit
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

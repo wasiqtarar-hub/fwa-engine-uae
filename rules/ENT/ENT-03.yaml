@@ -1,0 +1,267 @@
+# =============================================================================
+# ENT-03: Provider/facility licence, exclusion and privilege · P0
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: ENT-03
+  title: Provider/facility licence, exclusion and privilege
+  priority: P0
+  added_by_coverage_audit: false
+  control_count: 5
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: ENT-03-R01
+  name: Inactive/expired licence
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: Rendering, ordering, dispensing or facility licence not active at service time
+  inputs: &id001
+  - provider_status_period.status_type
+  - provider_status_period.valid_from
+  - provider_status_period.valid_to
+  - provider.regulator_id
+  expression: Rendering, ordering, dispensing or facility licence not active at service time
+  parameters: {}
+  exclusions:
+  - role_specific_licence_requirement
+  - approved_grace
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - member_sk
+  - scenario_id
+  - period_bucket
+  score: 90
+  disposition: REJECT
+  reason_code: LICENCE_INACTIVE
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: provider_network
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No licence periods in the source. provider_status_period holds only an undated
+    blacklist flag, and 'active AT SERVICE TIME' cannot be evaluated without dates.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Rendering, ordering, dispensing or facility licence not active at service time
+  catalogue_config_exclusions: Role-specific licence requirement and approved grace
+  catalogue_disposition: Reject/pend with licence period
+  alternate_dispositions:
+  - PREPAY_PEND
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: ENT-03-R02
+  name: Excluded/watch-listed entity
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: claim where provider_blacklist_flag is true
+  inputs:
+  - claim_header.provider_sk
+  - provider_status_period.status_value
+  - provider_status_period.valid_from
+  - provider_status_period.valid_to
+  expression: provider_status_period.status_value == 'BLACKLISTED' as_of claim.service_date and match_type
+    == 'EXACT'
+  parameters:
+    requires_exact_match: cfg.blacklist_requires_exact_match
+  exclusions:
+  - fuzzy_match_pends_only
+  - approved_internal_exception
+  - delisted_before_service_date
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - provider_sk
+  - scenario_id
+  - period_bucket
+  score: 90
+  disposition: PREPAY_PEND
+  reason_code: EXCLUDED_ENTITY
+  evidence_fields:
+  - provider_sk
+  - status_value
+  - match_type
+  - exclusion_source
+  - effective_dating_available
+  owner: provider_network
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: PARTIAL
+  data_support_reason: provider_blacklist_flag is the only exclusion-list signal available and it is UNDATED,
+    so 'effective match at service time' cannot be evaluated. The catalogue permits REJECT only on an
+    exact, effective-dated identifier match; with no effective date the governed disposition is downgraded
+    to PREPAY_PEND, which is the treatment the catalogue itself prescribes for a non-exact match.
+  required_canonical_fields:
+  - provider_status_period.status_type
+  - provider_status_period.valid_from
+  - provider_status_period.valid_to
+  - provider.regulator_id
+  - provider_status_period.valid_from (effective dating for the exclusion)
+  implementation: ent_03_r02_excluded_entity
+  catalogue_trigger: Effective match on regulator or approved internal exclusion list
+  catalogue_config_exclusions: Exact ID match required for reject; fuzzy match only pends
+  catalogue_disposition: Reject or SIU lead
+  alternate_dispositions:
+  - SIU_LEAD
+  governance_note: Disposition downgraded from REJECT to PREPAY_PEND because the exclusion source carries
+    no effective date. Recorded rather than silently applied.
+  shadow_since: '2026-01-01'
+- rule_id: ENT-03-R03
+  name: Hard privilege violation
+  version: 1.0.0
+  status: shadow
+  type: H
+  stage: PREPAY_SYNC
+  population: Activity outside regulator/facility privilege explicitly marked prohibited
+  inputs: &id003
+  - provider_status_period.status_type
+  - provider_status_period.valid_from
+  - provider_status_period.valid_to
+  - provider.regulator_id
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  expression: Activity outside regulator/facility privilege explicitly marked prohibited
+  parameters: {}
+  exclusions:
+  - effective_privilege_source
+  - exception
+  grouping_key: *id002
+  score: 90
+  disposition: REJECT
+  reason_code: PRIVILEGE_VIOLATION
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: provider_network
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No privilege table and no activity codes.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Activity outside regulator/facility privilege explicitly marked prohibited
+  catalogue_config_exclusions: Effective privilege source and exception
+  catalogue_disposition: Reject/pend
+  alternate_dispositions:
+  - PREPAY_PEND
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: ENT-03-R04
+  name: Soft specialty mismatch
+  version: 1.0.0
+  status: shadow
+  type: E
+  stage: PREPAY_ASYNC
+  population: Activity outside curated specialty map but not legally prohibited
+  inputs: &id004
+  - claim_line.rendering_clinician_id
+  - claim_line.ordering_clinician_id
+  - provider.specialty
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  expression: Activity outside curated specialty map but not legally prohibited
+  parameters: {}
+  exclusions:
+  - cfg_specialty_map
+  - cross_specialty_privileges
+  - sample_based_validation
+  grouping_key: *id002
+  score: 78
+  disposition: PREPAY_PEND
+  reason_code: SPECIALTY_MISMATCH
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: coding_policy
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No provider specialty and no activity codes; the ICD-chapter proxy used for peer
+    grouping is a service line, not a licensed specialty, and is too weak to assert a mismatch against.
+  required_canonical_fields: *id004
+  implementation: null
+  catalogue_trigger: Activity outside curated specialty map but not legally prohibited
+  catalogue_config_exclusions: cfg.specialty_map, cross-specialty privileges, sample-based validation
+  catalogue_disposition: Coding review, not reject
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: ENT-03-R05
+  name: Dormant/new/non-operational provider burst
+  version: 1.0.0
+  status: shadow
+  type: S
+  stage: POSTPAY_DAILY
+  population: New/reactivated provider immediately exceeds specialty volume/value percentile or lacks
+    expected operating footprint
+  inputs: &id005
+  - provider.credentialing_date
+  - provider_status_period.valid_from
+  expression: New/reactivated provider immediately exceeds specialty volume/value percentile or lacks
+    expected operating footprint
+  parameters: {}
+  exclusions:
+  - credentialing_date
+  - acquisition
+  - merger
+  - new_contract
+  grouping_key: *id002
+  score: 62
+  disposition: SIU_LEAD
+  reason_code: PROVIDER_BURST
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P0
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No credentialing or contract-start date, so 'new or reactivated' cannot be established.
+    First-appearance-in-file is not the same fact and would flag every provider in the first month of
+    the file.
+  required_canonical_fields: *id005
+  implementation: null
+  catalogue_trigger: New/reactivated provider immediately exceeds specialty volume/value percentile or
+    lacks expected operating footprint
+  catalogue_config_exclusions: Credentialing date, acquisition/merger and new contract
+  catalogue_disposition: SIU/provider-enrollment lead
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'

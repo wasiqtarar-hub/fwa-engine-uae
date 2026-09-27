@@ -1,0 +1,251 @@
+# =============================================================================
+# NET-02: Collusion ring and shared-identifier linkage · P1
+# =============================================================================
+# Scenario transcribed from the control catalogue. Every control below carries
+# the catalogue's verbatim trigger, configuration/exclusions and
+# output/disposition alongside this artefact's governed mapping.
+#
+# GENERATED FILE — regenerate with `python tools/gen_rules.py`. Hand edits are a
+# legitimate policy-owner workflow but must be carried back into
+# tools/catalogue_source.py or they will be overwritten.
+#
+# `disposition` is ONE of the eight governed dispositions. Where the catalogue
+# names several ("Reject/pend"), the first is taken and the rest are recorded
+# as `alternate_dispositions`, which are ADVISORY ONLY — the engine never acts
+# on them. Where the first would be illegal under the safety boundary for the
+# control's type, the substitution is recorded in `governance_note`.
+#
+# `exclusions` for controls that do not execute here are derived mechanically
+# from the catalogue's "Configuration and exclusions" column; for the controls
+# this build actually runs they are hand-authored and are exercised by the
+# approved-exception test category.
+#
+# Every control starts in `shadow`. Nothing in this catalogue is active until a
+# policy owner who did not author it approves the transition.
+# =============================================================================
+scenario:
+  scenario_id: NET-02
+  title: Collusion ring and shared-identifier linkage
+  priority: P1
+  added_by_coverage_audit: false
+  control_count: 4
+  source: Control catalogue v3.0, transcribed in full.
+controls:
+- rule_id: NET-02-R01
+  name: Shared administrative identity
+  version: 1.0.0
+  status: shadow
+  type: H/N
+  stage: POSTPAY_DAILY
+  population: Legally distinct entities share bank, phone, address, device or owner identifier
+  inputs: &id001
+  - provider.owner_entity_id
+  - provider.bank_account_token
+  - provider.phone_token
+  - provider.address_token
+  expression: Legally distinct entities share bank, phone, address, device or owner identifier
+  parameters: {}
+  exclusions:
+  - known_groups
+  - shared_services
+  - fuzzy_matches_cannot_be_hard_flags
+  grouping_key: &id002
+  - tenant_id
+  - payer_id
+  - community_id
+  - scenario_id
+  - period_bucket
+  score: 82
+  disposition: MONITOR_ONLY
+  reason_code: SHARED_ADMIN_IDENTITY
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: No bank, phone, address, device or owner identifiers exist. The entity-resolution
+    service that would consume them IS implemented (fwa.graph.entity_resolution) and runs on the identifiers
+    that do exist, surfacing every candidate for human confirmation and auto-merging nothing — but this
+    control's specific inputs are absent.
+  required_canonical_fields: *id001
+  implementation: null
+  catalogue_trigger: Legally distinct entities share bank, phone, address, device or owner identifier
+  catalogue_config_exclusions: Known groups/shared services; fuzzy matches cannot be hard flags
+  catalogue_disposition: Graph edge
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: NET-02-R02
+  name: Dense member circulation
+  version: 1.0.0
+  status: shadow
+  type: N
+  stage: NETWORK_WEEKLY
+  population: Louvain communities of at least cfg.community_min_size nodes
+  inputs:
+  - claim_header.member_sk
+  - claim_header.provider_sk
+  - claim_header.agent_id
+  - claim_header.service_date
+  - claim_header.gross_amount_aed
+  expression: internal_edge_density(community) > cfg.community_density_threshold and community size >=
+    cfg.community_min_size
+  parameters:
+    min_size: cfg.community_min_size
+    density: cfg.community_density_threshold
+  exclusions:
+  - size_matched_peers_only
+  - specialty_matching_unavailable
+  - geography_matching_unavailable
+  - corporate_group_structure
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - community_id
+  - scenario_id
+  - period_bucket
+  score: 55
+  disposition: SIU_LEAD
+  reason_code: DENSE_MEMBER_CIRCULATION
+  evidence_fields:
+  - community_id
+  - size
+  - internal_density
+  - peer_density_median
+  - member_count
+  - provider_count
+  - agent_count
+  - claim_count
+  - exposure_aed
+  - snapshot_window
+  - each_claim_counted_once
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: PARTIAL
+  data_support_reason: Louvain communities are computed on the real member-provider-agent-TPA graph built
+    from the claim extract, with weekly time-bounded snapshots, and internal density is compared against SIZE-matched
+    communities. Peer matching on specialty and geography is not possible, so the comparison is size-only
+    and the signal records that.
+  required_canonical_fields:
+  - provider.specialty
+  - provider.emirate
+  - encounter.location
+  - provider.owner_entity_id
+  - provider.bank_account_token
+  - provider.phone_token
+  - provider.address_token
+  implementation: net_02_r02_dense_member_circulation
+  catalogue_trigger: Community has abnormal internal member/provider edge density and low external flow
+  catalogue_config_exclusions: Specialty/geography/size matched communities
+  catalogue_disposition: SIU graph
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: NET-02-R03
+  name: Synchronized billing
+  version: 1.0.0
+  status: shadow
+  type: N/S
+  stage: POSTPAY_DAILY
+  population: communities identified by NET-02-R02's graph snapshot
+  inputs:
+  - claim_header.service_date
+  - claim_header.gross_amount_aed
+  - claim_header.provider_sk
+  - claim_header.member_sk
+  expression: two or more claims in one community share an admission date and have gross amounts within
+    cfg.duplicate_amount_tolerance of each other
+  parameters:
+    amount_tolerance: cfg.duplicate_amount_tolerance
+  exclusions:
+  - batch_billing_system
+  - code_signature_unavailable
+  - resubmission_signature_unavailable
+  - standard_package_pricing
+  grouping_key:
+  - tenant_id
+  - payer_id
+  - community_id
+  - scenario_id
+  - period_bucket
+  score: 55
+  disposition: MONITOR_ONLY
+  reason_code: SYNCHRONIZED_BILLING
+  evidence_fields:
+  - community_id
+  - synchronised_claims
+  - shared_date
+  - amount_spread
+  - distinct_members
+  - distinct_providers
+  - limbs_available
+  owner: analytics
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: PARTIAL
+  data_support_reason: 'The TIME and AMOUNT limbs run: claims within a community that share an admission
+    date and a closely-matching amount are a synchronisation signature. The CODE and RESUBMISSION limbs
+    do not (no codes, no lineage). The catalogue already assigns this control ''supporting evidence''
+    status and MONITOR_ONLY, which is retained.'
+  required_canonical_fields:
+  - claim_line.activity_code
+  - claim_line.units
+  - claim_line.net_amount
+  - claim_version.relationship
+  - claim_version.prior_claim_sk
+  - claim_version.changed_fields
+  implementation: net_02_r03_synchronized_billing
+  catalogue_trigger: Community claims share unusual time, amount, code or resubmission signatures
+  catalogue_config_exclusions: Batch billing systems
+  catalogue_disposition: Supporting evidence
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
+- rule_id: NET-02-R04
+  name: Structural-change alert
+  version: 1.0.0
+  status: shadow
+  type: N
+  stage: NETWORK_WEEKLY
+  population: Previously peripheral nodes rapidly become central/dense with material exposure
+  inputs: &id003
+  - contract.effective_dates
+  - provider.ownership_history
+  - provider.owner_entity_id
+  - provider.bank_account_token
+  - provider.phone_token
+  - provider.address_token
+  expression: Previously peripheral nodes rapidly become central/dense with material exposure
+  parameters: {}
+  exclusions:
+  - merger
+  - new_contract
+  grouping_key: *id002
+  score: 55
+  disposition: MONITOR_ONLY
+  reason_code: STRUCTURAL_CHANGE_ALERT
+  evidence_fields:
+  - rule_id
+  - scenario_id
+  - subject_id
+  - reason_code
+  owner: siu
+  effective_from: '2026-01-01'
+  priority: P1
+  data_support: NOT_EXECUTABLE_ON_THIS_DATASET
+  data_support_reason: Requires a stable node-centrality history across snapshots plus merger and contract
+    records to exclude legitimate structural change. With no contract data, every growing provider would
+    alert, so the control is classified honestly rather than run as a growth detector.
+  required_canonical_fields: *id003
+  implementation: null
+  catalogue_trigger: Previously peripheral nodes rapidly become central/dense with material exposure
+  catalogue_config_exclusions: Merger/new contract
+  catalogue_disposition: Monitor/SIU
+  alternate_dispositions: []
+  governance_note: ''
+  shadow_since: '2026-01-01'
