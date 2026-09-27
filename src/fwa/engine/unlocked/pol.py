@@ -14,10 +14,10 @@ import pandas as pd
 
 from ...cases import exposure as _exp
 from ...presentation import aed, count_phrase, pct, plain_date
-from ..controls import _f, _sig
+from ..controls import _sig
 from ..evallib import is_missing
 from .ent import (_claims, _col, _coverage, _d, _dstr, _has_word, _ids, _members, _num, _period, _providers, _s,
-                  _safe, _table, _truthy, _falsy, _up)
+                  _safe, _table, _falsy, _up)
 
 IMPLEMENTATIONS: dict[str, Callable] = {}
 

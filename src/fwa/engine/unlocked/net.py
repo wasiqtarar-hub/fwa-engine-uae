@@ -889,8 +889,12 @@ def net_03_r03_inducement_signature(ctx, control) -> list:
 # ===========================================================================
 
 
-_MISMATCH_TYPES = ("not_received", "not_provided", "never", "billing", "charge", "overcharg",
-                   "item", "mismatch", "phantom", "not_rendered", "wrong")
+#: Words that make a complaint an allegation of a service, item or charge mismatch.
+#: A billing QUERY that was explained and resolved is not one.
+_MISMATCH_TYPES = ("not_received", "not_provided", "never_received", "never_had", "did_not_receive",
+                   "overcharg", "charged_for", "mismatch", "phantom", "not_rendered", "wrong_item",
+                   "service_not", "item_not")
+_RESOLVED = ("resolved", "explained", "withdrawn")
 _UNRELIABLE_CHANNELS = ("anonymous", "unverified", "unknown", "unauthenticated")
 
 
@@ -932,7 +936,7 @@ def net_03_r04_complaint_corroboration(ctx, control) -> list:
         for r in comp.itertuples(index=False):
             c = _s(getattr(r, "claim_sk", ""))
             kind = _norm(getattr(r, "complaint_type", "")) + " " + _norm(getattr(r, "text", ""))
-            if not any(k in kind for k in _MISMATCH_TYPES):
+            if not any(k in kind for k in _MISMATCH_TYPES) or any(k in kind for k in _RESOLVED):
                 continue
             m = _s(r.member_sk)
             p = _s(getattr(r, "provider_sk", ""))

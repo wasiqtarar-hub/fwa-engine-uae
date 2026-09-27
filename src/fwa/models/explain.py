@@ -265,14 +265,53 @@ class ShapExplainer:
                     or "No SHAP explainer available for this model. The promotion gate requires feature "
                        "attribution for every flagged entity; a model that cannot supply it "
                        "fails the model gate's explanation-quality check.",
+                    "plain_language": (
+                        "No explanation is available for this model's scores, so they have no "
+                        "feature breakdown. The technical reason is in the log."
+                    ),
                 }
             ]
         try:
-            values = self._explainer.shap_values(row.to_frame().T, **self._shap_kwargs())
+            frame = row.to_frame().T
+            kwargs = self._shap_kwargs()
+            values = _bounded(
+                lambda: self._explainer.shap_values(frame, **kwargs), self.explain_timeout_seconds
+            )
             arr = np.asarray(values).reshape(-1) * self._sign
-        except Exception as exc:  # pragma: no cover
-            return [{"feature": "EXPLANATION_FAILED", "label": "Explanation failed", "note": str(exc)}]
+            if arr.shape[0] != len(self.feature_columns):
+                raise ValueError(
+                    f"SHAP returned {arr.shape[0]} attributions for "
+                    f"{len(self.feature_columns)} features"
+                )
+            return self._render(arr, raw_values, peer_values, top_n)
+        except Exception as exc:  # noqa: BLE001 - a failed explanation, never a crash
+            return [self._failed(exc)]
 
+    def _failed(self, exc: BaseException) -> dict[str, Any]:
+        """One ``EXPLANATION_FAILED`` row. The gate counts it as a failed check."""
+        timed_out = isinstance(exc, ExplanationTimeout)
+        self.last_failure = f"{type(exc).__name__}: {exc}"
+        _log.warning("SHAP explanation failed (%s): %s", self.method, self.last_failure)
+        return {
+            "feature": "EXPLANATION_FAILED",
+            "label": "Explanation failed",
+            "note": str(exc),
+            "plain_language": (
+                f"The explanation took longer than {self.explain_timeout_seconds:g} seconds and "
+                f"was stopped, so this score has no feature breakdown."
+                if timed_out else
+                "The explanation for this score could not be calculated, so it has no feature "
+                "breakdown. The technical reason is in the log."
+            ),
+        }
+
+    def _render(
+        self,
+        arr: np.ndarray,
+        raw_values: pd.Series,
+        peer_values: pd.Series | None,
+        top_n: int,
+    ) -> list[dict[str, Any]]:
         order = np.argsort(-np.abs(arr))[:top_n]
         out: list[dict[str, Any]] = []
         for i in order:
@@ -314,12 +353,22 @@ class ShapExplainer:
             return pd.DataFrame(columns=["feature", "label", "mean_abs_shap"])
         sub = matrix.sample(min(sample, len(matrix)), random_state=0)
         try:
-            values = np.asarray(self._explainer.shap_values(sub, **self._shap_kwargs())) * self._sign
-        except Exception:  # pragma: no cover
+            kwargs = self._shap_kwargs()
+            values = np.asarray(_bounded(
+                lambda: self._explainer.shap_values(sub, **kwargs), self.importance_timeout_seconds
+            )) * self._sign
+            if values.ndim == 3:
+                values = values[..., 0]
+            mean_abs = np.abs(values).mean(axis=0)
+            if len(mean_abs) != len(self.feature_columns):
+                raise ValueError(
+                    f"SHAP returned {len(mean_abs)} attributions for "
+                    f"{len(self.feature_columns)} features"
+                )
+        except Exception as exc:  # noqa: BLE001
+            self.last_failure = f"{type(exc).__name__}: {exc}"
+            _log.warning("SHAP global importance failed (%s): %s", self.method, self.last_failure)
             return pd.DataFrame(columns=["feature", "label", "mean_abs_shap"])
-        if values.ndim == 3:
-            values = values[..., 0]
-        mean_abs = np.abs(values).mean(axis=0)
         rows = []
         for name, v in zip(self.feature_columns, mean_abs):
             label, unit = humanise_feature(name)

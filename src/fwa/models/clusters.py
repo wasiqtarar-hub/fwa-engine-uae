@@ -29,8 +29,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+import logging
+
 import numpy as np
 import pandas as pd
+
+_log = logging.getLogger(__name__)
 
 __all__ = ["NovelCluster", "NovelClusterDiscovery"]
 
@@ -66,6 +70,12 @@ class NovelClusterDiscovery:
         self.min_cluster_size = int(config.get("novel_cluster_min_size"))
         self.seed = int(config.get("random_seed"))
         self.labels: pd.Series | None = None
+        #: technical reason discovery produced nothing ("" when it ran normally).
+        self.skip_reason: str = ""
+        #: plain-language sentence for the UI ("" when there is nothing to say).
+        self.message: str = ""
+        #: True when clustering ran to completion (even if it found nothing).
+        self.completed: bool = False
 
     def discover(
         self,
@@ -73,9 +83,49 @@ class NovelClusterDiscovery:
         exposures: pd.Series | None = None,
         feature_labels: dict[str, str] | None = None,
     ) -> list[NovelCluster]:
-        """Cluster the residual space. Returns candidate typologies."""
-        if residuals.empty or len(residuals) < self.min_cluster_size * 2:
+        """Cluster the residual space. Returns candidate typologies.
+
+        Never raises: too little input, a clustering failure, or a run that
+        finds only noise all return ``[]`` with :attr:`skip_reason` (technical)
+        and :attr:`message` (plain) set.
+        """
+        self.skip_reason, self.message, self.labels, self.completed = "", "", None, False
+        needed = self.min_cluster_size * 2
+        n = 0 if residuals is None else len(residuals)
+        if residuals is None or residuals.empty or n < needed:
+            self.skip_reason = (
+                f"{n} provider(s) in the residual space < 2 x novel_cluster_min_size = {needed}."
+            )
+            self.message = (
+                f"Not enough scored hospitals to look for groups of similar unusual hospitals. "
+                f"At least {needed} are needed (twice novel_cluster_min_size; this file has {n})."
+            )
             return []
+        if residuals.shape[1] == 0:
+            self.skip_reason = "Residual space has no usable columns (every feature has zero MAD)."
+            self.message = (
+                "The scored hospitals do not differ from each other on any measure, so there are "
+                "no groups of unusual hospitals to look for."
+            )
+            return []
+        try:
+            return self._discover(residuals, exposures, feature_labels)
+        except Exception as exc:  # noqa: BLE001 - exploratory control; degrade, never crash
+            self.labels = None
+            self.skip_reason = f"Cluster discovery failed: {type(exc).__name__}: {exc}"
+            self.message = (
+                "The search for groups of similar unusual hospitals could not be completed on "
+                "this file, so no candidate groups are shown. The technical reason is in the log."
+            )
+            _log.warning(self.skip_reason)
+            return []
+
+    def _discover(
+        self,
+        residuals: pd.DataFrame,
+        exposures: pd.Series | None,
+        feature_labels: dict[str, str] | None,
+    ) -> list[NovelCluster]:
         X = residuals.replace([np.inf, -np.inf], np.nan).fillna(0.0)
 
         labels = self._fit(X)
@@ -121,6 +171,17 @@ class NovelClusterDiscovery:
                     ),
                 )
             )
+        self.completed = True
+        if not out:
+            self.skip_reason = (
+                f"Clustering found no cluster of >= {self.min_cluster_size} members among "
+                f"{len(residuals)} providers (all noise or undersized)."
+            )
+            self.message = (
+                f"No groups of similar unusual hospitals were found among the {len(residuals)} "
+                f"scored hospitals (a group needs at least {self.min_cluster_size}, "
+                f"novel_cluster_min_size)."
+            )
         return sorted(out, key=lambda c: -c.aggregate_exposure_aed)
 
     def _fit(self, X: pd.DataFrame) -> np.ndarray:
@@ -136,7 +197,7 @@ class NovelClusterDiscovery:
 
             # eps from the knee of the k-distance curve, so the fallback is not
             # an arbitrary radius.
-            k = max(2, self.min_cluster_size // 2)
+            k = min(max(2, self.min_cluster_size // 2), len(X))
             distances, _ = NearestNeighbors(n_neighbors=k).fit(X).kneighbors(X)
             eps = float(np.percentile(distances[:, -1], 90))
             return DBSCAN(eps=eps, min_samples=self.min_cluster_size).fit_predict(X)

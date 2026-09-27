@@ -1346,6 +1346,15 @@ parameters:
     expected_alert_volume: 4
     review_date: "2027-01-01"
 
+  - key: pay05_rate_min_excess
+    value: 0.1
+    owner: analytics
+    rationale: "PAY-05-R03: the shrunk modifier use rate must also exceed the peer mean by at least this many percentage points (as a fraction). When peers almost never use a modifier, a multiple of their tiny rate is met by two or three uses; the absolute gap keeps such providers out of the audit queue."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 4
+    review_date: "2027-01-01"
+
   - key: pay05_migration_window_days
     value: 120
     owner: analytics

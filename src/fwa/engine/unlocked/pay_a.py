@@ -1081,8 +1081,8 @@ def pay_03_r02_demographic_impossibility(ctx, control) -> list[Signal]:
 
 @_register("pay_03_r03_unit_maximum")
 def pay_03_r03_unit_maximum(ctx, control) -> list[Signal]:
-    """Units of one service for one patient on one day (across all claims) above
-    the daily maximum. On an inpatient claim the maximum applies per day of
+    """Units of one service for one patient at one provider on one day (across all of
+    that provider's claims) above the daily maximum. On an inpatient claim the maximum applies per day of
     stay. Lines carrying a laterality or repeat indicator, and drug lines (dose
     rules belong to the pharmacy controls), are excluded."""
     lines = _lines(ctx)
@@ -1103,7 +1103,7 @@ def pay_03_r03_unit_maximum(ctx, control) -> list[Signal]:
     los = _num(_col(ln, "length_of_stay_days")).fillna(1.0).clip(lower=1.0)
     ln = ln.assign(
         grp=np.where(inpatient, "C:" + ln["claim_sk"],
-                     "D:" + ln["member_sk"] + ":" + ln["line_date"].dt.strftime("%Y-%m-%d")),
+                     "D:" + ln["member_sk"] + ":" + ln["provider_sk"] + ":" + ln["line_date"].dt.strftime("%Y-%m-%d")),
         allowed_factor=np.where(inpatient, los, 1.0))
     g = ln.groupby(["grp", "activity_code"]).agg(
         units=("units_n", "sum"), max_units=("max_units", "first"), factor=("allowed_factor", "max"),
@@ -1272,19 +1272,22 @@ def _needs_authorisation(ctx, lines: pd.DataFrame) -> pd.DataFrame:
     br["product"] = _col(br, "product").map(_str_id)
     br["service_family"] = _col(br, "service_family").map(lambda v: _str_id(v).lower())
     fam = ref[["activity_code"]].assign(service_family=_col(ref, "service_family").map(lambda v: _str_id(v).lower()))
-    ln = lines.merge(fam, on="activity_code", how="inner")
-    # Product: on the line when present, else the member's cover in force on the service date.
-    prod = _col(ln, "product").map(_str_id)
-    if (prod == "").any():
-        cov = _table(ctx, "coverage_period")
-        if not cov.empty and {"member_sk", "product"} <= set(cov.columns):
-            c = cov[["member_sk", "product", "valid_from", "valid_to"]].copy() if {"valid_from", "valid_to"} <= set(cov.columns) \
-                else cov[["member_sk", "product"]].assign(valid_from=pd.NaT, valid_to=pd.NaT)
-            c["member_sk"] = c["member_sk"].map(_str_id)
-            j = ln[["line_sk", "member_sk", "line_date"]].merge(c, on="member_sk", how="inner")
-            j = j[_in_force(j["line_date"], j["valid_from"], j["valid_to"])].drop_duplicates("line_sk")
-            fill = dict(zip(j["line_sk"], j["product"].map(_str_id)))
-            prod = prod.where(prod != "", ln["line_sk"].map(fill).fillna(""))
+    base = lines.drop(columns=[c for c in ("product", "service_family") if c in lines.columns])
+    ln = base.merge(fam, on="activity_code", how="inner")
+    # Benefit family: on a case-rate (package) claim every line takes the case-rate code's family,
+    # as the benefit rules' own exceptions state; elsewhere the line code's family.
+    case = ln[ln["activity_type_s"] == "drg"].drop_duplicates("claim_sk").set_index("claim_sk")["service_family"]
+    if not case.empty:
+        ln["service_family"] = ln["claim_sk"].map(case).fillna(ln["service_family"])
+    # Product: the member's cover in force on the service date.
+    prod = pd.Series("", index=ln.index)
+    cov = _table(ctx, "coverage_period")
+    if not cov.empty and {"member_sk", "product"} <= set(cov.columns):
+        c = cov[["member_sk", "product"]].assign(valid_from=_col(cov, "valid_from"), valid_to=_col(cov, "valid_to"))
+        c["member_sk"] = c["member_sk"].map(_str_id)
+        j = ln[["line_sk", "member_sk", "line_date"]].merge(c, on="member_sk", how="inner")
+        j = j[_in_force(j["line_date"], j["valid_from"], j["valid_to"])].drop_duplicates("line_sk")
+        prod = ln["line_sk"].map(dict(zip(j["line_sk"], j["product"].map(_str_id)))).fillna("")
     ln = ln.assign(product_s=prod.values)
     exact = ln.merge(br[["product", "service_family", "valid_from", "valid_to"]],
                      left_on=["product_s", "service_family"], right_on=["product", "service_family"], how="inner")
@@ -1515,12 +1518,17 @@ def pay_04_r04_quantity_exhaustion(ctx, control) -> list[Signal]:
         return []
     paid = _paid_by_line(ctx)
     if not paid.empty:
-        rev = set(paid.loc[paid["reversed"].astype(bool), "line_sk"])
-        m = m[~m["line_sk"].isin(rev)]  # declared exclusion: cancelled / reversed claims
+        # declared exclusion: cancelled / reversed claims. A line refused outright consumed
+        # nothing of the approval either, so it does not count toward the running total.
+        gone = paid["reversed"].astype(bool) | (paid["denied"].astype(bool) & (paid["paid"] <= 0))
+        m = m[~m["line_sk"].isin(set(paid.loc[gone, "line_sk"]))]
     cv = _table(ctx, "claim_version")
     if not cv.empty and "relationship" in cv.columns and "claim_sk" in cv.columns:
         canc = _norm(cv["relationship"]).str.contains("cancel|void|revers", regex=True)
-        m = m[~m["claim_sk"].isin(set(cv.loc[canc, "claim_sk"].astype(str)))]
+        dropped = set(cv.loc[canc, "claim_sk"].astype(str))
+        # a claim replaced by a resubmission or correction is superseded, not consumed twice
+        dropped |= set(_col(cv, "prior_claim_sk").dropna().astype(str))
+        m = m[~m["claim_sk"].isin(dropped)]
     m = m.sort_values(["auth_key", "activity_code", "line_date", "claim_sk", "line_sk"])
     g = m.groupby(["auth_key", "activity_code"])
     m["cum_units"] = g["units_n"].cumsum()
@@ -1787,6 +1795,7 @@ def pay_05_r03_indicator_rate_outlier(ctx, control) -> list[Signal]:
     min_lines = max(min_opp, int(ctx.cfg("pay05_rate_min_lines")))
     pctl = float(ctx.cfg("pay05_rate_peer_percentile"))
     ratio_cut = float(ctx.cfg("pay05_rate_ratio_to_peer"))
+    min_excess = float(ctx.cfg("pay05_rate_min_excess"))
     interval_mass = float(ctx.cfg("posterior_interval_mass"))
     max_width = float(ctx.cfg("max_posterior_width"))
     ln = lines[~_is_drug(lines) & (lines["provider_sk"] != "")]
@@ -1819,6 +1828,8 @@ def pay_05_r03_indicator_rate_outlier(ctx, control) -> list[Signal]:
                     continue
                 if sr.shrunk_rate < ratio_cut * max(prior.peer_mean, 1e-9):
                     continue
+                if sr.shrunk_rate - prior.peer_mean < min_excess:
+                    continue  # far above peers means a material gap, not a ratio of two small rates
                 row = grp.loc[p]
                 claims = row["claims"] if isinstance(row["claims"], list) else []
                 out.append(_sig(
