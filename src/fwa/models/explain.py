@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import concurrent.futures as _futures
 import logging
+import threading
 from typing import Any, Callable, Iterable
 
 import numpy as np
@@ -42,6 +43,10 @@ class ExplanationTimeout(RuntimeError):
     """A SHAP call exceeded its wall-clock budget."""
 
 
+#: Stack size for the SHAP worker thread (bytes). A platform limit, not a threshold.
+_SHAP_THREAD_STACK_BYTES = 64 * 1024 * 1024
+
+
 def _bounded(fn: Callable[[], Any], seconds: float | None) -> Any:
     """Run ``fn`` with a wall-clock budget; raise :class:`ExplanationTimeout` past it.
 
@@ -52,8 +57,22 @@ def _bounded(fn: Callable[[], Any], seconds: float | None) -> Any:
     """
     if not seconds or seconds <= 0:
         return fn()
+    # Worker threads on Windows get a small default stack, and SHAP's tree
+    # traversal recurses deeply; after a long test session that surfaced as a
+    # "Windows fatal exception: stack overflow" inside this worker. The thread
+    # is created at submit(), so the larger size applies to it alone and the
+    # process-wide default is restored immediately afterwards.
+    previous = threading.stack_size()
+    try:
+        threading.stack_size(_SHAP_THREAD_STACK_BYTES)
+    except (ValueError, RuntimeError):  # platform refuses a custom size
+        previous = None
     pool = _futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="shap")
-    future = pool.submit(fn)
+    try:
+        future = pool.submit(fn)
+    finally:
+        if previous is not None:
+            threading.stack_size(previous)
     try:
         return future.result(timeout=seconds)
     except _futures.TimeoutError as exc:

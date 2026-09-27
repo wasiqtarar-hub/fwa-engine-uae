@@ -35,9 +35,9 @@ unlocks:
 
   - rule_id: PAY-02-R05
     implementation: pay_02_r05_novel_unbundling
-    requires_tables: [claim_line, provider, bundling_edit_table]
-    data_support: EXECUTABLE
-    reason: "Runs as the catalogue specifies when the file carries claim lines, providers with their type and specialty, and the bundling edit table: code pairs no edit covers, billed together by one provider far more often than by its peers, with rates shrunk toward the peer rate and a minimum volume."
+    requires_tables: [claim_line, provider, bundling_edit_table, activity_code_reference]
+    data_support: PARTIAL
+    reason: "Runs on claim lines, providers with their type and specialty, the bundling edit table and the code reference: separately charged code pairs no edit covers, billed together by one provider far more often than by its peers, with rates shrunk toward the peer rate and a minimum volume. Which pairs can be components of one service is approximated as codes of the same service family, since the file has no component relationships beyond the edit table itself."
 
   - rule_id: PAY-03-R01
     implementation: pay_03_r01_invalid_code

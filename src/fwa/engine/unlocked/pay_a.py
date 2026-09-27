@@ -117,6 +117,15 @@ def _in_force(dates: pd.Series, valid_from: pd.Series, valid_to: pd.Series) -> p
     return ok_from & ok_to
 
 
+def _sid(s: pd.Series) -> pd.Series:
+    """Vectorised :func:`_str_id`: identifiers as stripped strings, missing as ''."""
+    if len(s) == 0:
+        return s.astype(object)
+    obj = s.astype(object)
+    out = obj.where(obj.notna(), "").astype(str).str.strip()
+    return out.where(~out.str.lower().isin({"nan", "none", "nat", "<na>"}), "")
+
+
 def _str_id(v: Any) -> str:
     return "" if is_missing(v) else str(v)
 
@@ -167,7 +176,7 @@ def _lines(ctx) -> pd.DataFrame:
             out["line_date"] = line_date.fillna(_date(out["service_date_hdr"]))
             out["line_date"] = out["line_date"].dt.normalize()
             out["line_sk"] = _col(out, "line_sk").astype(str)
-            out["activity_code"] = _col(out, "activity_code").map(_str_id)
+            out["activity_code"] = _col(out, "activity_code").pipe(_sid)
             out["units_n"] = _num(_col(out, "units")).fillna(1.0)
             gross = _num(_col(out, "gross_amount"))
             net = _num(_col(out, "net_amount"))
@@ -175,10 +184,10 @@ def _lines(ctx) -> pd.DataFrame:
             out["payable"] = net.fillna(gross).fillna(0.0)
             up = _num(_col(out, "unit_price"))
             out["unit_price_n"] = up.fillna(out["billed"] / out["units_n"].where(out["units_n"] > 0))
-            out["indicator_s"] = _col(out, "indicator").map(_str_id).str.strip()
+            out["indicator_s"] = _col(out, "indicator").pipe(_sid).str.strip()
             out["activity_type_s"] = _norm(_col(out, "activity_type"))
-            out["member_sk"] = out["member_sk"].map(_str_id)
-            out["provider_sk"] = out["provider_sk"].map(_str_id)
+            out["member_sk"] = out["member_sk"].pipe(_sid)
+            out["provider_sk"] = out["provider_sk"].pipe(_sid)
     try:
         ctx._pay_a_cache = {"lines_key": key, "lines": out}
     except Exception:  # pragma: no cover
@@ -191,7 +200,7 @@ def _codes(ctx) -> pd.DataFrame:
     if ref.empty or "activity_code" not in ref.columns:
         return pd.DataFrame(columns=["activity_code"])
     ref = ref.copy()
-    ref["activity_code"] = ref["activity_code"].map(_str_id)
+    ref["activity_code"] = ref["activity_code"].pipe(_sid)
     return ref.drop_duplicates("activity_code")
 
 
@@ -233,29 +242,35 @@ def _authorisations(ctx) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, str]]:
     al = _table(ctx, "authorization_line")
     if auth.empty or "authorization_sk" not in auth.columns:
         return pd.DataFrame(), pd.DataFrame(), {}
+    cache = getattr(ctx, "_pay_a_cache", None)
+    key = (id(auth), len(auth), id(al), len(al))
+    if isinstance(cache, dict) and cache.get("auth_key") == key:
+        return cache["auth"]
     auth = auth.copy()
-    auth["authorization_sk"] = auth["authorization_sk"].map(_str_id)
+    auth["authorization_sk"] = auth["authorization_sk"].pipe(_sid)
     auth["status_s"] = _norm(_col(auth, "status"))
     auth["vf"] = _date(_col(auth, "valid_from")).dt.normalize()
     auth["vt"] = _date(_col(auth, "valid_to")).dt.normalize()
-    auth["member_sk"] = _col(auth, "member_sk").map(_str_id)
-    auth["provider_sk"] = _col(auth, "provider_sk").map(_str_id)
+    auth["member_sk"] = _col(auth, "member_sk").pipe(_sid)
+    auth["provider_sk"] = _col(auth, "provider_sk").pipe(_sid)
     ids: dict[str, str] = {}
     for column in ("response_id", "request_id", "authorization_sk"):
         if column in auth.columns:
-            for v, k in zip(auth[column], auth["authorization_sk"]):
-                if not is_missing(v) and str(v).strip():
-                    ids[str(v).strip()] = k
+            v = auth[column].pipe(_sid)
+            keep = v != ""
+            ids.update(zip(v[keep], auth.loc[keep, "authorization_sk"]))
     if not al.empty and "authorization_sk" in al.columns:
         al = al.copy()
-        al["authorization_sk"] = al["authorization_sk"].map(_str_id)
-        al["activity_code"] = _col(al, "activity_code").map(_str_id)
+        al["authorization_sk"] = al["authorization_sk"].pipe(_sid)
+        al["activity_code"] = _col(al, "activity_code").pipe(_sid)
         al["line_denied"] = _has(_col(al, "denial_code"))
         al["approved_units_n"] = _num(_col(al, "approved_units"))
         al["approved_value_n"] = _num(_col(al, "approved_value"))
     else:
         al = pd.DataFrame(columns=["authorization_sk", "activity_code", "line_denied",
                                    "approved_units_n", "approved_value_n"])
+    if isinstance(cache, dict):
+        cache["auth_key"], cache["auth"] = key, (auth, al, ids)
     return auth, al, ids
 
 
@@ -339,7 +354,7 @@ def _paid_by_line(ctx) -> pd.DataFrame:
     dec = _norm(_col(r, "decision"))
     r["is_denied"] = dec.isin(_DENIAL_DECISIONS) | _has(_col(r, "denial_code"))
     r["is_reversed"] = dec.isin(_REVERSAL_DECISIONS)
-    r["dcode"] = _col(r, "denial_code").map(_str_id)
+    r["dcode"] = _col(r, "denial_code").pipe(_sid)
     g = r.groupby("line_sk").agg(paid=("pay", "sum"), denied=("is_denied", "any"),
                                  reversed=("is_reversed", "any")).reset_index()
     codes = r[r["dcode"] != ""].drop_duplicates("line_sk").set_index("line_sk")["dcode"]
@@ -356,13 +371,13 @@ def _peer_group(ctx) -> dict[str, str]:
     parts = []
     for c in ("provider_type", "specialty"):
         if c in prov.columns:
-            parts.append(prov[c].map(_str_id))
+            parts.append(prov[c].pipe(_sid))
     if not parts:
         return {}
     label = parts[0]
     for p in parts[1:]:
         label = label + " / " + p
-    return dict(zip(prov["provider_sk"].map(_str_id), label))
+    return dict(zip(prov["provider_sk"].pipe(_sid), label))
 
 
 # ===========================================================================
@@ -387,7 +402,7 @@ def pay_01_r04_cross_payer_duplicate(ctx, control) -> list[Signal]:
         return []
     tol = float(ctx.cfg("pay01_cross_payer_amount_tolerance_aed"))
     full = _claim_frame(ctx)
-    hdr["token"] = _col(full, "cross_payer_match_token").map(_str_id).values
+    hdr["token"] = _col(full, "cross_payer_match_token").pipe(_sid).values
     hdr["gross"] = _num(_col(full, "gross_amount_aed")).fillna(_num(_col(full, "gross_amount"))).values
 
     # What this payer paid on each claim.
@@ -401,10 +416,10 @@ def pay_01_r04_cross_payer_duplicate(ctx, control) -> list[Signal]:
     ours = r.groupby("claim_sk").agg(our_paid=("pay", "sum"), reversed=("rev", "any")).reset_index()
 
     o = opr.copy()
-    o["claim_sk"] = _col(o, "claim_sk").map(_str_id)
-    o["token"] = _col(o, "cross_payer_match_token").map(_str_id)
+    o["claim_sk"] = _col(o, "claim_sk").pipe(_sid)
+    o["token"] = _col(o, "cross_payer_match_token").pipe(_sid)
     o["other_paid"] = _num(_col(o, "payment_amount")).fillna(0.0)
-    o["other_payer_id"] = _col(o, "other_payer_id").map(_str_id)
+    o["other_payer_id"] = _col(o, "other_payer_id").pipe(_sid)
     o["other_settled"] = _col(o, "settlement_date")
     o = o[o["other_paid"] > 0]
     if o.empty:
@@ -416,7 +431,7 @@ def pay_01_r04_cross_payer_duplicate(ctx, control) -> list[Signal]:
     m = pd.concat([by_token, by_claim], ignore_index=True)
     if m.empty:
         return []
-    m = m[m["other_payer_id"] != m["payer_id"].map(_str_id)]
+    m = m[m["other_payer_id"] != m["payer_id"].pipe(_sid)]
     m = m.merge(ours, on="claim_sk", how="left")
     m["our_paid"] = m["our_paid"].fillna(0.0)
     m = m[(m["our_paid"] > 0) & ~m["reversed"].fillna(False).astype(bool)]
@@ -499,10 +514,10 @@ def _edits(ctx) -> pd.DataFrame:
     if e.empty or "column_1_code" not in e.columns or "column_2_code" not in e.columns:
         return pd.DataFrame()
     e = e.copy()
-    e["col1"] = e["column_1_code"].map(_str_id)
-    e["col2"] = e["column_2_code"].map(_str_id)
+    e["col1"] = e["column_1_code"].pipe(_sid)
+    e["col2"] = e["column_2_code"].pipe(_sid)
     e["mod_ok"] = _truthy(_col(e, "modifier_allowed"))
-    e["edit_type_s"] = _col(e, "edit_type").map(_str_id)
+    e["edit_type_s"] = _col(e, "edit_type").pipe(_sid)
     e["e_vf"] = _col(e, "valid_from")
     e["e_vt"] = _col(e, "valid_to")
     return e[(e["col1"] != "") & (e["col2"] != "") & (e["col1"] != e["col2"])]
@@ -645,8 +660,8 @@ def _packages(ctx) -> pd.DataFrame:
     if p.empty or "package_code" not in p.columns or "component_code" not in p.columns:
         return pd.DataFrame()
     p = p.copy()
-    p["package_code"] = p["package_code"].map(_str_id)
-    p["component_code"] = p["component_code"].map(_str_id)
+    p["package_code"] = p["package_code"].pipe(_sid)
+    p["component_code"] = p["component_code"].pipe(_sid)
     p["zero"] = _truthy(_col(p, "expected_zero_price"))
     return p[(p["package_code"] != "") & (p["component_code"] != "")]
 
@@ -709,16 +724,23 @@ def pay_02_r03_package_completeness(ctx, control) -> list[Signal]:
     # listed components that appear on nearly every claim for that package.
     core_share = float(ctx.cfg("pay02_package_core_share"))
     min_claims = int(ctx.cfg("pay02_package_min_claims"))
-    n_claims = pkg_lines.groupby("activity_code")["claim_sk"].nunique()
-    required: dict[str, list[str]] = {}
+    # Packages whose definitions list the same components (severity variants of one case
+    # rate) share one core, so their claims are pooled to infer it.
+    sig = pk[pk["zero"]].groupby("package_code")["component_code"].apply(lambda s: "|".join(sorted(set(s))))
+    pl = pkg_lines.drop_duplicates(["claim_sk", "activity_code"]).assign(sig=lambda f: f["activity_code"].map(sig))
+    n_claims = pl.groupby("sig")["claim_sk"].nunique()
+    core_by_sig: dict[str, list[str]] = {}
     if not comp.empty:
-        seen = comp[comp["zero"]].groupby(["package_code", "component_code"])["claim_sk"].nunique()
-        for (pkg, code), n in seen.items():
-            total = int(n_claims.get(pkg, 0))
+        cz = comp[comp["zero"]].assign(sig=lambda f: f["package_code"].map(sig))
+        seen = cz.groupby(["sig", "component_code"])["claim_sk"].nunique()
+        for (sg, code), n in seen.items():
+            total = int(n_claims.get(sg, 0))
             if total >= min_claims and n / total >= core_share:
-                required.setdefault(pkg, []).append(code)
+                core_by_sig.setdefault(sg, []).append(code)
+    required = {pkg: core_by_sig[sg] for pkg, sg in sig.items() if sg in core_by_sig}
     lines = _lines(ctx)
-    codes_by_claim = lines.groupby("claim_sk")["activity_code"].apply(set)
+    pkg_claim_set = set(pkg_lines["claim_sk"])
+    codes_by_claim = lines[lines["claim_sk"].isin(pkg_claim_set)].groupby("claim_sk")["activity_code"].apply(set)
     docs = _table(ctx, "document")
     documented: set[str] = set()
     if not docs.empty and {"doc_type", "claim_sk"} <= set(docs.columns):
@@ -824,6 +846,14 @@ def pay_02_r05_novel_unbundling(ctx, control) -> list[Signal]:
         return []
     pairs = per.merge(per[["claim_sk", "activity_code", "billed"]], on="claim_sk", suffixes=("_a", "_b"))
     pairs = pairs[pairs["activity_code_a"] < pairs["activity_code_b"]]
+    # A component relationship is between parts of one kind of service (two laboratory
+    # tests, two parts of an ECG), so only pairs within one service family are compared;
+    # a visit and a drug, or a test and an infusion, are separate services, not components.
+    ref = _codes(ctx)
+    if not ref.empty and "service_family" in ref.columns:
+        fam = ref.set_index("activity_code")["service_family"].pipe(_sid)
+        fa = pairs["activity_code_a"].map(fam).fillna("")
+        pairs = pairs[(fa != "") & (fa == pairs["activity_code_b"].map(fam).fillna(""))]
     if pairs.empty:
         return []
     e = _edits(ctx)
@@ -832,40 +862,41 @@ def pay_02_r05_novel_unbundling(ctx, control) -> list[Signal]:
         keys = list(zip(pairs["activity_code_a"], pairs["activity_code_b"]))
         pairs = pairs[[k not in known for k in keys]]
     peer_of = _peer_group(ctx)
-    per["peer"] = per["provider_sk"].map(lambda p: peer_of.get(p, "all providers"))
     # Opportunities: the provider's claims carrying either code of the pair.
-    code_claims = per.groupby(["provider_sk", "activity_code"])["claim_sk"].nunique()
+    code_claims = per.groupby(["provider_sk", "activity_code"]).size()
     ev = pairs.groupby(["provider_sk", "activity_code_a", "activity_code_b"]).agg(
-        events=("claim_sk", "nunique"), extra_billed=("billed_b", "sum"),
-        claim_ids=("claim_sk", lambda s: sorted(set(s))), last_date=("line_date", "max")).reset_index()
+        events=("claim_sk", "size"), extra_billed=("billed_b", "sum"), last_date=("line_date", "max")).reset_index()
     if ev.empty:
         return []
-
-    def opp(p, a, b, events):
-        return int(code_claims.get((p, a), 0) + code_claims.get((p, b), 0) - events)
-
-    ev["opportunities"] = [opp(p, a, b, n) for p, a, b, n in
-                           zip(ev["provider_sk"], ev["activity_code_a"], ev["activity_code_b"], ev["events"])]
+    ca = pd.Series(list(zip(ev["provider_sk"], ev["activity_code_a"]))).map(code_claims).fillna(0).values
+    cb = pd.Series(list(zip(ev["provider_sk"], ev["activity_code_b"]))).map(code_claims).fillna(0).values
+    ev["opportunities"] = (ca + cb - ev["events"].values).astype(int)
     ev["peer"] = ev["provider_sk"].map(lambda p: peer_of.get(p, "all providers"))
     candidates = ev[ev["events"] >= min_claims]
     if candidates.empty:
         return []
-    # Peer denominators: every provider in the peer group that bills either code.
-    provs_by_peer = per.groupby("peer")["provider_sk"].apply(lambda s: sorted(set(s))).to_dict()
-    ev_index = ev.set_index(["provider_sk", "activity_code_a", "activity_code_b"])
+    ids = pairs.merge(candidates[["provider_sk", "activity_code_a", "activity_code_b"]],
+                      on=["provider_sk", "activity_code_a", "activity_code_b"])
+    claim_lists = ids.groupby(["provider_sk", "activity_code_a", "activity_code_b"])["claim_sk"].apply(
+        lambda x: sorted(set(x)))
+    # Peers: the other providers that bill either code, in the same provider type and specialty
+    # when there are enough of them, otherwise across all providers.
+    provs_by_code = per.groupby("activity_code")["provider_sk"].apply(set).to_dict()
+    ev_events = ev.set_index(["provider_sk", "activity_code_a", "activity_code_b"])["events"].to_dict()
     desc = _describer(ctx)
     out: list[Signal] = []
     for r in candidates.itertuples(index=False):
-        peers = [p for p in provs_by_peer.get(r.peer, []) if p != r.provider_sk]
+        both = (provs_by_code.get(r.activity_code_a, set()) | provs_by_code.get(r.activity_code_b, set()))             - {r.provider_sk}
+        same = [p for p in both if peer_of.get(p, "all providers") == r.peer]
+        peers, peer_label = (same, r.peer) if len(same) >= min_peers else (sorted(both), "all providers billing either code")
         e_list, o_list = [], []
         for p in peers:
-            o = int(code_claims.get((p, r.activity_code_a), 0) + code_claims.get((p, r.activity_code_b), 0))
+            n = int(ev_events.get((p, r.activity_code_a, r.activity_code_b), 0))
+            o = int(code_claims.get((p, r.activity_code_a), 0) + code_claims.get((p, r.activity_code_b), 0)) - n
             if o <= 0:
                 continue
-            key = (p, r.activity_code_a, r.activity_code_b)
-            n = int(ev_index["events"].get(key, 0)) if key in ev_index.index else 0
             e_list.append(n)
-            o_list.append(o - n)
+            o_list.append(o)
         if len(o_list) < min_peers:
             continue  # declared exclusion: peer adjustment needs a peer population
         prior = fit_beta_prior(e_list, o_list)
@@ -880,14 +911,15 @@ def pay_02_r05_novel_unbundling(ctx, control) -> list[Signal]:
         out.append(_sig(
             ctx, control, subject_type="provider", subject_id=r.provider_sk,
             fact_key=f"novelpair:{r.provider_sk}:{r.activity_code_a}:{r.activity_code_b}",
-            claim_ids=r.claim_ids[:200], event_time=r.last_date, period=period_bucket(r.last_date),
-            confidence=0.7, peer_level_used=f"provider type / specialty: {r.peer}",
+            claim_ids=claim_lists.get((r.provider_sk, r.activity_code_a, r.activity_code_b), [])[:200],
+            event_time=r.last_date, period=period_bucket(r.last_date),
+            confidence=0.7, peer_level_used=peer_label,
             evidence=_base_evidence(
                 control, r.provider_sk,
                 plain_language=(
                     f"This provider billed {desc(r.activity_code_a)} and {desc(r.activity_code_b)} as "
                     f"separate charges together on {pct(observed)} of the claims where either appears "
-                    f"({count_phrase(r.events, 'claim')}); similar providers do so on {pct(peer_rate)}. "
+                    f"({count_phrase(r.events, 'claim')}); {'similar providers' if peer_label == r.peer else 'other providers'} do so on {pct(peer_rate)}. "
                     f"No bundling rule covers this pair."
                 ),
                 what_the_reviewer_must_verify=(
@@ -897,7 +929,7 @@ def pay_02_r05_novel_unbundling(ctx, control) -> list[Signal]:
                 claims_with_pair=int(r.events), claims_with_either_code=int(r.opportunities),
                 observed_rate=round(observed, 4), shrunk_rate=round(sr.shrunk_rate, 4),
                 posterior_interval=[round(sr.posterior_low, 4), round(sr.posterior_high, 4)],
-                peer_rate=round(peer_rate, 4), peer_providers=len(o_list), peer_group=r.peer,
+                peer_rate=round(peer_rate, 4), peer_providers=len(o_list), peer_group=peer_label,
                 rate_ratio_threshold=ratio_cut, second_code_billed_aed=_money(r.extra_billed),
                 shrinkage_explanation=sr.explain(),
             ),
@@ -922,8 +954,8 @@ def pay_03_r01_invalid_code(ctx, control) -> list[Signal]:
     if csv.empty or lines.empty or "code" not in csv.columns:
         return []
     csv = csv.copy()
-    csv["code"] = csv["code"].map(_str_id)
-    csv["system"] = _col(csv, "code_system").map(_str_id)
+    csv["code"] = csv["code"].pipe(_sid)
+    csv["system"] = _col(csv, "code_system").pipe(_sid)
     listed = set(csv["code"])
     desc = _describer(ctx)
     obs = _table(ctx, "observation")
@@ -953,7 +985,7 @@ def pay_03_r01_invalid_code(ctx, control) -> list[Signal]:
     if bad.empty:
         return []
     # declared exclusion: approved unlisted-code pathway with the required Observation
-    auth_ok = _col(bad, "authorization_id").map(lambda v: _str_id(v).strip() in approved_ids)
+    auth_ok = _col(bad, "authorization_id").pipe(_sid).isin(approved_ids)
     bad = bad[~(bad["line_sk"].isin(observed_lines) & auth_ok)]
     out: list[Signal] = []
     for r in bad.drop_duplicates("line_sk").itertuples(index=False):
@@ -988,18 +1020,20 @@ def pay_03_r01_invalid_code(ctx, control) -> list[Signal]:
         systems = set(csv["system"]) - {""}
         d = dx.copy()
         d["claim_sk"] = d["claim_sk"].astype(str)
-        d["code"] = d["code"].map(_str_id)
-        d["system"] = _col(d, "code_system").map(_str_id)
+        d["code"] = d["code"].pipe(_sid)
+        d["system"] = _col(d, "code_system").pipe(_sid)
         d = d[d["system"].isin(systems) & (d["code"] != "")]
         if not d.empty:
             hdr = _header(ctx)[["claim_sk", "member_sk", "provider_sk", "service_date"]]
             d = d.merge(hdr, on="claim_sk", how="inner")
-            listed_pairs = set(zip(csv["code"], csv["system"]))
-            d["listed"] = [(c, s) in listed_pairs for c, s in zip(d["code"], d["system"])]
-            dm = d.merge(csv[["code", "system", "valid_from", "valid_to"]], on=["code", "system"], how="left")
+            ref_rows = csv[["code", "system", "valid_from", "valid_to"]].assign(listed=True)
+            dm = d.merge(ref_rows, on=["code", "system"], how="left")
+            dm["listed"] = dm["listed"].fillna(False).astype(bool)
             dm["active"] = _in_force(dm["service_date"], dm["valid_from"], dm["valid_to"]) & dm["listed"]
-            actd = dm.groupby(["claim_sk", "code"])["active"].any()
-            badd = d[[not actd.get((c, k), False) for c, k in zip(d["claim_sk"], d["code"])]]
+            actd = dm.groupby(["claim_sk", "code"], as_index=False).agg(active=("active", "any"),
+                                                                       listed=("listed", "any"))
+            badd = d.drop(columns=[c for c in ("listed",) if c in d.columns]).merge(
+                actd[~actd["active"]], on=["claim_sk", "code"], how="inner")
             for r in badd.drop_duplicates(["claim_sk", "code"]).itertuples(index=False):
                 problem = "absent" if not r.listed else "inactive"
                 text = (f"Diagnosis code {r.code} ({r.system}) on this claim "
@@ -1041,7 +1075,7 @@ def pay_03_r02_demographic_impossibility(ctx, control) -> list[Signal]:
     if lines.empty or ref.empty or mem.empty or "member_sk" not in mem.columns:
         return []
     mem = mem.copy()
-    mem["member_sk"] = mem["member_sk"].map(_str_id)
+    mem["member_sk"] = mem["member_sk"].pipe(_sid)
     mem["m_sex"] = _col(mem, "sex").map(_sex)
     mem["dob"] = _date(_col(mem, "date_of_birth"))
     r = ref[["activity_code"]].copy()
@@ -1069,7 +1103,7 @@ def pay_03_r02_demographic_impossibility(ctx, control) -> list[Signal]:
     pairs = _approved_code_pairs(auth, al)
     if not pairs.empty:
         ok_keys = {(k, c) for k, c in zip(pairs["authorization_sk"], pairs["activity_code"])}
-        auth_key = _col(m, "authorization_id").map(lambda v: ids.get(_str_id(v).strip()))
+        auth_key = _col(m, "authorization_id").pipe(_sid).map(ids)
         excepted = [(k, c) in ok_keys for k, c in zip(auth_key, m["activity_code"])]
         m = m[[not x for x in excepted]]
     desc = _describer(ctx)
@@ -1119,7 +1153,7 @@ def pay_03_r03_unit_maximum(ctx, control) -> list[Signal]:
         return []
     exempt = {str(x).strip().upper() for x in (ctx.cfg("pay03_unit_exempt_indicators") or [])}
     pol = pol.copy()
-    pol["activity_code"] = pol["activity_code"].map(_str_id)
+    pol["activity_code"] = pol["activity_code"].pipe(_sid)
     pol["max_units"] = _num(_col(pol, "max_units_per_day"))
     pol = pol[pol["max_units"] > 0].drop_duplicates("activity_code")
     ln = lines[~lines["line_sk"].isin(_inactive_lines(ctx))]  # declared exclusion: repeat / resubmission
@@ -1303,9 +1337,9 @@ def _needs_authorisation(ctx, lines: pd.DataFrame) -> pd.DataFrame:
     br = br[_truthy(_col(br, "authorization_required"))]
     if br.empty:
         return pd.DataFrame()
-    br["product"] = _col(br, "product").map(_str_id)
-    br["service_family"] = _col(br, "service_family").map(lambda v: _str_id(v).lower())
-    fam = ref[["activity_code"]].assign(service_family=_col(ref, "service_family").map(lambda v: _str_id(v).lower()))
+    br["product"] = _col(br, "product").pipe(_sid)
+    br["service_family"] = _col(br, "service_family").pipe(_sid).str.lower()
+    fam = ref[["activity_code"]].assign(service_family=_col(ref, "service_family").pipe(_sid).str.lower())
     base = lines.drop(columns=[c for c in ("product", "service_family") if c in lines.columns])
     ln = base.merge(fam, on="activity_code", how="inner")
     # Benefit family: on a case-rate (package) claim every line takes the case-rate code's family,
@@ -1318,10 +1352,10 @@ def _needs_authorisation(ctx, lines: pd.DataFrame) -> pd.DataFrame:
     cov = _table(ctx, "coverage_period")
     if not cov.empty and {"member_sk", "product"} <= set(cov.columns):
         c = cov[["member_sk", "product"]].assign(valid_from=_col(cov, "valid_from"), valid_to=_col(cov, "valid_to"))
-        c["member_sk"] = c["member_sk"].map(_str_id)
+        c["member_sk"] = c["member_sk"].pipe(_sid)
         j = ln[["line_sk", "member_sk", "line_date"]].merge(c, on="member_sk", how="inner")
         j = j[_in_force(j["line_date"], j["valid_from"], j["valid_to"])].drop_duplicates("line_sk")
-        prod = ln["line_sk"].map(dict(zip(j["line_sk"], j["product"].map(_str_id)))).fillna("")
+        prod = ln["line_sk"].map(dict(zip(j["line_sk"], j["product"].pipe(_sid)))).fillna("")
     ln = ln.assign(product_s=prod.values)
     exact = ln.merge(br[["product", "service_family", "valid_from", "valid_to"]],
                      left_on=["product_s", "service_family"], right_on=["product", "service_family"], how="inner")
@@ -1346,7 +1380,7 @@ def pay_04_r01_missing_authorization(ctx, control) -> list[Signal]:
     if need.empty:
         return []
     auth, al, ids = _authorisations(ctx)
-    aid = _col(need, "authorization_id").map(lambda v: _str_id(v).strip())
+    aid = _col(need, "authorization_id").pipe(_sid)
     need = need.assign(aid=aid.values)
     unlinked = need[(need["aid"] == "") | ~need["aid"].isin(set(ids))]
     if unlinked.empty:
@@ -1468,10 +1502,10 @@ def pay_04_r03_scope_mismatch(ctx, control) -> list[Signal]:
     a = auth[_approved(auth["status_s"])].copy()
     a["conditions_all"] = ""
     if not al.empty and "conditions" in al.columns:
-        cond = al.groupby("authorization_sk")["conditions"].apply(
-            lambda s: " ".join(str(v) for v in s if not is_missing(v)).lower())
-        a["conditions_all"] = a["authorization_sk"].map(cond).fillna("")
-    a["facility_s"] = _col(a, "facility_id").map(_str_id)
+        flags = al.assign(t=_norm(al["conditions"]).str.contains("transfer", regex=False))
+        transfer = flags.groupby("authorization_sk")["t"].any()
+        a["conditions_all"] = a["authorization_sk"].map(transfer).fillna(False).map({True: "transfer", False: ""})
+    a["facility_s"] = _col(a, "facility_id").pipe(_sid)
     m = ln[ln["auth_key"].notna()].merge(
         a[["authorization_sk", "provider_sk", "facility_s", "conditions_all", "member_sk"]].rename(columns={
             "authorization_sk": "auth_key", "provider_sk": "auth_provider_sk", "member_sk": "auth_member_sk"}),
@@ -1483,12 +1517,22 @@ def pay_04_r03_scope_mismatch(ctx, control) -> list[Signal]:
     eq = _table(ctx, "code_equivalence_map")
     group_of: dict[str, set[str]] = {}
     if not eq.empty and {"code", "equivalence_group"} <= set(eq.columns):
-        for c, g in zip(eq["code"].map(_str_id), eq["equivalence_group"].map(_str_id)):
+        for c, g in zip(eq["code"].pipe(_sid), eq["equivalence_group"].pipe(_sid)):
             group_of.setdefault(c, set()).add(g)
     enc = _table(ctx, "encounter")
-    fac = {}
+    fac: dict[str, str] = {}
     if not enc.empty and {"claim_sk", "facility_id"} <= set(enc.columns):
-        fac = dict(zip(enc["claim_sk"].astype(str), enc["facility_id"].map(_str_id)))
+        fac = enc.assign(cs=enc["claim_sk"].astype(str), f=enc["facility_id"].pipe(_sid))             .drop_duplicates("cs").set_index("cs")["f"].to_dict()
+    # Vectorised screen; only the lines that fail a dimension go through the detailed check.
+    ok_pairs = al.loc[~al["line_denied"], ["authorization_sk", "activity_code"]].drop_duplicates()         .rename(columns={"authorization_sk": "auth_key"}).assign(code_ok=True)
+    m = m.merge(ok_pairs, on=["auth_key", "activity_code"], how="left")
+    has_lines = m["auth_key"].isin(set(ok_pairs["auth_key"]))
+    code_bad = has_lines & m["code_ok"].isna()
+    no_transfer = m["conditions_all"] != "transfer"
+    prov_bad = (m["auth_provider_sk"] != "") & (m["provider_sk"] != "") &         (m["auth_provider_sk"] != m["provider_sk"]) & no_transfer
+    m["claim_facility"] = m["claim_sk"].map(fac).fillna("")
+    fac_bad = (m["facility_s"] != "") & (m["claim_facility"] != "") & (m["facility_s"] != m["claim_facility"])         & no_transfer
+    m = m[code_bad | prov_bad | fac_bad]
     desc = _describer(ctx)
     out: list[Signal] = []
     for r in m.itertuples(index=False):
@@ -1544,8 +1588,9 @@ def pay_04_r04_quantity_exhaustion(ctx, control) -> list[Signal]:
     a = al[~al["line_denied"] & al["authorization_sk"].isin(set(ok))].groupby(
         ["authorization_sk", "activity_code"]).agg(
         approved_units=("approved_units_n", "sum"), approved_value=("approved_value_n", "sum"),
-        has_units=("approved_units_n", lambda s: s.notna().any()),
-        has_value=("approved_value_n", lambda s: s.notna().any())).reset_index()
+        has_units=("approved_units_n", "count"), has_value=("approved_value_n", "count")).reset_index()
+    a["has_units"] = a["has_units"] > 0
+    a["has_value"] = a["has_value"] > 0
     m = ln[ln["auth_key"].notna()].merge(
         a.rename(columns={"authorization_sk": "auth_key"}), on=["auth_key", "activity_code"], how="inner")
     if m.empty:
@@ -1619,7 +1664,7 @@ def pay_04_r05_authorization_reuse(ctx, control) -> list[Signal]:
     if family_ok:
         mem = _table(ctx, "member")
         if not mem.empty and "sponsor_id" in mem.columns:
-            sp = dict(zip(mem["member_sk"].map(_str_id), mem["sponsor_id"].map(_str_id)))
+            sp = dict(zip(mem["member_sk"].pipe(_sid), mem["sponsor_id"].pipe(_sid)))
             same = [sp.get(a, "") != "" and sp.get(a) == sp.get(b) for a, b in zip(m["member_sk"], m["auth_member_sk"])]
             m = m[[not s for s in same]]
     users = ln[ln["auth_key"].notna()].groupby("auth_key")["member_sk"].apply(lambda s: sorted(set(s)))
@@ -1676,8 +1721,8 @@ def _indicator_rules(ctx) -> pd.DataFrame:
     if rows.empty:
         return pd.DataFrame(columns=["indicator", "scope"])
     return pd.DataFrame({
-        "indicator": _col(rows, "description").map(lambda v: _str_id(v).strip().upper()).values,
-        "scope": _col(rows, "service_family").map(lambda v: _str_id(v).strip().lower()).values,
+        "indicator": _col(rows, "description").pipe(_sid).str.upper().values,
+        "scope": _col(rows, "service_family").pipe(_sid).str.lower().values,
         "value": _num(_col(rows, "value")).values,
     })
 
@@ -1696,7 +1741,7 @@ def pay_05_r01_prohibited_indicator_pair(ctx, control) -> list[Signal]:
         return []
     desc = _describer(ctx)
     ref = _codes(ctx)
-    fam = dict(zip(ref["activity_code"], _col(ref, "service_family").map(lambda v: _str_id(v).lower()))) \
+    fam = dict(zip(ref["activity_code"], _col(ref, "service_family").pipe(_sid).str.lower())) \
         if not ref.empty else {}
     hits: dict[str, dict[str, Any]] = {}
     rules = _indicator_rules(ctx)
@@ -1842,12 +1887,18 @@ def pay_05_r03_indicator_rate_outlier(ctx, control) -> list[Signal]:
             grp = grp[grp["opportunities"] >= min_lines]
             if len(grp) < int(ctx.cfg("pay02_novel_min_peer_providers")):
                 continue
-            prior = fit_beta_prior(grp["events"], grp["opportunities"])
-            srs = {p: shrink_rate(str(p), r.events, r.opportunities, prior, interval_mass=interval_mass,
-                                  max_posterior_width=max_width) for p, r in grp.iterrows()}
-            rates = [s.shrunk_rate for s in srs.values()]
-            cut = float(np.quantile(rates, pctl))
-            for p, sr in srs.items():
+            # Leave-one-out: each provider is compared with its peers WITHOUT itself, so a heavy
+            # user cannot pull the peer rate (and the peer percentile) up toward its own rate.
+            ev_all, op_all = grp["events"].to_numpy(float), grp["opportunities"].to_numpy(float)
+            others_rate = (ev_all.sum() - ev_all) / np.maximum(op_all.sum() - op_all, 1.0)
+            own = ev_all / np.maximum(op_all, 1.0)
+            for i in np.flatnonzero(own >= ratio_cut * np.maximum(others_rate, 1e-9)):
+                p = grp.index[i]
+                rest = np.arange(len(grp)) != i
+                prior = fit_beta_prior(ev_all[rest], op_all[rest])
+                sr = shrink_rate(str(p), ev_all[i], op_all[i], prior, interval_mass=interval_mass,
+                                 max_posterior_width=max_width)
+                cut = float(np.quantile(ev_all[rest] / op_all[rest], pctl))
                 if sr.excluded_from_ranking or sr.shrunk_rate <= cut:
                     continue
                 if sr.shrunk_rate < ratio_cut * max(prior.peer_mean, 1e-9):
@@ -1877,7 +1928,7 @@ def pay_05_r03_indicator_rate_outlier(ctx, control) -> list[Signal]:
                         observed_rate=round(sr.observed_rate or 0.0, 4), shrunk_rate=round(sr.shrunk_rate, 4),
                         posterior_interval=[round(sr.posterior_low, 4), round(sr.posterior_high, 4)],
                         peer_mean=round(prior.peer_mean, 4), peer_percentile=pctl,
-                        peer_percentile_cut=round(cut, 4), peer_group=peer, peer_providers=len(grp),
+                        peer_percentile_cut=round(cut, 4), peer_group=peer, peer_providers=len(grp) - 1,
                         shrinkage_explanation=sr.explain(),
                     ),
                     exposure=_exp.no_exposure(
@@ -1908,7 +1959,7 @@ def pay_05_r04_post_edit_migration(ctx, control) -> list[Signal]:
     if e.empty:
         return []
     ref = _codes(ctx)
-    fam = dict(zip(ref["activity_code"], _col(ref, "service_family").map(lambda v: _str_id(v).lower()))) \
+    fam = dict(zip(ref["activity_code"], _col(ref, "service_family").pipe(_sid).str.lower())) \
         if not ref.empty else {}
     paid = _paid_by_line(ctx)
     paid_map = dict(zip(paid["line_sk"], paid["paid"])) if not paid.empty else {}
@@ -2010,34 +2061,44 @@ def pay_06_r01_tariff_price_variance(ctx, control) -> list[Signal]:
     tol = float(ctx.cfg("pay06_price_rounding_tolerance_pct"))
     tol_abs = float(ctx.cfg("pay06_price_rounding_tolerance_aed"))
     c = contract.copy()
-    c["provider_sk"] = _col(c, "provider_sk").map(_str_id)
-    c["c_payer"] = _col(c, "payer_id").map(_str_id)
-    c["tier"] = _col(c, "network_tier").map(_str_id)
+    c["provider_sk"] = _col(c, "provider_sk").pipe(_sid)
+    c["c_payer"] = _col(c, "payer_id").pipe(_sid)
+    c["tier"] = _col(c, "network_tier").pipe(_sid)
     c["disc"] = _num(_col(c, "discount_pct")).fillna(0.0)
-    c["basis"] = _col(c, "tariff_basis").map(_str_id)
+    c["basis"] = _col(c, "tariff_basis").pipe(_sid)
     c["c_vf"] = _col(c, "valid_from")
     c["c_vt"] = _col(c, "valid_to")
-    ln = lines[(lines["activity_code"] != "") & (lines["units_n"] > 0)]
-    j = ln.merge(c[["provider_sk", "c_payer", "tier", "disc", "basis", "c_vf", "c_vt"]], on="provider_sk", how="inner")
+    ln = lines[(lines["activity_code"] != "") & (lines["units_n"] > 0) & (lines["billed"] > 0)]
+    ln = ln[["line_sk", "claim_sk", "member_sk", "provider_sk", "payer_id", "activity_code", "units_n",
+             "billed", "payable", "line_date"]].assign(payer_s=ln["payer_id"].pipe(_sid))
+    cols = ["provider_sk", "c_payer", "tier", "disc", "basis", "c_vf", "c_vt"]
+    j = pd.concat([
+        ln.merge(c.loc[c["c_payer"] != "", cols], left_on=["provider_sk", "payer_s"],
+                 right_on=["provider_sk", "c_payer"], how="inner"),
+        ln.merge(c.loc[c["c_payer"] == "", cols], on="provider_sk", how="inner"),
+    ], ignore_index=True)
     j = j[_in_force(j["line_date"], j["c_vf"], j["c_vt"])]
-    j = j[(j["c_payer"] == "") | (j["c_payer"] == j["payer_id"].map(_str_id))]
     # declared exclusion: negotiated carve-outs
     j = j[~_norm(j["basis"]).str.contains("carve|per_diem|per diem|case_rate|capitat", regex=True)]
     if j.empty:
         return []
     t = tariff.copy()
-    t["activity_code"] = t["activity_code"].map(_str_id)
-    t["tier"] = _col(t, "network_tier").map(_str_id)
-    t["t_payer"] = _col(t, "payer_id").map(_str_id)
+    t["activity_code"] = t["activity_code"].pipe(_sid)
+    t["tier"] = _col(t, "network_tier").pipe(_sid)
+    t["t_payer"] = _col(t, "payer_id").pipe(_sid)
     t["allowed_price"] = _num(_col(t, "allowed_price"))
+    t["t_vf"] = _col(t, "valid_from")
+    t["t_vt"] = _col(t, "valid_to")
     t = t[t["allowed_price"] > 0]
-    k = j.merge(t[["activity_code", "tier", "t_payer", "allowed_price", "valid_from", "valid_to"]],
-                on=["activity_code", "tier"], how="inner", suffixes=("", "_t"))
+    tcols = ["activity_code", "tier", "t_payer", "allowed_price", "t_vf", "t_vt"]
+    k = pd.concat([
+        j.merge(t.loc[t["t_payer"] != "", tcols], left_on=["activity_code", "tier", "payer_s"],
+                right_on=["activity_code", "tier", "t_payer"], how="inner"),
+        j.merge(t.loc[t["t_payer"] == "", tcols], on=["activity_code", "tier"], how="inner"),
+    ], ignore_index=True)
     if k.empty:
         return []
-    k = k[_in_force(k["line_date"], k["valid_from_t"] if "valid_from_t" in k.columns else k["valid_from"],
-                    k["valid_to_t"] if "valid_to_t" in k.columns else k["valid_to"])]
-    k = k[(k["t_payer"] == "") | (k["t_payer"] == k["payer_id"].map(_str_id))]
+    k = k[_in_force(k["line_date"], k["t_vf"], k["t_vt"])]
     # payer-specific tariff wins over the generic one
     k = k.assign(spec=(k["t_payer"] != "").astype(int)).sort_values(["line_sk", "spec"], ascending=[True, False])
     k = k.drop_duplicates("line_sk")

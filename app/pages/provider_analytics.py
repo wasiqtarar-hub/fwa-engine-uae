@@ -29,7 +29,7 @@ from components.analysis_pages import (
 )
 from fwa.auth import Permission
 from fwa.presentation import (
-    aed, control_title, pct, plain_month, ratio_words, standard_text,
+    aed, control_title, pct, plain_month, plain_number, ratio_words, standard_text,
 )
 from fwa.statistical.changepoint import detect_changepoints, monthly_provider_metrics
 from fwa.statistical.shrinkage import shrinkage_demonstration
@@ -254,7 +254,7 @@ def _shrinkage(result, config, state) -> None:
             rows.append({
                 "Provider": mask(s.subject_id, state),
                 "Check": control_title(s.rule_id),
-                "Claims": s.evidence.get("claim_count"),
+                "Claims": plain_number(s.evidence.get("claim_count"), missing="—"),
                 "Rate seen": pct(s.evidence.get("observed_rate")),
                 "After adjustment": pct(s.evidence.get("shrunk_rate")),
                 "Typical rate": pct(s.evidence.get("peer_mean")),
@@ -268,7 +268,7 @@ def _shrinkage(result, config, state) -> None:
         friendly_table(frame, key="pa_shrunk",
                        columns=["Provider", "Check", "Claims", "Rate seen", "After adjustment",
                                 "Typical rate", "Likely range"],
-                       keep_numeric=["Claims"], height=320)
+                       height=320)
 
     with st.expander("Technical details: empirical-Bayes shrinkage", expanded=False):
         st.markdown(
@@ -411,8 +411,10 @@ def _peers(result) -> None:
                 "Groups found": int(r.distinct_values),
             })
         friendly_table(pd.DataFrame(rows), key="pa_levels", keep_numeric=["Level", "Groups found"])
-        st.caption("Location is never used: this file has no location field, so it is left out "
-                   "rather than guessed, and the checks that need it do not run.")
+        geo = table[table["canonical_name"] == "geography"]
+        if not geo.empty and str(geo.iloc[0]["availability"]) == "NOT_POPULATED":
+            st.caption("Location is never used in these comparisons: it is left out rather than "
+                       "guessed, and the checks that need it do not run.")
 
     used = pd.Series([s.peer_level_used for s in result.signals if s.peer_level_used])
     if not used.empty:
@@ -420,8 +422,7 @@ def _peers(result) -> None:
         counts.columns = ["group", "signals"]
         top = counts.iloc[0]["group"]
         bar(counts.sort_values("signals"), "group", "signals",
-            title=f"Most comparisons used providers with the {top}" if not top.startswith(("all", "not"))
-            else f"Most comparisons used: {top}",
+            title=f"Most flags compared providers on: {top}",
             horizontal=True, height=300, x_label="Comparison group", y_label="Number of flags",
             how_to_read="Each bar counts the flags whose comparison used that kind of group. More "
                         "specific groups make fairer comparisons; broader ones are used when the "

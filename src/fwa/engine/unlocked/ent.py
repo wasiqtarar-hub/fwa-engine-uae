@@ -22,6 +22,7 @@ imports the helpers below):
 
 from __future__ import annotations
 
+import datetime as _dt
 import functools
 import json
 from typing import Any, Callable, Iterable
@@ -59,6 +60,7 @@ _NON_INDEPENDENT_ROLE_WORDS = ("NURSE", "TECHNICIAN", "ASSISTANT", "TRAINEE", "I
                                "AIDE", "SCRIBE")
 _ANAESTHESIA_WORDS = ("ANAES", "ANES")
 _PROHIBITED_PREFIXES = ("NOT:", "!", "PROHIBITED:", "EXCLUDED:", "-")
+_IN_NETWORK_VALUES = {"IN_NETWORK", "IN NETWORK", "IN", "PARTICIPATING", "CONTRACTED"}
 
 
 def _safe(fn: Callable) -> Callable:
@@ -375,6 +377,16 @@ def _authorizations(ctx) -> pd.DataFrame:
     return out.drop_duplicates("authorization_id")
 
 
+def _fast_ts(value: Any) -> pd.Timestamp:
+    """An ISO date string parsed without pandas' general-purpose parser; anything else falls back."""
+    if isinstance(value, str) and len(value) >= 10:
+        try:
+            return pd.Timestamp(_dt.date.fromisoformat(value[:10]))
+        except ValueError:
+            pass
+    return pd.to_datetime(value, errors="coerce")
+
+
 def _parse_periods(value: Any) -> list[tuple[pd.Timestamp, pd.Timestamp, str]]:
     """Leave periods in any of the shapes a roster tends to use."""
     if value is None or (isinstance(value, float) and np.isnan(value)):
@@ -405,14 +417,18 @@ def _parse_periods(value: Any) -> list[tuple[pd.Timestamp, pd.Timestamp, str]]:
                 if sep in it:
                     start, end = it.split(sep, 1)
                     break
-        s = pd.to_datetime(start, errors="coerce")
-        e = pd.to_datetime(end, errors="coerce")
+        s = _fast_ts(start)
+        e = _fast_ts(end)
         if pd.isna(s):
             continue
         if pd.isna(e):
             e = s
         out.append((s.normalize(), e.normalize(), kind))
     return out
+
+
+def _article(word: str) -> str:
+    return "an" if str(word)[:1].lower() in "aeiou" else "a"
 
 
 def _period(value: Any) -> str:
@@ -707,8 +723,9 @@ def ent_01_r04_network_referral_violation(ctx, control) -> list:
     tokens = j["status_value"].str.replace(",", ";").str.split(";")
     listed = [nw in {t.strip() for t in toks} if isinstance(toks, list) else False
               for nw, toks in zip(j["network_u"], tokens)]
-    j["ok"] = in_force & pd.Series(listed, index=j.index) & ~j["status_value"].str.contains("OUT|TERMIN|SUSPEND",
-                                                                                               regex=True)
+    generic_in = j["status_value"].str.strip().isin(_IN_NETWORK_VALUES)
+    j["ok"] = in_force & (pd.Series(listed, index=j.index) | generic_in) & \
+        ~j["status_value"].str.contains("OUT|TERMIN|SUSPEND", regex=True)
     in_net = j.groupby("claim_sk")["ok"].any()
     c["in_network"] = c["claim_sk"].map(in_net).fillna(False).astype(bool)
     c["limb"] = np.where(~c["in_network"], "out_of_network", "")
@@ -756,11 +773,16 @@ def ent_01_r04_network_referral_violation(ctx, control) -> list:
         nw_prov = net[net["status_value"].notna()].copy()
         nw_prov["emirate"] = nw_prov["provider_sk"].map(pinfo["emirate"])
         nw_prov["ftype"] = nw_prov["provider_sk"].map(pinfo["facility_type"])
+        nw_prov = nw_prov[~nw_prov["status_value"].str.contains("OUT|TERMIN|SUSPEND", regex=True)]
         avail = set()
         for r in nw_prov.itertuples(index=False):
-            for tok in str(r.status_value).replace(",", ";").split(";"):
-                avail.add((tok.strip(), r.emirate, r.ftype))
-        gap = [(nw, e, t) not in avail for nw, e, t in zip(c["network_u"], c["p_emirate"], c["p_type"])]
+            toks = {t.strip() for t in str(r.status_value).replace(",", ";").split(";")}
+            if toks & _IN_NETWORK_VALUES:
+                toks.add("*")
+            for tok in toks:
+                avail.add((tok, r.emirate, r.ftype))
+        gap = [(nw, e, t) not in avail and ("*", e, t) not in avail
+               for nw, e, t in zip(c["network_u"], c["p_emirate"], c["p_type"])]
         c = c[~(pd.Series(gap, index=c.index) & (c["limb"] == "out_of_network"))]
     out = []
     for row in c.itertuples(index=False):
@@ -924,10 +946,20 @@ def ent_02_r04_card_sharing_pattern(ctx, control) -> list:
         c["emirate"] = np.nan
     c["emirate"] = c["emirate"].where(c["emirate"].notna(), c["location"])
     # limb 1: same member, same day, providers in two or more emirates
-    g = c.dropna(subset=["emirate", "service_date"]).groupby(["member_sk", "service_date"])
-    n_em = g["emirate"].nunique()
-    geo = n_em[n_em >= 2].reset_index()[["member_sk", "service_date"]]
-    geo_days = geo.groupby("member_sk")["service_date"].apply(list).to_dict()
+    # (neighbouring emirates are a short drive apart, so only non-adjacent pairs count)
+    adjacent = {frozenset(str(x).strip().upper() for x in pair)
+                for pair in (ctx.cfg("ent02_adjacent_emirates") or []) if len(pair) == 2}
+    cg = c.dropna(subset=["emirate", "service_date"])
+    cg = cg.assign(emirate_u=_up(cg["emirate"]))
+    n_em = cg.groupby(["member_sk", "service_date"])["emirate_u"].nunique()
+    multi = n_em[n_em >= 2].reset_index()[["member_sk", "service_date"]]
+    geo_days: dict[str, list] = {}
+    if not multi.empty:
+        sets = cg.merge(multi, on=["member_sk", "service_date"]).groupby(["member_sk", "service_date"])[
+            "emirate_u"].apply(lambda v: sorted(set(v)))
+        for (member, day), ems in sets.items():
+            if any(frozenset((a, b)) not in adjacent for i, a in enumerate(ems) for b in ems[i + 1:]):
+                geo_days.setdefault(member, []).append(day)
     # limb 2: services inconsistent with the member's age or sex
     demo: dict[str, list[dict[str, Any]]] = {}
     ref = _activity_ref(ctx)
@@ -1257,8 +1289,10 @@ def ent_03_r04_soft_specialty_mismatch(ctx, control) -> list:
     out = []
     for claim_sk, g in bad.groupby("claim_sk", sort=False):
         r0 = g.iloc[0]
-        clin_spec = ", ".join(sorted(spec.get(r0["rendering"], set()))).replace("_", " ").title()
-        req_txt = " or ".join(sorted(smap[r0["code_family"]])).replace("_", " ").title()
+        clin_spec = ", ".join(sorted(spec.get(r0["rendering"], set()))).replace("_", " ").lower()
+        expected = sorted(smap[r0["code_family"]])
+        req_txt = ("a specialist (" + ", ".join(e.replace("_", " ").lower() for e in expected[:3]) + " and others)"
+                   if len(expected) > 3 else " or ".join(e.replace("_", " ").lower() for e in expected))
         what = desc.get(r0["activity_code"]) if len(desc) else None
         what = f"{what} (code {r0['activity_code']})" if what and not is_missing(what) else f"Code {r0['activity_code']}"
         out.append(_sig(
@@ -1404,6 +1438,12 @@ def ent_04_r01_missing_rendering_clinician(ctx, control) -> list:
         return []
     ref = _activity_ref(ctx)
     lines = lines[_clinician_required(lines, ref)]
+    # role requirement by activity: a diagnostic test (laboratory or imaging) is performed by the
+    # department; the role it requires is a named ordering clinician, so one on the line satisfies it
+    if not ref.empty and "service_family" in ref.columns:
+        fam = _up(lines["activity_code"].map(ref.set_index("activity_code")["service_family"]).fillna(""))
+        diagnostic = fam.isin({"LAB", "IMAGING", "ADVANCED_IMAGING"})
+        lines = lines[~(diagnostic & lines["rendering"].isna() & lines["ordering"].notna())]
     prov = _providers(ctx)
     facility_ids = set(prov["provider_sk"].astype(str))
     for col in ("source_provider_id", "regulator_id", "licence_no"):
@@ -1604,7 +1644,10 @@ def ent_04_r04_geographic_leave_impossibility(ctx, control) -> list:
         if leave:
             lv = pd.DataFrame(leave, columns=["rendering", "ls", "le", "kind"]).drop_duplicates()
             j = lines.merge(lv, on="rendering", how="inner")
-            j = j[(j["line_date"] >= j["ls"]) & (j["line_date"] <= j["le"])]
+            # a stay or episode that began before the leave may carry the clinician on later lines
+            # (standing orders, attribution to the admitting team): only claims that START inside
+            # the leave are counted
+            j = j[(j["line_date"] >= j["ls"]) & (j["line_date"] <= j["le"]) & (j["service_date"] >= j["ls"])]
             for (clin, ls, le, kind), g in j.groupby(["rendering", "ls", "le", "kind"], sort=False):
                 findings.append({"clin": clin, "limb": "leave", "claims": _ids(g["claim_sk"]),
                                  "date": g["line_date"].min(), "providers": _ids(g["provider_sk"]),
@@ -1682,9 +1725,13 @@ def ent_05_r01_facility_type_incompatible(ctx, control) -> list:
     allowed = ref.set_index("activity_code")["facility_types"].map(_allowed_tokens)
     allowed = allowed[allowed.map(len) > 0]
     l2 = lines[lines["activity_code"].isin(allowed.index)].copy()
-    l2["ftype"] = _up(l2["provider_sk"].map(prov.set_index("provider_sk")["facility_type"]).fillna(""))
-    l2 = l2[l2["ftype"] != ""]
-    ok = [ft in al for ft, al in zip(l2["ftype"], l2["activity_code"].map(allowed))]
+    pinfo = prov.set_index("provider_sk")
+    l2["ftype"] = _up(l2["provider_sk"].map(pinfo["facility_type"]).fillna(""))
+    l2["ptype"] = _up(l2["provider_sk"].map(pinfo["provider_type"]).fillna("")) if "provider_type" in pinfo.columns \
+        else ""
+    l2 = l2[(l2["ftype"] != "") | (l2["ptype"] != "")]
+    # the licence category may be recorded as the provider type (HOSPITAL, CLINIC, PHARMACY …) or the facility type
+    ok = [ft in al or pt in al for ft, pt, al in zip(l2["ftype"], l2["ptype"], l2["activity_code"].map(allowed))]
     bad = l2[~pd.Series(ok, index=l2.index)]
     if bad.empty:
         return []
@@ -1711,9 +1758,11 @@ def ent_05_r01_facility_type_incompatible(ctx, control) -> list:
                            "net_amount_aed": round(_f(r.net_line), 2)} for r in g.itertuples(index=False)],
                 "net_amount_aed": round(total, 2),
                 "reason_code": control.reason_code, "subject_id": claim_sk,
-                "plain_language": (f"{what.capitalize() if what[0].islower() else what} was billed by a provider licensed "
-                                   f"as a {r0['ftype'].lower()}; that service may only be billed by "
-                                   f"{' or '.join(sorted(t.lower() for t in allowed[r0['activity_code']]))} "
+                "provider_type": r0["ptype"] or None,
+                "plain_language": (f"{what[0].upper() + what[1:]} was billed by a provider licensed as a "
+                                   f"{(r0['ptype'] or r0['ftype']).replace('_', ' ').lower()}; that service may only be "
+                                   f"billed by a "
+                                   f"{' or '.join(sorted(t.replace('_', ' ').lower() for t in allowed[r0['activity_code']]))} "
                                    f"({aed(total)})."),
                 "what_the_reviewer_must_verify": "Confirm the facility type on the provider's licence and whether a "
                                                  "home, mobile or telehealth exception applies.",
@@ -1752,7 +1801,7 @@ def ent_05_r02_admission_evidence_conflict(ctx, control) -> list:
         missing = [w for w in flags if getattr(r, w)]
         if "no_encounter" in missing:
             missing = ["no_encounter"]
-        setting_txt = str(r.encounter_type or r.claim_type).lower() or "inpatient"
+        setting_txt = (str(r.encounter_type or r.claim_type).lower() or "inpatient").replace("_", "-")
         out.append(_sig(
             ctx, control, subject_type="claim", subject_id=r.claim_sk,
             fact_key=f"admission_evidence:{r.claim_sk}", claim_ids=[r.claim_sk],
@@ -1761,7 +1810,7 @@ def ent_05_r02_admission_evidence_conflict(ctx, control) -> list:
                 "provider_sk": r.provider_sk, "member_sk": r.member_sk, "setting_billed": setting_txt,
                 "missing_evidence": missing, "gross_amount_aed": round(_f(r.gross), 2),
                 "reason_code": control.reason_code, "subject_id": r.claim_sk,
-                "plain_language": (f"Billed as a {setting_txt} stay ({aed(r.gross)}, {plain_date(r.service_date)}) but "
+                "plain_language": (f"Billed as {_article(setting_txt)} {setting_txt} stay ({aed(r.gross)}, {plain_date(r.service_date)}) but "
                                    f"the records show {' and '.join(words[m] for m in missing)}."),
                 "what_the_reviewer_must_verify": "Ask for the admission and discharge notes; check whether the records "
                                                  "are late or the patient was transferred.",
@@ -1820,7 +1869,7 @@ def ent_05_r03_related_claim_setting_conflict(ctx, control) -> list:
                 "reason_code": control.reason_code, "subject_id": r.claim_sk_op,
                 "plain_language": (f"The patient was an inpatient at this provider from {plain_date(r.adm)} to "
                                    f"{plain_date(r.dis)} (claim {r.claim_sk_ip}, {aed(r.gross_ip)}), yet claim "
-                                   f"{r.claim_sk_op} bills a {op_setting} visit at the same provider on "
+                                   f"{r.claim_sk_op} bills {_article(op_setting)} {op_setting} visit at the same provider on "
                                    f"{plain_date(r.service_date)} ({aed(r.gross_op)})."),
                 "what_the_reviewer_must_verify": "Compare both claims side by side and check for a transfer or an "
                                                  "independent practitioner.",
@@ -1853,7 +1902,7 @@ def ent_05_r04_setting_shift_anomaly(ctx, control) -> list:
     rows = []
     for p, g in monthly.groupby("provider_sk", sort=False):
         g = g.sort_values("month")
-        if len(g) < 2 * min_months or g["h"].sum() == 0:
+        if len(g) < 2 * min_months:
             continue
         cn, ch = g["n"].cumsum().values, g["h"].cumsum().values
         tn, th = cn[-1], ch[-1]
@@ -1866,11 +1915,14 @@ def ent_05_r04_setting_shift_anomaly(ctx, control) -> list:
             d = ha / na - hb / nb
             if best is None or d > best[0]:
                 best = (d, k, hb / nb, ha / na, int(nb), int(na))
-        if best is None or best[0] < min_delta:
+        if best is None:
             continue
         rows.append((p, g["month"].iloc[best[1]], *best))
     if not rows:
         return []
+    # peer yardstick: the largest rise each other provider shows at its own best change point
+    deltas = pd.Series({r[0]: r[2] for r in rows})
+    rows = [r for r in rows if r[2] >= min_delta]
     own_change = _d(info["ownership_changed_on"]) if "ownership_changed_on" in info.columns else pd.Series(dtype="datetime64[ns]")
     contract = _table(ctx, "contract")
     c_start = pd.Series(dtype="datetime64[ns]")
@@ -1887,14 +1939,15 @@ def ent_05_r04_setting_shift_anomaly(ctx, control) -> list:
         if len(c_start) and any(near(x) for x in c_start.get(p, [])):
             continue
         ft = ftype.get(p) if len(ftype) else None
-        peers = overall[[x for x in overall.index if x not in flagged and (ft is None or ftype.get(x) == ft)]]
+        peers = deltas[[x for x in deltas.index if x not in flagged and (ft is None or ftype.get(x) == ft)]]
         if len(peers) < min_peer:
-            peers = overall[[x for x in overall.index if x not in flagged]]
+            peers = deltas[[x for x in deltas.index if x not in flagged]]
         if len(peers) < min_peer:
             continue
         cut = float(np.quantile(peers, q))
-        if after <= cut:
+        if delta <= cut:
             continue
+        peer_share = overall[[x for x in overall.index if x not in flagged and (ft is None or ftype.get(x) == ft)]]
         sub = setting[(setting["provider_sk"] == p) & (setting["service_date"] >= split) & (setting["high"] == 1)]
         out.append(_sig(
             ctx, control, subject_type="provider", subject_id=p,
@@ -1903,14 +1956,16 @@ def ent_05_r04_setting_shift_anomaly(ctx, control) -> list:
             peer_level_used=f"facility_type={ft}" if ft is not None else "all providers",
             evidence={
                 "provider_sk": p, "change_month": str(split_month), "share_before": round(before, 3),
-                "share_after": round(after, 3), "claims_before": nb, "claims_after": na,
-                "peer_percentile": q, "peer_cut_share": round(cut, 3), "peer_median_share": round(float(peers.median()), 3),
+                "share_after": round(after, 3), "claims_before": nb, "claims_after": na, "rise": round(delta, 3),
+                "peer_percentile": q, "peer_cut_rise": round(cut, 3), "peer_n": int(len(peers)),
+                "peer_median_share": round(float(peer_share.median()), 3) if len(peer_share) else None,
                 "mean_gross_inpatient_aed": round(float(mean_by_setting.get(1, np.nan)), 2),
                 "mean_gross_outpatient_aed": round(float(mean_by_setting.get(0, np.nan)), 2),
                 "reason_code": control.reason_code, "subject_id": p,
                 "plain_language": (f"From {split:%B %Y} {pct(after)} of this provider's claims were billed as inpatient "
-                                   f"or day-case, up from {pct(before)} before; for similar providers it is "
-                                   f"{pct(float(peers.median()))}."),
+                                   f"or day-case, up from {pct(before)} before — a rise of {round(delta * 100)} "
+                                   f"points; similar providers' mix moved by at most {round(cut * 100)} points "
+                                   f"(the {pct(q)} mark)."),
                 "what_the_reviewer_must_verify": "Check for a contract or facility change around the shift and sample "
                                                  "claims from after it for record review.",
             },
@@ -2033,20 +2088,25 @@ def _encounter_clinician(lines: pd.DataFrame) -> pd.Series:
     l2 = lines.dropna(subset=["rendering"])
     if l2.empty:
         return pd.Series(dtype=object)
-    return l2.groupby("claim_sk")["rendering"].agg(lambda s: s.value_counts().index[0])
+    cnt = l2.groupby(["claim_sk", "rendering"]).size().reset_index(name="n")
+    cnt = cnt.sort_values(["claim_sk", "n", "rendering"], ascending=[True, False, True]).drop_duplicates("claim_sk")
+    return cnt.set_index("claim_sk")["rendering"]
 
 
 def _orders_after(enc: pd.DataFrame, orders: pd.DataFrame, window: int) -> pd.DataFrame:
     """Orders by the encounter's clinician (or provider) for the same member within ``window`` days after."""
     if enc.empty or orders.empty:
         return pd.DataFrame(columns=["claim_sk", "kind", "recipient", "amount", "product", "order_claim_sk"])
-    a = enc[["claim_sk", "member_sk", "provider_sk", "clinician", "service_date"]].merge(
-        orders.rename(columns={"claim_sk": "order_claim_sk"}), on="member_sk", how="inner")
-    who = (a["clinician_x"] == a["clinician_y"]) | (a["referrer_provider"] == a["provider_sk"]) \
-        if "clinician_x" in a.columns else (a["referrer_provider"] == a["provider_sk"])
+    e = enc[["claim_sk", "member_sk", "provider_sk", "clinician", "service_date"]]
+    o = orders.rename(columns={"claim_sk": "order_claim_sk"})
+    by_clin = e.merge(o.drop(columns=["referrer_provider"]), on=["member_sk", "clinician"], how="inner")
+    by_prov = e.merge(o.dropna(subset=["referrer_provider"]).drop(columns=["clinician"]).rename(
+        columns={"referrer_provider": "provider_sk"}), on=["member_sk", "provider_sk"], how="inner")
+    a = pd.concat([by_clin, by_prov], ignore_index=True)
     delta = (a["date"] - a["service_date"]).dt.days
-    a = a[who & (delta >= 0) & (delta <= window)]
-    return a.rename(columns={"clinician_x": "clinician"})
+    a = a[(delta >= 0) & (delta <= window)]
+    keys = [k for k in ("claim_sk", "kind", "recipient", "date", "order_claim_sk", "product") if k in a.columns]
+    return a.drop_duplicates(subset=keys)
 
 
 @_register("ent_06_r02_no_meaningful_interaction")
@@ -2156,6 +2216,8 @@ def ent_06_r03_downstream_referral_concentration(ctx, control) -> list:
         repl = orders["clinician"].map(pref)
         orders["from_provider"] = repl.where(repl.notna() & orders["referrer_provider"].isna(), orders["from_provider"])
     orders = orders.dropna(subset=["from_provider", "recipient"])
+    # dispensing by the ordering provider's own pharmacy is in-house, not a downstream referral
+    orders = orders[orders["from_provider"] != orders["recipient"]]
     counts = orders.groupby(["from_provider", "recipient"]).size().rename("n").reset_index()
     tot = counts.groupby("from_provider")["n"].sum()
     top = counts.sort_values("n", ascending=False).drop_duplicates("from_provider").set_index("from_provider")
@@ -2166,18 +2228,24 @@ def ent_06_r03_downstream_referral_concentration(ctx, control) -> list:
         return []
     min_peer = int(ctx.cfg("min_entity_opportunities"))
     tele_prov = [p for p in eligible.index if share.get(p, 0) >= tele_share_min]
-    peers = eligible.drop(index=tele_prov, errors="ignore")["share"]
-    if len(peers) < min_peer:
-        peers = eligible["share"]
-    cut = max(min_share, float(np.quantile(peers, q))) if len(peers) else min_share
     prov = _providers(ctx)
     info = prov.set_index("provider_sk") if not prov.empty else pd.DataFrame()
+    others = eligible.drop(index=tele_prov, errors="ignore")
+    ptype_of = info["provider_type"] if "provider_type" in info.columns else pd.Series(dtype=object)
     owner = info["owner_entity_id"] if "owner_entity_id" in info.columns else pd.Series(dtype=object)
     emir = info["emirate"] if "emirate" in info.columns else pd.Series(dtype=object)
     ftype = _up(info["facility_type"]) if "facility_type" in info.columns else pd.Series(dtype=object)
     out = []
     for p in tele_prov:
         row = eligible.loc[p]
+        # peers: other prescribing providers of the same provider type (a clinic is compared with clinics)
+        peers = others[others.index.map(ptype_of).astype(str) == str(ptype_of.get(p))]["share"] \
+            if len(ptype_of) else others["share"]
+        if len(peers) < min_peer:
+            peers = others["share"]
+        if len(peers) < min_peer:
+            continue
+        cut = max(min_share, float(np.quantile(peers, q)))
         if row["share"] <= cut:
             continue
         rec = row["recipient"]
@@ -2190,7 +2258,7 @@ def ent_06_r03_downstream_referral_concentration(ctx, control) -> list:
                 continue  # narrow network: there are hardly any alternatives
         sub = orders[(orders["from_provider"] == p) & (orders["recipient"] == rec)]
         kind = sub["kind"].mode().iloc[0] if not sub.empty else "order"
-        rec_kind = str(ftype.get(rec, "supplier")).lower() if len(ftype) else "supplier"
+        rec_kind = str(ftype.get(rec, "supplier")).lower().replace("_", " ") if len(ftype) else "supplier"
         amount = float(sub["amount"].fillna(0).sum())
         first = sub["date"].min()
         out.append(_sig(

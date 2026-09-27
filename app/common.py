@@ -226,7 +226,9 @@ def boot(page_title: str, icon: str = "🛡️") -> None:
     # page render replaces the DOM, so a <style> element added on a previous
     # page is gone — and the AI panel would lose the dashed border that makes
     # it visually distinct from an evidence panel, which is non-negotiable.
-    st.markdown(f"<style>{_stylesheet(active_theme())}</style>", unsafe_allow_html=True)
+    # ``st.html`` with nothing but a <style> block applies the styles without
+    # adding a visible element, so the stylesheet is chrome, never page text.
+    st.html(f"<style>{_stylesheet(active_theme())}</style>")
     chart_template()
 
 

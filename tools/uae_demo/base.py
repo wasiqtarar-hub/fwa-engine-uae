@@ -253,11 +253,11 @@ RESUBMITTABLE = {"DOC-001", "DOC-003", "CLAI-012"}
 
 #: Acute outpatient scenarios. rx: list of (probability, [products]); labs/imaging: (probability, [codes]).
 ACUTE: list[dict[str, Any]] = [
-    dict(key="URTI", dx="J06.9", w=14, levels={2: .35, 3: .5, 4: .12, 1: .03}, rx=[(.5, ["RX1033"]), (.35, ["RX1041", "RX1042"])], tele=.08, season=1.8),
+    dict(key="URTI", dx="J06.9", w=12, levels={2: .35, 3: .5, 4: .12, 1: .03}, rx=[(.5, ["RX1033"]), (.35, ["RX1041", "RX1042"])], tele=.08, season=1.8),
     dict(key="PHARYNGITIS", dx="J02.9", w=5, levels={2: .3, 3: .55, 4: .15}, office=[(.5, "87880")], rx=[(.7, ["RX1001", "RX1002"]), (.4, ["RX1035"])], season=1.5),
     dict(key="TONSILLITIS", dx="J03.90", w=3, levels={2: .2, 3: .6, 4: .2}, rx=[(.8, ["RX1004", "RX1005", "RX1001"]), (.5, ["RX1035"])], season=1.4),
-    dict(key="BRONCHITIS", dx="J20.9", w=3, levels={3: .6, 4: .4}, imaging=[(.4, ["71046"])], rx=[(.3, ["RX1038"]), (.3, ["RX1006"])], season=1.6),
-    dict(key="COUGH", dx="R05.9", w=2, levels={2: .4, 3: .6}, imaging=[(.3, ["71046"])], rx=[(.2, ["RX1041"])], season=1.5),
+    dict(key="BRONCHITIS", dx="J20.9", w=3, levels={3: .6, 4: .4}, imaging=[(.6, ["71046"])], rx=[(.3, ["RX1038"]), (.3, ["RX1006"])], season=1.6),
+    dict(key="COUGH", dx="R05.9", w=2, levels={2: .4, 3: .6}, imaging=[(.5, ["71046"])], rx=[(.2, ["RX1041"])], season=1.5),
     dict(key="OTITIS", dx="H66.90", w=3, age=(0, 12), levels={2: .3, 3: .6, 4: .1}, rx=[(.8, ["RX1001"]), (.5, ["RX1033"])], season=1.3),
     dict(key="CONJUNCTIVITIS", dx="H10.9", w=2, levels={2: .6, 3: .4}),
     dict(key="RHINITIS", dx="J30.9", w=3, levels={2: .4, 3: .5, 4: .1}, rx=[(.7, ["RX1041", "RX1042"]), (.2, ["RX1040"])], tele=.08),
@@ -265,9 +265,9 @@ ACUTE: list[dict[str, Any]] = [
     dict(key="GASTRITIS", dx="K29.70", w=2, age=(16, 90), levels={3: .6, 4: .4}, rx=[(.9, ["RX1029", "RX1030", "RX1032"])], refer=("GASTROENTEROLOGY", .05)),
     dict(key="CONSTIPATION", dx="K59.00", w=1, levels={2: .5, 3: .5}),
     dict(key="UTI", dx="N39.0", w=3, sexw={"F": 4, "M": 1}, age=(12, 90), levels={3: .7, 4: .3}, office=[(.6, "81002")], labs=[(.35, ["81001", "87086"])], rx=[(.9, ["RX1008", "RX1009"])]),
-    dict(key="BACKPAIN", dx="M54.50", w=4, age=(18, 80), levels={3: .6, 4: .4}, imaging=[(.45, ["72100"])], rx=[(.8, ["RX1035", "RX1037"])], physio=.15),
-    dict(key="KNEEPAIN", dx="M25.561", w=2, age=(20, 80), levels={3: .6, 4: .4}, imaging=[(.6, ["73562"])], rx=[(.7, ["RX1035", "RX1037"])], physio=.12, refer=("ORTHOPAEDICS", .12)),
-    dict(key="SPRAIN", dx="S93.401A", w=2, age=(8, 70), levels={3: .6, 4: .4}, imaging=[(.6, ["73610"])], rx=[(.7, ["RX1035"])], dme=[(.15, "E0114")], ed=.5, injury=True),
+    dict(key="BACKPAIN", dx="M54.50", w=5, age=(18, 80), levels={3: .6, 4: .4}, imaging=[(.6, ["72100"])], rx=[(.8, ["RX1035", "RX1037"])], physio=.15),
+    dict(key="KNEEPAIN", dx="M25.561", w=2, age=(20, 80), levels={3: .6, 4: .4}, imaging=[(.8, ["73562"])], rx=[(.7, ["RX1035", "RX1037"])], physio=.12, refer=("ORTHOPAEDICS", .12)),
+    dict(key="SPRAIN", dx="S93.401A", w=2.5, age=(8, 70), levels={3: .6, 4: .4}, imaging=[(.8, ["73610"])], rx=[(.7, ["RX1035"])], dme=[(.15, "E0114")], ed=.3, injury=True),
     dict(key="LACERATION", dx="S61.411A", w=1, age=(3, 80), levels={3: .6, 4: .4}, office=[(1.0, "12001")], rx=[(.5, ["RX1056"])], ed=.7, injury=True),
     dict(key="ABSCESS", dx="L02.91", w=1, age=(5, 85), levels={3: .6, 4: .4}, office=[(1.0, "10060")], rx=[(.8, ["RX1004", "RX1005"])]),
     dict(key="DERMATITIS", dx="L30.9", w=2, levels={2: .4, 3: .6}, rx=[(.8, ["RX1055"]), (.3, ["RX1041"])], spec="DERMATOLOGY", specp=.3, tele=.05),
@@ -282,7 +282,7 @@ ACUTE: list[dict[str, Any]] = [
     dict(key="CHESTPAIN", dx="R07.9", w=1, age=(30, 90), levels={3: .3, 4: .5, 5: .2}, office=[(.9, "93000")], labs=[(.3, ["84484"])], imaging=[(.5, ["71046"])], ed=.4, refer=("CARDIOLOGY", .2)),
     dict(key="VITD", dx="E55.9", w=2, age=(12, 90), levels={2: .4, 3: .6}, labs=[(.9, ["82306"])], rx=[(.9, ["RX1044"])]),
     dict(key="IRONDEF", dx="D50.9", w=1, sexw={"F": 5, "M": 1}, age=(12, 90), levels={3: .7, 4: .3}, labs=[(.9, ["85025", "83540", "82728"])], rx=[(.9, ["RX1045"])]),
-    dict(key="CHECKUP", dx="Z00.00", w=1.5, age=(18, 90), levels={3: .6, 4: .4}, labs=[(.8, ["85025", "80061"])]),
+    dict(key="CHECKUP", dx="Z00.00", w=3, age=(18, 90), levels={3: .6, 4: .4}, labs=[(.8, ["85025", "80061"])], imaging=[(.6, ["71046"])]),
     dict(key="VACCINE", dx="Z23", w=1, levels={}, vaccine=True, season=2.5),
     dict(key="ANXIETY", dx="F41.1", w=1, age=(16, 80), levels={3: .5, 4: .5}, rx=[(.6, ["RX1052", "RX1053"])], spec="PSYCHIATRY", specp=.7, psych=True),
     dict(key="INSOMNIA", dx="G47.00", w=.4, age=(20, 90), levels={3: .7, 4: .3}, rx=[(.5, ["RX1050"])]),
@@ -290,11 +290,11 @@ ACUTE: list[dict[str, Any]] = [
     dict(key="RADICULOPATHY", dx="M54.16", w=1, age=(25, 80), levels={3: .5, 4: .5}, rx=[(.3, ["RX1048"]), (.6, ["RX1035"])], physio=.3, refer=("ORTHOPAEDICS", .15), chain="LUMBAR"),
     dict(key="ROTATOR", dx="M75.101", w=.6, age=(30, 80), levels={3: .5, 4: .5}, rx=[(.6, ["RX1037"])], physio=.5, refer=("ORTHOPAEDICS", .3), chain="SHOULDER"),
     dict(key="MENORRHAGIA", dx="N92.0", w=1, sexw={"F": 1, "M": 0}, age=(15, 50), levels={3: .6, 4: .4}, imaging=[(.6, ["76856"])], labs=[(.5, ["85025"])], rx=[(.5, ["RX1035"])], spec="OBSTETRICS_GYNAECOLOGY", specp=.6),
-    dict(key="ABDPAIN", dx="R10.9", w=2, age=(8, 90), levels={3: .5, 4: .5}, imaging=[(.6, ["76700"])], labs=[(.3, ["85025", "80053"])], rx=[(.4, ["RX1058"])]),
+    dict(key="ABDPAIN", dx="R10.9", w=4, age=(8, 90), levels={3: .5, 4: .5}, imaging=[(.8, ["76700"])], labs=[(.3, ["85025", "80053"])], rx=[(.4, ["RX1058"])]),
     dict(key="KIDNEYSTONE", dx="N20.0", w=.8, age=(20, 80), levels={3: .4, 4: .6}, imaging=[(.5, ["74176"]), (.4, ["76705"])], labs=[(.5, ["81001"])], rx=[(.8, ["RX1035"])], ed=.35),
     dict(key="THYROIDNODULE", dx="E04.1", w=.5, age=(20, 80), sexw={"F": 3, "M": 1}, levels={3: .6, 4: .4}, imaging=[(.9, ["76536"])], labs=[(.8, ["84443"])], spec="ENDOCRINOLOGY", specp=.4),
     dict(key="PNEUMONIA_OP", dx="J18.9", w=.8, age=(5, 80), levels={3: .3, 4: .6, 5: .1}, imaging=[(1.0, ["71046"])], labs=[(.3, ["85025", "86140"])], rx=[(.9, ["RX1004", "RX1005", "RX1006"])], season=1.8),
-    dict(key="SCREENMAMMO", dx="Z12.31", w=1.2, sexw={"F": 1, "M": 0}, age=(40, 75), levels={2: .5, 3: .5}, imaging=[(1.0, ["77067"])]),
+    dict(key="SCREENMAMMO", dx="Z12.31", w=6, sexw={"F": 1, "M": 0}, age=(40, 75), levels={2: .5, 3: .5}, imaging=[(1.0, ["77067"])]),
     dict(key="SEPTUM", dx="J34.2", w=.2, age=(16, 70), levels={3: .6, 4: .4}, spec="ENT", specp=.9),
 ]
 ACUTE_BY_KEY = {s["key"]: s for s in ACUTE}
@@ -306,17 +306,18 @@ CHRONIC: dict[str, dict[str, Any]] = {
                 labs=[(.35, ["80048"])], office=[(.15, "93000")],
                 drugs=[(1.0, [("RX1020", 5), ("RX1021", 2), ("RX1022", 3)]), (.3, [("RX1024", 1)])]),
     "E11.9": dict(prev=[(30, .005), (45, .06), (60, .18), (200, .25)], interval=90, spec=("ENDOCRINOLOGY",) + GP_SPECS,
+                  imaging_at_radiology=[(.15, ["76705"])],
                   labs=[(.95, ["83036"]), (.3, ["80053"]), (.4, ["80061"]), (.3, ["81001"])],
                   drugs=[(1.0, [("RX1010", 4), ("RX1011", 4), ("RX1012", 2)]), (.3, [("RX1013", 1)]),
                          (.2, [("RX1014", 1)]), (.15, [("RX1015", 1)]), (.3, [("A4253", 1)])]),
     "E78.5": dict(prev=[(30, .03), (45, .15), (60, .3), (200, .4)], interval=180, spec=GP_SPECS + ("INTERNAL_MEDICINE",),
                   labs=[(.9, ["80061"])], drugs=[(1.0, [("RX1017", 5), ("RX1018", 2), ("RX1019", 2)])]),
     "E03.9": dict(prev=[(200, .035)], sexw={"F": 1.6, "M": .4}, min_age=12, interval=180, spec=("ENDOCRINOLOGY",) + GP_SPECS,
-                  labs=[(.9, ["84443"])], drugs=[(1.0, [("RX1043", 1)])]),
+                  labs=[(.9, ["84443"])], imaging_at_radiology=[(.25, ["76536"])], drugs=[(1.0, [("RX1043", 1)])]),
     "J45.909": dict(prev=[(18, .08), (200, .05)], min_age=4, interval=180, spec=GP_SPECS + ("PULMONOLOGY", "PAEDIATRICS"),
                     office=[(.15, "94010")],
                     drugs=[(1.0, [("RX1038", 1)]), (.4, [("RX1039", 1)]), (.3, [("RX1040", 1)])]),
-    "K21.9": dict(prev=[(18, .005), (200, .05)], interval=180, spec=GP_SPECS,
+    "K21.9": dict(prev=[(18, .005), (200, .05)], interval=180, spec=GP_SPECS, imaging_at_radiology=[(.2, ["76705"])],
                   drugs=[(1.0, [("RX1029", 4), ("RX1030", 3), ("RX1031", 1), ("RX1032", 2)])]),
     "F32.9": dict(prev=[(16, 0), (200, .03)], interval=60, spec=("PSYCHIATRY",), psych=True,
                   drugs=[(1.0, [("RX1052", 1), ("RX1053", 1)])]),
@@ -325,15 +326,17 @@ CHRONIC: dict[str, dict[str, Any]] = {
     "K50.90": dict(prev=[(16, 0), (200, .003)], interval=56, spec=("GASTROENTEROLOGY",), infusion="J1745"),
     "C50.911": dict(prev=[(35, 0), (200, .004)], sexw={"F": 1.0, "M": 0.0}, interval=21, spec=("ONCOLOGY",), chemo=True),
     "N40.0": dict(prev=[(50, 0), (65, .08), (200, .18)], sexw={"F": 0.0, "M": 1.0}, interval=180, spec=GP_SPECS,
-                  labs=[(.5, ["84153"])], drugs=[(1.0, [("RX1061", 1)])]),
+                  labs=[(.5, ["84153"])], imaging_at_radiology=[(.35, ["76705"])], drugs=[(1.0, [("RX1061", 1)])]),
     "M81.0": dict(prev=[(55, 0), (200, .10)], sexw={"F": 1.0, "M": 0.0}, interval=180, spec=GP_SPECS + ("RHEUMATOLOGY",),
-                  imaging_at_radiology=[(.3, ["77080"])], drugs=[(.8, [("RX1044", 1)])], denosumab=.3),
+                  imaging_at_radiology=[(.6, ["77080"])], drugs=[(.8, [("RX1044", 1)])], denosumab=.3),
     "N18.30": dict(prev=[(55, 0), (200, .05)], interval=120, spec=("INTERNAL_MEDICINE",) + GP_SPECS,
-                   labs=[(.8, ["80048"]), (.5, ["81001"])], drugs=[(1.0, [("RX1022", 1)])]),
+                   labs=[(.8, ["80048"]), (.5, ["81001"])], imaging_at_radiology=[(.4, ["76705"])],
+                   drugs=[(1.0, [("RX1022", 1)])]),
     "I25.10": dict(prev=[(45, 0), (200, .06)], interval=120, spec=("CARDIOLOGY",), office=[(.4, "93000")],
                    echo=.15, drugs=[(1.0, [("RX1025", 1)]), (1.0, [("RX1017", 3), ("RX1018", 1)]),
                                     (.3, [("RX1026", 3), ("RX1027", 1)]), (.5, [("RX1024", 1)]), (.1, [("RX1063", 1)])]),
     "J44.9": dict(prev=[(55, 0), (200, .03)], interval=120, spec=GP_SPECS + ("PULMONOLOGY",), office=[(.2, "94010")],
+                  imaging_at_radiology=[(.35, ["71046"])],
                   drugs=[(1.0, [("RX1039", 1)]), (.8, [("RX1038", 1)])]),
     "F90.0": dict(prev=[(6, 0), (17, .03), (200, 0)], interval=90, spec=("PSYCHIATRY", "PAEDIATRICS"),
                   drugs=[(1.0, [("RX1051", 1)])]),
@@ -650,8 +653,8 @@ def _build_providers(ctx: _Ctx, scale: float) -> None:
                     "provider_type": ptype, "specialty": specialty, "facility_type": facility,
                     "owner_entity_id": _token(rng, "OWN-", 12), "bank_account_token": _token(rng, "IBANTOK-", 16),
                     "phone_token": _token(rng, "TELTOK-", 12), "address_token": _token(rng, "ADDRTOK-", 14),
-                    "emirate": emirate, "volume_band": None, "tenant_id": TENANT, "source_system": "UAE_MULTITABLE",
-                    "missingness": None, "credentialing_date": cred, "bed_count": beds,
+                    "emirate": emirate, "tenant_id": TENANT,
+                    "credentialing_date": cred, "bed_count": beds,
                     "operational_status": "OPERATIONAL", "ownership_changed_on": None,
                     "licence_no": f"{reg}-LIC-{cred.year}-{int(rng.integers(10000, 99999))}",
                 })
@@ -857,9 +860,9 @@ def _build_people(ctx: _Ctx, n_members: int, scale: float) -> None:
             # anthropometrics at period start
             a = age0
             if a < 18:
-                height = 52 + 6.2 * min(a, 12) + (4.5 * (a - 12) if a > 12 else 0)
-                height = float(np.clip(height + rng.normal(0, 5), 45, 190))
-                bmi = float(np.clip(rng.normal(17 + 0.3 * min(a, 14), 2), 13, 30))
+                height = 50 + 25 * a if a < 1 else 75 + 6.0 * min(a, 13) + (4.0 * (a - 13) if a > 13 else 0)
+                height = float(np.clip(height + rng.normal(0, 4), 45, 190))
+                bmi = float(np.clip(rng.normal(16 + 0.25 * max(a - 6, 0), 1.6), 13, 30))
             else:
                 height = float(rng.normal(173 if sex == "M" else 160, 7))
                 bmi = float(np.clip(rng.normal(27.5, 4.5), 17, 45))
@@ -892,7 +895,7 @@ def _build_people(ctx: _Ctx, n_members: int, scale: float) -> None:
                 "protected_id_token": _token(rng, "EIDTOK-", 24), "date_of_birth": dob, "sex": sex,
                 "death_date": None, "death_source": None, "death_source_confidence": None,
                 "sponsor_id": principal_sk, "employer_id": member["employer"], "tenant_id": TENANT,
-                "source_system": "UAE_MULTITABLE", "missingness": None, "relationship": relationship,
+                "relationship": relationship,
                 "weight_kg": weight, "height_cm": round(height, 1), "emirate": emirate,
             })
             # coverage terms: policy years anchored on the inception anniversary
@@ -915,8 +918,8 @@ def _build_people(ctx: _Ctx, n_members: int, scale: float) -> None:
                 cov_rows.append({
                     "coverage_id": cid, "member_sk": msk, "product": product, "payer_id": payer,
                     "valid_from": vf, "valid_to": vt, "network": PRODUCTS[product]["network"], "status": "ACTIVE",
-                    "policy_inception_date": inception, "days_since_policy_start": None, "tenant_id": TENANT,
-                    "source_system": "UAE_MULTITABLE", "agent_id": agent, "product_tier": PRODUCTS[product]["tier"],
+                    "policy_inception_date": inception, "tenant_id": TENANT,
+                    "agent_id": agent, "product_tier": PRODUCTS[product]["tier"],
                 })
                 first = vf == inception
                 ev_time = _dt_at(vf - TD(days=int(rng.integers(3, 30))), int(rng.integers(8 * 60, 17 * 60)))
@@ -1076,6 +1079,8 @@ class _Sched:
             ev["root"] = root if root is not None else ("EV", self.n)
             ev["rtype"] = rtype or "ACUTE"
         self.by_eid[self.n] = ev
+        if "provider" in ev and ev["provider"] is None:
+            return ev  # nowhere eligible to go: the event (and anything hanging off it) is not scheduled
         self.events.append(ev)
         return ev
 
@@ -1197,7 +1202,7 @@ def _acute_episode(ctx: _Ctx, s: _Sched, m: dict, sc: dict, d: D) -> None:
         rxs = _rx_choices(ctx, m, sc, d)
         if rxs:
             s.add(kind="RX", member=m["sk"], date=d + TD(days=int(rng.integers(0, 2))), parent=ev["eid"],
-                  items=rxs, dx=dx[:1], provider=_home(ctx, m, "PHARM", ptype="PHARMACY"), prio=7)
+                  items=rxs, dx=dx[:1], provider=_pharmacy_for(ctx, m), prio=7)
         return
     hospital = ctx.providers[prov]["type"] == "HOSPITAL"
     # office procedures and POC tests
@@ -1206,7 +1211,7 @@ def _acute_episode(ctx: _Ctx, s: _Sched, m: dict, sc: dict, d: D) -> None:
     ev["dme"] = [code for p, code in sc.get("dme", []) if rng.random() < p]
     labs = [c for p, codes in sc.get("labs", []) if rng.random() < p for c in codes]
     imaging = [c for p, codes in sc.get("imaging", []) if rng.random() < p for c in codes]
-    rxs = _rx_choices(ctx, m, sc, d)
+    rxs = _rx_choices(ctx, m, sc, d) if rng.random() < 0.55 or hospital_visit(ctx, prov) else []
     ev["injury"] = bool(sc.get("injury"))
     if hospital:
         ev["labs"], ev["imaging"], ev["rx_inhouse"] = labs, imaging, rxs
@@ -1223,7 +1228,7 @@ def _acute_episode(ctx: _Ctx, s: _Sched, m: dict, sc: dict, d: D) -> None:
                       provider=rad, codes=imaging, dx=dx[:1], prio=6)
         if rxs:
             s.add(kind="RX", member=m["sk"], date=d + TD(days=int(rng.integers(0, 2))), parent=ev["eid"],
-                  items=rxs, dx=dx[:1], provider=_home(ctx, m, "PHARM", ptype="PHARMACY"), prio=7)
+                  items=rxs, dx=dx[:1], provider=_pharmacy_for(ctx, m), prio=7)
     # specialist referral
     ref_spec = sc.get("refer")
     if ref_spec and rng.random() < ref_spec[1]:
@@ -1242,6 +1247,10 @@ def _acute_episode(ctx: _Ctx, s: _Sched, m: dict, sc: dict, d: D) -> None:
         ev["psych"] = True
 
 
+def hospital_visit(ctx: _Ctx, provider: str) -> bool:
+    return ctx.providers[provider]["type"] == "HOSPITAL"
+
+
 def _rx_choices(ctx: _Ctx, m: dict, sc: dict, d: D) -> list[str]:
     rng = ctx.rng
     age = _age(m["dob"], d)
@@ -1256,9 +1265,23 @@ def _rx_choices(ctx: _Ctx, m: dict, sc: dict, d: D) -> list[str]:
                         "RX1003", "RX1034", "RX1036", "RX1055", "RX1056", "RX1059", "RX1041") else None)
             if prod == "RX1041" and age < 6:
                 prod = None
+        if prod in _OTC and rng.random() < 0.6:
+            prod = None  # bought over the counter, never claimed
         if prod and prod not in out:
             out.append(prod)
     return out
+
+
+#: Cheap over-the-counter products members usually buy without claiming.
+_OTC = {"RX1033", "RX1034", "RX1035", "RX1036", "RX1041", "RX1042", "RX1059"}
+
+
+def _pharmacy_for(ctx: _Ctx, m: dict, loyalty: float = 0.55) -> str | None:
+    """The member's usual pharmacy most of the time, otherwise another nearby network pharmacy."""
+    home = _home(ctx, m, "PHARM", ptype="PHARMACY")
+    if ctx.rng.random() < loyalty:
+        return home
+    return _choose(ctx, _eligible(ctx, m, ptype="PHARMACY")) or home
 
 
 def _radiology_for(ctx: _Ctx, m: dict, codes: list[str]) -> str | None:
@@ -1394,7 +1417,8 @@ def _refill_stream(ctx: _Ctx, s: _Sched, m: dict, visits: dict[str, list[dict]])
     first = min(v[0]["date"] for v in drug_visits.values())
     d = first + TD(days=int(rng.integers(0, 3)))
     a, b = m["window"]
-    cycle = m.setdefault("refill_cycle", 90 if rng.random() < 0.65 else 30)
+    short = any((ctx.drugs[p]["max_duration_days"] or 365) <= 30 for c in drug_visits for p in m["drugs"][c] if p in ctx.drugs)
+    cycle = m.setdefault("refill_cycle", 30 if short else 90)
     while d <= b:
         items = []
         for cond, vs in drug_visits.items():
@@ -1402,7 +1426,8 @@ def _refill_stream(ctx: _Ctx, s: _Sched, m: dict, visits: dict[str, list[dict]])
             if prior:
                 items.append((cond, prior[-1]["eid"]))
         if items:
-            s.add(kind="REFILL", member=m["sk"], date=d, provider=pharm, items=items, prio=7, cycle=cycle,
+            s.add(kind="REFILL", member=m["sk"], date=d, provider=_pharmacy_for(ctx, m, 0.8) or pharm, items=items,
+                  prio=7, cycle=cycle,
                   rtype="CHRONIC", root=("CHR", m["sk"]))
         d += TD(days=cycle + int(rng.integers(0, 4)))
 
@@ -1507,13 +1532,18 @@ def _pregnancy(ctx: _Ctx, s: _Sched, m: dict) -> None:
                    rtype="IP", root=("PREG", m["sk"], conception))
         if extra and "ULTRASOUND" in ctx.providers[ob]["equipment"]:
             ev["office"] = extra
+        elif extra:
+            rad = _radiology_for(ctx, m, extra)
+            if rad:
+                s.add(kind="RAD", member=m["sk"], date=d + TD(days=int(rng.integers(0, 4))), parent=ev["eid"],
+                      provider=rad, codes=extra, dx=["Z34.90"], prio=6)
         labs = ["85025"] + (["84702"] if week == 8 else [])
         if week in (8, 28):
             lab = _home(ctx, m, "LAB", ptype="DIAGNOSTIC_LAB")
             if lab and ctx.providers[ob]["type"] != "HOSPITAL":
                 s.add(kind="LAB", member=m["sk"], date=d, parent=ev["eid"], provider=lab, codes=labs, dx=["Z34.90"], prio=6)
         if week in (8, 20):
-            pharm = _home(ctx, m, "PHARM", ptype="PHARMACY")
+            pharm = _pharmacy_for(ctx, m)
             s.add(kind="RX", member=m["sk"], date=d, parent=ev["eid"], items=["RX1046", "RX1045"] if week == 20 else ["RX1046"],
                   dx=["Z34.90"], provider=pharm, prio=7, course_days=30)
         prev = ev
@@ -1552,7 +1582,7 @@ def _dose_units(ctx: _Ctx, product: str, member: dict, on: D, days: int | None =
         return float(qty), float(days), ml_day, round(mg_day, 1)
     if form in ("INHALER", "CREAM", "OINTMENT"):
         days = days or 30
-        return 1.0, float(min(days, d["max_duration_days"])), 1.0, round(d["strength_mg"] / days, 3)
+        return 1.0, float(min(days, d["max_duration_days"] or 365)), 1.0, round(d["strength_mg"] / days, 3)
     if form == "SACHET":
         return 6.0, 3.0, 2.0, 0.0
     if product == "RX1044":
@@ -1563,7 +1593,7 @@ def _dose_units(ctx: _Ctx, product: str, member: dict, on: D, days: int | None =
         return 1.0, float(days or 30), 1.0, d["strength_mg"]
     per_day, course = regimen
     days = days or course
-    days = min(days, d["max_duration_days"])
+    days = min(days, d["max_duration_days"] or 365)
     if d["max_mg_per_kg_day"]:
         while per_day > 1 and per_day * d["strength_mg"] > d["max_mg_per_kg_day"] * weight * 0.95:
             per_day -= 1
@@ -1574,8 +1604,10 @@ def _injectable_units(ctx: _Ctx, product: str, member: dict) -> tuple[float, flo
     """(billed units, wastage units) for one administration, whole vials."""
     d = ctx.drugs[product]
     w = member["weight"]
+    # adult doses, scaled down by weight for children so mg/kg/day stays within drug_policy limits
     dose_mg = {"J1745": 5 * w, "J9355": 6 * w, "J9312": 375 * 1.8, "J0135": 40, "J2506": 6, "J0897": 60,
-               "J1650": 40, "J0696": 1000, "J1100": 8, "J1885": 30, "J2405": 4}[product]
+               "J1650": min(40, 1.0 * w), "J0696": min(1000, 50 * w), "J1100": min(8, 0.3 * w),
+               "J1885": min(30, 0.5 * w), "J2405": min(4, 0.15 * w)}[product]
     vial = d["vial_size_mg"] or d["strength_mg"]
     vials = math.ceil(dose_mg / vial - 1e-9)
     billed_mg = vials * vial
@@ -1668,23 +1700,23 @@ def _compose(ctx: _Ctx, spec: dict) -> str | None:
         if clin is None:
             if fam in ("DRUG_ORAL", "SUPPLY") or (fam in ("DRUG_INJECTABLE", "DME") and pinfo["type"] == "PHARMACY"):
                 role_family = "DRUG_ORAL" if fam != "DME" else "DME"
-                clin = per_family_clin.get("PHARM") or ctx.pick_clinician(provider, role_family, sdate, "PHARMACY")
-                per_family_clin["PHARM"] = clin
+                clin = per_family_clin.get(("PHARM", sdate)) or ctx.pick_clinician(provider, role_family, sdate, "PHARMACY")
+                per_family_clin[("PHARM", sdate)] = clin
             elif fam in ("ANAESTHESIA", "SEDATION"):
-                clin = per_family_clin.get("ANAES") or ctx.pick_clinician(provider, fam, sdate, "ANAESTHESIA")
-                per_family_clin["ANAES"] = clin
+                clin = per_family_clin.get(("ANAES", sdate)) or ctx.pick_clinician(provider, fam, sdate, "ANAESTHESIA")
+                per_family_clin[("ANAES", sdate)] = clin
             elif fam.startswith("LAB_") and fam != "LAB_POC" or (fam == "SPECIMEN" and pinfo["type"] == "DIAGNOSTIC_LAB") \
                     or (fam == "LAB_POC" and pinfo["type"] == "DIAGNOSTIC_LAB"):
-                clin = per_family_clin.get("PATH") or ctx.pick_clinician(provider, fam, sdate, "PATHOLOGY")
-                per_family_clin["PATH"] = clin
+                clin = per_family_clin.get(("PATH", sdate)) or ctx.pick_clinician(provider, fam, sdate, "PATHOLOGY")
+                per_family_clin[("PATH", sdate)] = clin
             elif fam.startswith("IMAGING_"):
                 if attending and fam in ctx.clin_by_id.get(attending, {}).get("privileges", set()) and pinfo["type"] == "CLINIC":
                     clin = attending
                 else:
                     clin = ctx.pick_clinician(provider, fam, sdate, "RADIOLOGY") or ctx.pick_clinician(provider, fam, sdate)
             elif fam == "PHYSIO":
-                clin = per_family_clin.get("PHYSIO") or ctx.pick_clinician(provider, fam, sdate, "PHYSIOTHERAPY")
-                per_family_clin["PHYSIO"] = clin
+                clin = per_family_clin.get(("PHYSIO", sdate)) or ctx.pick_clinician(provider, fam, sdate, "PHYSIOTHERAPY")
+                per_family_clin[("PHYSIO", sdate)] = clin
             else:
                 clin = ctx.pick_clinician(provider, fam, sdate, prefer=attending) if attending else \
                     ctx.pick_clinician(provider, fam, sdate)
@@ -1892,7 +1924,7 @@ def _compose(ctx: _Ctx, spec: dict) -> str | None:
         "location": f"{pinfo['emirate']} / " + {"INPATIENT": "Ward", "DAY_CASE": "Day-care unit", "EMERGENCY": "Emergency department",
                                                  "PHARMACY": "Pharmacy counter", "DIAGNOSTIC": "Diagnostic suite",
                                                  "TELEHEALTH": "Virtual"}.get(enc_type, "Outpatient clinic"),
-        "tenant_id": TENANT, "missingness": None, "member_sk": member["sk"], "bed_id": spec.get("bed_id"),
+        "tenant_id": TENANT, "member_sk": member["sk"], "bed_id": spec.get("bed_id"),
         "duration_minutes": round((end_dt - start_dt).total_seconds() / 60.0, 1),
         "observation_status": spec.get("observation_status"), "admission_type": spec.get("admission_type"),
         "discharge_type": spec.get("discharge_type", "HOME") if inpatient else None,
@@ -2189,6 +2221,8 @@ def _em_code(ctx: _Ctx, member: str, provider: str, level: int, setting: str) ->
 def _repeat_ok(ctx: _Ctx, hist: _History, member: str, code: str, d: D) -> bool:
     gap = ctx.world.context["repeat_interval"].get(code)
     last = hist.code_last.get((member, code))
+    if last is not None and last == d:
+        return False  # the same service already billed for this member today
     if gap and last is not None and (d - last).days < gap:
         return False
     return True
@@ -2215,7 +2249,7 @@ def _drug_item(ctx: _Ctx, hist: _History, m: dict, product: str, d: D, prescribe
             drug = ctx.drugs[product]
     if product.startswith("J"):
         units, wastage = _injectable_units(ctx, product, m)
-        qty, days, dose = units, float(drug["max_duration_days"]), None
+        qty, days, dose = units, float(drug["max_duration_days"] or 30), None
     else:
         qty, days, _, dose = _dose_units(ctx, product, m, d, course_days)
         wastage = 0.0
@@ -2267,7 +2301,8 @@ def _build_claims(ctx: _Ctx, sched: _Sched, target: int) -> None:
             stats[(kind, "no_spec")] += 1
             continue
         key = (m["sk"], d, spec["provider"])
-        if key in hist.day_claims:
+        visit_key = (m["sk"], d, "VISIT")
+        if key in hist.day_claims or (kind in ("OP", "PHYSIO") and visit_key in hist.member_day_kind):
             stats[(kind, "same_day")] += 1
             continue
         ctx.last_claim = None
@@ -2277,6 +2312,8 @@ def _build_claims(ctx: _Ctx, sched: _Sched, target: int) -> None:
             continue
         stats[(kind, "ok")] += 1
         hist.day_claims.add(key)
+        if kind in ("OP", "PHYSIO"):
+            hist.member_day_kind.add(visit_key)
         info = ctx.last_claim
         done[ev["eid"]] = {"claim": claim, "clin": info["attending"], "provider": spec["provider"], "date": d}
         ctx.seen_mp.add((m["sk"], spec["provider"]))
@@ -2301,17 +2338,21 @@ def _keep_probabilities(events: list[dict], target: int) -> dict[str, float]:
     """Keep-probability per root type so the kept events approximate ``target`` claims in TARGET_MIX."""
     from scipy.optimize import lsq_linear
 
-    rtypes = sorted({e["rtype"] for e in events})
+    # acute and chronic care share one probability (so chronic care is never traded away);
+    # the inpatient pathways get their own, which is what sets the inpatient share.
+    group = {"ACUTE": "GENERAL", "CHRONIC": "GENERAL", "IP": "IP"}
+    rtypes = sorted({group[e["rtype"]] for e in events})
     ctypes = list(TARGET_MIX)
     A = np.zeros((len(ctypes), len(rtypes)))
     for e in events:
-        A[ctypes.index(_KIND_TYPE[e["kind"]]), rtypes.index(e["rtype"])] += _YIELD[e["kind"]]
+        A[ctypes.index(_KIND_TYPE[e["kind"]]), rtypes.index(group[e["rtype"]])] += _YIELD[e["kind"]]
     T = np.array([target * TARGET_MIX[c] for c in ctypes])
     W = 1.0 / np.maximum(T, 1.0)
     A_w = np.vstack([A * W[:, None], 3.0 * A.sum(axis=0)[None, :] / max(target, 1)])
     T_w = np.concatenate([T * W, [3.0]])
     sol = lsq_linear(A_w, T_w, bounds=(0.0, 1.0))
-    return {r: float(np.clip(p, 0.0, 1.0)) for r, p in zip(rtypes, sol.x)}
+    by_group = {r: float(np.clip(p, 0.0, 1.0)) for r, p in zip(rtypes, sol.x)}
+    return {rt: by_group.get(g, 1.0) for rt, g in group.items()}
 
 
 def _resubmit(ctx: _Ctx, info: dict) -> None:
@@ -2505,7 +2546,7 @@ def _op_spec(ctx: _Ctx, hist: _History, ev: dict, m: dict, parent: dict | None) 
         u, w = _injectable_units(ctx, ev["injectable"], m)
         lines.append({"code": "96372"})
         lines.append({"code": ev["injectable"], "units": u, "wastage": w,
-                      "rx": {"days_supply": float(ctx.drugs[ev["injectable"]]["max_duration_days"]), "prescribed_qty": u,
+                      "rx": {"days_supply": float(ctx.drugs[ev["injectable"]]["max_duration_days"] or 30), "prescribed_qty": u,
                              "dispensed_qty": u, "dose_mg_per_day": None}})
     for code in ev.get("dme", []):
         lines.append({"code": code})

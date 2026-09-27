@@ -34,7 +34,7 @@ from components.analysis_pages import (
 )
 from fwa.auth import Permission
 from fwa.presentation import (
-    aed, feature_phrase, model_label, pct, plain_date, standard_text,
+    aed, feature_phrase, feature_unit, model_label, pct, plain_date, standard_text,
 )
 from fwa.presentation.explain_case import explain_model_claim
 
@@ -372,6 +372,8 @@ def _claims(result, layer, models, state, capacity) -> None:
         )
         expl = explain_model_claim(layer, name, claim, exploratory=exploratory)
         if expl is None and exploratory:
+            expl = _exploratory_explanation(layer, name, claim, series)
+        if expl is None and exploratory:
             st.info("This claim was not part of the fair test, so the model's reasons for its "
                     "exploratory score are not worked out. Its rank above is for exploring only.",
                     icon="ℹ️")
@@ -403,7 +405,7 @@ def _claims(result, layer, models, state, capacity) -> None:
     view = importance.head(10).copy()
     view["what"] = [_short(feature_phrase(f)) for f in view["feature"]]
     bar(view.sort_values("mean_abs_shap"), "what", "mean_abs_shap",
-        title=f"{label} relies most on {view.iloc[0]['what']}", horizontal=True, height=380,
+        title=f"{label} relies most on {_lower(view.iloc[0]['what'])}", horizontal=True, height=380,
         x_label="Claim detail", y_label="Average influence on the score",
         how_to_read="Longer bars are the claim details that move this model's scores the most, on "
                     "average across the claims it scored. Influence is not the same as wrongdoing.")
@@ -411,9 +413,63 @@ def _claims(result, layer, models, state, capacity) -> None:
         dataframe(importance)
 
 
+def _exploratory_explanation(layer, name, claim, series):
+    """Reasons for a claim that only has an exploratory score (outside the fair test)."""
+    fn = getattr(layer, "explain_exploratory_claim", None)
+    if not callable(fn):
+        return None
+    try:
+        rows = fn(name, str(claim), top_n=5) or []
+    except Exception:
+        return None
+    from fwa.presentation.explain_case import ModelClaimExplanation
+
+    reasons = []
+    for r in rows:
+        feat = str(r.get("feature") or "")
+        if not feat or feat.startswith("EXPLANATION_") or (r.get("shap_value") or 0) <= 0:
+            continue
+        value, typical = r.get("value_display"), r.get("peer_display")
+        if feature_unit(feat) == "flag" or feat.endswith("__missing"):
+            try:
+                on = float(r.get("value")) >= 0.5
+            except (TypeError, ValueError):
+                continue
+            phrase = feature_phrase(feat)
+            reasons.append(f"{phrase[:1].upper() + phrase[1:]}." if on else f"The absence of {phrase}.")
+            if len(reasons) >= 3:
+                break
+            continue
+        if value in (None, "not available"):
+            continue
+        reasons.append(f"{_short(feature_phrase(feat), 400)} was {value}"
+                       + (f", compared with a typical {typical}." if typical not in (None, "not available") else "."))
+        if len(reasons) >= 3:
+            break
+    rank = float(series.rank(pct=True).get(str(claim), float("nan")))
+    top = max(1, round((1 - rank) * 100)) if rank == rank else None
+    headline = (f"Exploratory only: an automated pattern-finder ({model_label(name)}) ranked this claim "
+                + (f"among the top {top}% of all claims" if top else "as unusual")
+                + (f". The main reason: {_lower(reasons[0].rstrip('.'))}." if reasons else "."))
+    caveats = ["Exploratory score: the model has seen some of this provider's claims during training, "
+               "so this score is not used for the promotion gate.",
+               standard_text("model_only"), standard_text("not_proof")]
+    return ModelClaimExplanation(
+        claim_sk=str(claim), model=name, headline=headline, reasons=reasons,
+        caveats=[c for c in caveats if c], percentile=rank if rank == rank else None,
+        technical=[{"feature": r.get("feature"), "value": r.get("value"),
+                    "peer_median": r.get("peer_median"), "shap_value": r.get("shap_value")} for r in rows],
+        exploratory=True,
+    )
+
+
 def _short(text: str, n: int = 70) -> str:
     text = text[:1].upper() + text[1:]
     return text if len(text) <= n else text[: n - 1].rstrip() + "…"
+
+
+def _lower(text: str) -> str:
+    return text[:1].lower() + text[1:]
 
 
 def _importance(layer, name, explainer) -> pd.DataFrame:
@@ -473,7 +529,7 @@ def _drift(layer, models, config) -> None:
                 view = detail.head(10).copy()
                 view["what"] = [_short(feature_phrase(f)) for f in view["feature"]]
                 bar(view.sort_values("psi"), "what", "psi",
-                    title=f"The biggest shift is in {view.iloc[0]['what'].lower()}",
+                    title=f"The biggest shift is in {_lower(view.iloc[0]['what'])}",
                     horizontal=True, height=340, x_label="Claim detail",
                     y_label="How much it shifted (PSI)",
                     how_to_read=f"Each bar is one claim detail. Past {warn:g} is worth watching; "
@@ -509,7 +565,7 @@ def _clusters(result, layer, state, config) -> None:
     for i, c in enumerate(clusters, start=1):
         diffs = []
         for f in c.top_features[:3]:
-            diffs.append(("higher " if f["mean_residual"] > 0 else "lower ") + feature_phrase(f["feature"]))
+            diffs.append(f"{feature_phrase(f['feature'])}: {'higher' if f['mean_residual'] > 0 else 'lower'}")
         rows.append({
             "Pattern": f"Pattern {i}",
             "Providers": c.size,
@@ -526,9 +582,9 @@ def _clusters(result, layer, state, config) -> None:
                           help="Shows how the providers in this pattern differ from similar providers.")
     cluster = picks[chosen]
     st.markdown("\n".join(
-        f"- {('Higher' if f['mean_residual'] > 0 else 'Lower')} {feature_phrase(f['feature'])} than "
-        f"similar providers ({abs(f['mean_residual']):.1f} typical spreads "
-        f"{'above' if f['mean_residual'] > 0 else 'below'})"
+        f"- {_short(feature_phrase(f['feature']), 200)}: "
+        f"{'higher' if f['mean_residual'] > 0 else 'lower'} than at similar providers "
+        f"({abs(f['mean_residual']):.1f} typical spreads {'above' if f['mean_residual'] > 0 else 'below'})"
         for f in cluster.top_features))
     with st.expander("Technical details: cluster record", expanded=False):
         dataframe(pd.DataFrame([cluster.to_row()]))

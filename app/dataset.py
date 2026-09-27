@@ -24,7 +24,9 @@ from __future__ import annotations
 
 import datetime as _dt
 import hashlib
+import io
 import re
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -34,13 +36,18 @@ import streamlit as st
 
 ROOT = Path(__file__).resolve().parents[1]
 UPLOAD_DIR = ROOT / "data" / "uploads"
-#: The dataset a fresh session opens on. It is the synthetic demonstration
-#: file, because it is the one that exercises every runnable control and the
-#: promotion gate in its passing state (``docs/DEMO_DATASET.md``). It is
-#: clearly named ``_synthetic`` and carries its own warning banner: a gate
-#: passed on a file built to pass it is a test of the gate, not evidence about
-#: detection performance. Any other file can be loaded from the Data page.
-DEFAULT_PATH = ROOT / "data" / "claims_demo_synthetic.csv"
+#: The dataset a fresh session opens on: the SYNTHETIC multi-table UAE demo
+#: (``tools/make_uae_demo_dataset.py``), because it is the one that populates
+#: the claim lines, authorisations, remittances, rosters and reference tables
+#: most of the catalogue needs. It carries its own SYNTHETIC notice: a check
+#: that passes on data built to pass it is a test of the check, not evidence
+#: that it detects fraud. Any other file can be loaded from the Data page.
+DEFAULT_PATH = ROOT / "data" / "uae_demo.zip"
+#: The claim-header demo that used to be the default; still shipped.
+CLAIM_HEADER_DEMO_PATH = ROOT / "data" / "claims_demo_synthetic.csv"
+SAMPLE_EXTRACT_PATH = ROOT / "data" / "claims.csv"
+#: The adapter used for any folder or .zip dataset.
+MULTITABLE_ADAPTER = "uae_multitable"
 
 SESSION_KEY = "fwa_dataset"
 HISTORY_KEY = "fwa_dataset_history"
@@ -49,6 +56,7 @@ __all__ = [
     "DatasetSpec", "active_dataset", "set_active_dataset", "default_spec",
     "spec_from_upload", "spec_from_path", "loaded_datasets", "compare_runs",
     "model_summary", "model_parameters", "outcome_label", "ADAPTER_LABELS",
+    "shipped_datasets", "is_multitable",
 ]
 
 #: The adapters a user may pick, with what each one expects. The two UAE
@@ -58,6 +66,7 @@ ADAPTER_LABELS: dict[str, str] = {
     "generic_india_tpa": "Generic TPA — one row per claim header (CSV)",
     "shafafiya": "Shafafiya (DoH) — not certified against a live feed",
     "eclaimlink": "eClaimLink (DHA) — not certified against a live feed",
+    "uae_multitable": "UAE multi-table (folder or .zip) — synthetic layout, not certified",
 }
 
 
@@ -115,6 +124,7 @@ def _adapter_short(adapter: str) -> str:
         "generic_india_tpa": "Generic TPA",
         "shafafiya": "Shafafiya",
         "eclaimlink": "eClaimLink",
+        "uae_multitable": "UAE multi-table",
     }.get(adapter, adapter)
 
 
@@ -123,13 +133,57 @@ def _adapter_short(adapter: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def is_multitable(path: Path | str) -> bool:
+    """A folder or a .zip is a multi-table dataset (one CSV per table)."""
+    path = Path(str(path))
+    return path.is_dir() or path.suffix.lower() == ".zip"
+
+
+def _claim_header_shape(frame_source) -> tuple[int, tuple[str, ...]]:
+    frame = pd.read_csv(frame_source, dtype=str, usecols=lambda c: True, keep_default_na=False)
+    return len(frame), tuple(frame.columns)
+
+
+def _profile_multitable(path: Path) -> tuple[str, int, tuple[str, ...]]:
+    """Hash a folder (its sorted file names and bytes) or a zip (its bytes); count claim_header rows.
+
+    ``rows`` is the number of claims — ``claim_header`` rows — and ``columns``
+    lists the tables present, since a multi-table dataset has no single header.
+    """
+    digest = hashlib.sha256()
+    rows, tables = 0, []
+    if path.is_dir():
+        for f in sorted(path.iterdir()):
+            if not f.is_file():
+                continue
+            digest.update(f.name.encode("utf-8") + b"\0")
+            digest.update(f.read_bytes())
+            if f.suffix.lower() == ".csv":
+                tables.append(f.stem)
+        header = path / "claim_header.csv"
+        if header.exists():
+            rows, _ = _claim_header_shape(header)
+    else:
+        digest.update(path.read_bytes())
+        with zipfile.ZipFile(path) as zf:
+            names = sorted(n for n in zf.namelist() if not n.endswith("/"))
+            tables = [Path(n).stem for n in names if n.lower().endswith(".csv")]
+            header = [n for n in names if Path(n).name == "claim_header.csv"]
+            if header:
+                rows, _ = _claim_header_shape(io.BytesIO(zf.read(header[0])))
+    return digest.hexdigest(), rows, tuple(t for t in tables if not t.endswith("_labels"))
+
+
 def _profile(path: Path) -> tuple[str, int, tuple[str, ...]]:
     """Hash the file and read its shape, without loading it twice.
 
     The hash is taken over the bytes on disk, before any parsing, for the same
     reason the engine hashes each raw record before parsing it: the identity of
-    an input should not depend on how successfully it was interpreted.
+    an input should not depend on how successfully it was interpreted. A
+    folder or .zip dataset is profiled by :func:`_profile_multitable`.
     """
+    if is_multitable(path):
+        return _profile_multitable(path)
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1 << 20), b""):
@@ -140,13 +194,32 @@ def _profile(path: Path) -> tuple[str, int, tuple[str, ...]]:
     return digest.hexdigest(), rows, tuple(header.columns)
 
 
+def _shipped_spec(path: Path, name: str) -> DatasetSpec:
+    sha, rows, columns = _profile(path)
+    adapter = MULTITABLE_ADAPTER if is_multitable(path) else "generic_india_tpa"
+    return DatasetSpec(name=name, path=path, adapter=adapter, sha256=sha, rows=rows,
+                       columns=columns, origin="shipped")
+
+
+#: The datasets that ship with the application, default first, with a short plain name.
+_SHIPPED = (
+    (DEFAULT_PATH, "UAE demo (synthetic, multi-table)"),
+    (CLAIM_HEADER_DEMO_PATH, "Claim-header demo (synthetic)"),
+    (SAMPLE_EXTRACT_PATH, "Sample claim extract"),
+)
+
+
+def shipped_datasets() -> list[DatasetSpec]:
+    """The shipped datasets that exist on disk: the UAE demo (default), the claim-header demo, the sample."""
+    return [_shipped_spec(path, name) for path, name in _SHIPPED if path.exists()]
+
+
 def default_spec() -> DatasetSpec:
-    """The dataset the application starts on."""
-    sha, rows, columns = _profile(DEFAULT_PATH)
-    return DatasetSpec(
-        name=DEFAULT_PATH.name, path=DEFAULT_PATH, sha256=sha, rows=rows,
-        columns=columns, origin="shipped",
-    )
+    """The dataset the application starts on (the claim-header demo if the UAE demo is not built yet)."""
+    for path, name in _SHIPPED:
+        if path.exists():
+            return _shipped_spec(path, name)
+    raise FileNotFoundError(f"No shipped dataset found; run tools/make_uae_demo_dataset.py to build {DEFAULT_PATH}.")
 
 
 def _safe_stem(name: str) -> str:
@@ -164,9 +237,14 @@ def spec_from_upload(uploaded, adapter: str) -> DatasetSpec:
     payload = uploaded.getvalue()
     sha = hashlib.sha256(payload).hexdigest()
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    path = UPLOAD_DIR / f"{_safe_stem(uploaded.name)}-{sha[:12]}.csv"
+    is_zip = Path(uploaded.name).suffix.lower() == ".zip"
+    path = UPLOAD_DIR / f"{_safe_stem(uploaded.name)}-{sha[:12]}{'.zip' if is_zip else '.csv'}"
     if not path.exists():
         path.write_bytes(payload)
+    if is_zip:
+        if not zipfile.is_zipfile(path):
+            raise ValueError(f"{uploaded.name} is not a readable .zip file")
+        adapter = MULTITABLE_ADAPTER
     _, rows, columns = _profile(path)
     return DatasetSpec(
         name=uploaded.name, path=path, adapter=adapter, sha256=sha, rows=rows,
@@ -184,10 +262,15 @@ def spec_from_path(raw: str, adapter: str) -> DatasetSpec:
     path = Path(raw.strip().strip('"').strip("'")).expanduser()
     if not path.exists():
         raise FileNotFoundError(f"No file at {path}")
-    if not path.is_file():
-        raise ValueError(f"{path} is a directory, not a file")
-    if path.suffix.lower() not in (".csv", ".txt", ".tsv"):
-        raise ValueError(f"{path.suffix or 'That file'} is not a delimited text file")
+    if is_multitable(path):
+        # a folder or .zip of one CSV per table: always the multi-table adapter
+        if path.is_dir() and not (path / "claim_header.csv").exists():
+            raise ValueError(f"{path} is a folder without a claim_header.csv, so it is not a multi-table dataset")
+        if path.is_file() and not zipfile.is_zipfile(path):
+            raise ValueError(f"{path.name} is not a readable .zip file")
+        adapter = MULTITABLE_ADAPTER
+    elif path.suffix.lower() not in (".csv", ".txt", ".tsv"):
+        raise ValueError(f"{path.suffix or 'That file'} is not a delimited text file, a folder or a .zip")
     sha, rows, columns = _profile(path)
     return DatasetSpec(
         name=path.name, path=path, adapter=adapter, sha256=sha, rows=rows,

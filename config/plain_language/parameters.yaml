@@ -2393,3 +2393,58 @@ parameters:
       treatment-duration limit.
     lower: Removing a drug class here means continuous fills of it can again be flagged for exceeding
       a treatment-duration limit.
+  phr02_allowed_overlap_fraction:
+    label: Early-refill allowance as a share of supply
+    meaning: How much of the previous supply may be left when a refill is collected, as a share of that
+      supply; the larger of this and the fixed number of overlap days applies.
+    raise: Refills can come earlier before they count as early, so fewer refills are flagged, but some
+      genuine stockpiling may be missed.
+    lower: Refills must come closer to the end of the previous supply, so more refills are flagged as
+      early, with more false alarms for long-supply medicines.
+  phr02_duration_tolerance:
+    label: Allowed overrun beyond the maximum course length
+    meaning: How far, as a share of the policy's maximum course length, a course of one medicine may run
+      before it is flagged.
+    raise: Longer overruns are tolerated, so fewer courses are flagged, but some over-long prescribing
+      may be missed.
+    lower: Smaller overruns are flagged, so more courses are flagged, including some that only reflect
+      refill timing or pack sizes.
+  ent02_adjacent_emirates:
+    label: Neighbouring emirates a member can visit the same day
+    meaning: Pairs of emirates close enough that using one member's cover in both on the same day is not
+      treated as a sign that the card was shared.
+    raise: Adding pairs means fewer same-day visits in two emirates count as a warning sign, so fewer
+      members are flagged for card sharing.
+    lower: Removing pairs means more same-day visits in two emirates count as a warning sign, so more
+      members are flagged, including some genuine travellers.
+  cln04_frequency_window_days:
+    label: Window for counting a patient's service days
+    meaning: How many days back the check counts a patient's days of care in one type of service when
+      looking for unusually frequent care.
+    raise: Days are counted over a longer stretch, so more patients reach a high count and more may be
+      flagged, including some with long legitimate treatment.
+    lower: Days are counted over a shorter stretch, so fewer patients reach a high count and fewer are
+      flagged, but spread-out excess care may be missed.
+  cln04_frequency_peer_percentile:
+    label: How far above other patients before excess care is flagged
+    meaning: A patient's count of service days must be above this share of all patients using the same
+      type of service before it is reported as excess.
+    raise: Only the most extreme patients are flagged, so fewer flags and less reviewer work, but some
+      real over-servicing may be missed.
+    lower: Less extreme patients are flagged too, so more flags and more false alarms.
+  cln06_signature_min_lines:
+    label: Minimum lines on a claim before copied patterns are compared
+    meaning: Only claims with at least this many service lines are compared for identical line patterns
+      across different patients.
+    raise: Only longer claims are compared, so fewer copied-looking claims are flagged, but short copied
+      claims may be missed.
+    lower: Shorter claims are compared too, so more are flagged, including ordinary standard visits that
+      simply look alike.
+  cln06_signature_min_members:
+    label: Patients sharing an identical claim pattern before it is flagged
+    meaning: How many different patients at one provider must have exactly the same lines (codes, units,
+      amounts and times) before the pattern is reported.
+    raise: More patients must share the pattern, so fewer providers are flagged, but smaller copied batches
+      may be missed.
+    lower: Fewer patients need to share the pattern, so more providers are flagged, with more coincidental
+      matches among them.

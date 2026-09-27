@@ -60,8 +60,8 @@ CODES = [
 ]
 CLINICS = ["P02", "P03", "P04", "P05", "P06", "P07"]
 PHARMACIES = ["P08", "P09", "P10"]
-EMIRATE = {"P01": "DUBAI", "P02": "DUBAI", "P03": "ABU DHABI", "P04": "DUBAI", "P05": "ABU DHABI",
-           "P06": "DUBAI", "P07": "ABU DHABI", "P08": "DUBAI", "P09": "DUBAI", "P10": "DUBAI", "P11": "DUBAI"}
+EMIRATE = {"P01": "DUBAI", "P02": "DUBAI", "P03": "RAS AL KHAIMAH", "P04": "DUBAI", "P05": "RAS AL KHAIMAH",
+           "P06": "DUBAI", "P07": "RAS AL KHAIMAH", "P08": "DUBAI", "P09": "DUBAI", "P10": "DUBAI", "P11": "DUBAI"}
 FTYPE = {"P01": "HOSPITAL", **{p: "CLINIC" for p in CLINICS}, **{p: "PHARMACY" for p in PHARMACIES},
          "P11": "DIAGNOSTIC_LAB"}
 MONTHS = pd.date_range("2024-07-01", "2025-12-01", freq="MS")

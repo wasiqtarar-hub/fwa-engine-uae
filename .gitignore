@@ -25,3 +25,7 @@ data/_scratch/
 
 # Per-user interface preferences (Simple/Advanced mode), written by the app.
 data/ui_prefs.json
+
+# The unzipped UAE demo (68 MB). The committed data/uae_demo.zip holds the same
+# tables; rebuild the folder with tools/make_uae_demo_dataset.py or unzip it.
+data/uae_demo/

@@ -597,9 +597,9 @@ CASE_RATES: dict[str, dict[str, Any]] = {
 #: form, unit_price (AED per unit), max_duration_days, max_mg_per_kg_day, high_cost, controlled,
 #: vial_size_mg, indication_prefixes, regimen (units/day, typical course days).
 _DRUG_ROWS: list[tuple] = [
-    ("RX1001", "Amoxicillin 500 mg capsule (generic)", "AMOXICILLIN", "ANTIBIOTIC", 500, "CAPSULE", 1.20, 14, 100, 0, 0, None, "J01;J02;J03;J20;H66", (3, 7)),
-    ("RX1002", "Amoxicillin 500 mg capsule (originator brand)", "AMOXICILLIN", "ANTIBIOTIC", 500, "CAPSULE", 2.60, 14, 100, 0, 0, None, "J01;J02;J03;J20;H66", (3, 7)),
-    ("RX1003", "Amoxicillin 250 mg/5 ml oral suspension, per ml", "AMOXICILLIN", "ANTIBIOTIC", 50, "SUSPENSION", 0.25, 14, 90, 0, 0, None, "J01;J02;J03;J20;H66", None),
+    ("RX1001", "Amoxicillin 500 mg capsule (generic)", "AMOXICILLIN", "ANTIBIOTIC", 500, "CAPSULE", 1.20, 14, 100, 0, 0, None, "J01;J02;J03;J20;H66;L02;L03;J18", (3, 7)),
+    ("RX1002", "Amoxicillin 500 mg capsule (originator brand)", "AMOXICILLIN", "ANTIBIOTIC", 500, "CAPSULE", 2.60, 14, 100, 0, 0, None, "J01;J02;J03;J20;H66;L02;L03;J18", (3, 7)),
+    ("RX1003", "Amoxicillin 250 mg/5 ml oral suspension, per ml", "AMOXICILLIN", "ANTIBIOTIC", 50, "SUSPENSION", 0.25, 14, 90, 0, 0, None, "J01;J02;J03;J20;H66;L02;L03;J18", None),
     ("RX1004", "Amoxicillin-clavulanate 625 mg tablet (generic)", "AMOXICILLIN_CLAVULANATE", "ANTIBIOTIC", 625, "TABLET", 3.50, 14, 90, 0, 0, None, "J01;J02;J03;J20;H66;L02;L03;J18", (2, 7)),
     ("RX1005", "Amoxicillin-clavulanate 625 mg tablet (originator brand)", "AMOXICILLIN_CLAVULANATE", "ANTIBIOTIC", 625, "TABLET", 6.80, 14, 90, 0, 0, None, "J01;J02;J03;J20;H66;L02;L03;J18", (2, 7)),
     ("RX1006", "Azithromycin 250 mg tablet", "AZITHROMYCIN", "ANTIBIOTIC", 250, "TABLET", 4.50, 5, 12, 0, 0, None, "J02;J03;J18;J20;A09", (2, 3)),
@@ -630,13 +630,13 @@ _DRUG_ROWS: list[tuple] = [
     ("RX1032", "Pantoprazole 40 mg tablet", "PANTOPRAZOLE", "PPI", 40, "TABLET", 1.00, 56, None, 0, 0, None, "K21;K29;K25", (1, 28)),
     ("RX1033", "Paracetamol 500 mg tablet", "PARACETAMOL", "ANALGESIC", 500, "TABLET", 0.10, 30, 75, 0, 0, None, "", (4, 5)),
     ("RX1034", "Paracetamol 120 mg/5 ml oral syrup, per ml", "PARACETAMOL", "ANALGESIC", 24, "SYRUP", 0.08, 7, 75, 0, 0, None, "", None),
-    ("RX1035", "Ibuprofen 400 mg tablet", "IBUPROFEN", "NSAID", 400, "TABLET", 0.30, 14, 40, 0, 0, None, "M;S;R51;G43;J02;J03;N92;R50", (3, 5)),
-    ("RX1036", "Ibuprofen 100 mg/5 ml oral suspension, per ml", "IBUPROFEN", "NSAID", 20, "SUSPENSION", 0.10, 7, 40, 0, 0, None, "M;S;R51;J02;J03;H66;R50", None),
+    ("RX1035", "Ibuprofen 400 mg tablet", "IBUPROFEN", "NSAID", 400, "TABLET", 0.30, 14, 40, 0, 0, None, "M;S;R51;G43;J02;J03;J06;N92;N20;R50;R10", (3, 5)),
+    ("RX1036", "Ibuprofen 100 mg/5 ml oral suspension, per ml", "IBUPROFEN", "NSAID", 20, "SUSPENSION", 0.10, 7, 40, 0, 0, None, "M;S;R51;J02;J03;J06;H66;R50;N20", None),
     ("RX1037", "Diclofenac sodium 50 mg tablet", "DICLOFENAC", "NSAID", 50, "TABLET", 0.40, 14, 3, 0, 0, None, "M;S", (2, 7)),
     ("RX1038", "Salbutamol 100 mcg metered-dose inhaler, 200 doses", "SALBUTAMOL", "BRONCHODILATOR", 20, "INHALER", 18.0, 90, None, 0, 0, None, "J45;J44;J20", None),
     ("RX1039", "Fluticasone/salmeterol 250/50 mcg inhaler, 60 doses", "FLUTICASONE_SALMETEROL", "ICS_LABA", 18, "INHALER", 95.0, 90, None, 0, 0, None, "J45;J44", None),
     ("RX1040", "Montelukast 10 mg tablet", "MONTELUKAST", "LEUKOTRIENE_ANTAGONIST", 10, "TABLET", 1.20, 90, None, 0, 0, None, "J45;J30", (1, 30)),
-    ("RX1041", "Cetirizine 10 mg tablet", "CETIRIZINE", "ANTIHISTAMINE", 10, "TABLET", 0.30, 30, None, 0, 0, None, "J30;L50;J06;L30", (1, 10)),
+    ("RX1041", "Cetirizine 10 mg tablet", "CETIRIZINE", "ANTIHISTAMINE", 10, "TABLET", 0.30, 30, None, 0, 0, None, "J30;L50;J06;L30;R05;J20", (1, 10)),
     ("RX1042", "Loratadine 10 mg tablet", "LORATADINE", "ANTIHISTAMINE", 10, "TABLET", 0.35, 30, None, 0, 0, None, "J30;L50;J06;L30", (1, 10)),
     ("RX1043", "Levothyroxine 50 mcg tablet", "LEVOTHYROXINE", "THYROID_HORMONE", 0.05, "TABLET", 0.30, 90, None, 0, 0, None, "E03;E89", (1, 30)),
     ("RX1044", "Colecalciferol 50,000 IU capsule", "COLECALCIFEROL", "VITAMIN", 1.25, "CAPSULE", 3.00, 84, None, 0, 0, None, "E55;M81", None),
@@ -653,7 +653,7 @@ _DRUG_ROWS: list[tuple] = [
     ("RX1055", "Hydrocortisone 1% cream, 30 g tube", "HYDROCORTISONE_TOPICAL", "TOPICAL_STEROID", 300, "CREAM", 12.0, 30, None, 0, 0, None, "L30;L20;L50", None),
     ("RX1056", "Mupirocin 2% ointment, 15 g tube", "MUPIROCIN", "TOPICAL_ANTIBIOTIC", 300, "OINTMENT", 22.0, 10, None, 0, 0, None, "L01;L02;L08;S61", None),
     ("RX1057", "Ondansetron 4 mg orally disintegrating tablet", "ONDANSETRON", "ANTIEMETIC", 4, "TABLET", 3.00, 5, 0.45, 0, 0, None, "A09;R11;K52", (2, 3)),
-    ("RX1058", "Domperidone 10 mg tablet", "DOMPERIDONE", "ANTIEMETIC", 10, "TABLET", 0.40, 7, None, 0, 0, None, "R11;K30;K21;A09", (3, 5)),
+    ("RX1058", "Domperidone 10 mg tablet", "DOMPERIDONE", "ANTIEMETIC", 10, "TABLET", 0.40, 7, None, 0, 0, None, "R11;R10;K30;K21;K29;A09", (3, 5)),
     ("RX1059", "Oral rehydration salts, sachet", "ORAL_REHYDRATION", "ELECTROLYTE", 0, "SACHET", 1.00, 7, None, 0, 0, None, "A09;E86;K52", (3, 3)),
     ("RX1060", "Methotrexate 2.5 mg tablet", "METHOTREXATE", "DMARD", 2.5, "TABLET", 0.60, 90, None, 0, 0, None, "M05;L40", (6, 28)),
     ("RX1061", "Tamsulosin 0.4 mg capsule", "TAMSULOSIN", "ALPHA_BLOCKER", 0.4, "CAPSULE", 1.30, 90, None, 0, 0, None, "N40", (1, 30)),
@@ -676,7 +676,9 @@ _DRUG_ROWS: list[tuple] = [
 DRUGS: list[dict[str, Any]] = [
     {
         "product": r[0], "description": r[1], "equivalence_group": r[2], "therapeutic_class": r[3],
-        "strength_mg": float(r[4]), "form": r[5], "unit_price": float(r[6]), "max_duration_days": int(r[7]),
+        "strength_mg": float(r[4]), "form": r[5], "unit_price": float(r[6]),
+        # chronic maintenance products (90-day ceiling in the table above) carry no duration limit
+        "max_duration_days": None if int(r[7]) >= 90 else int(r[7]),
         "max_mg_per_kg_day": None if r[8] is None else float(r[8]), "is_high_cost": bool(r[9]),
         "is_controlled": bool(r[10]), "vial_size_mg": None if r[11] is None else float(r[11]),
         "indication_prefixes": r[12], "regimen": r[13],
@@ -760,7 +762,7 @@ _INDICATIONS = {
     "94010": "J44;J45;R06;R05", "94640": "J45;J44;J20;J21", "95816": "G40;R56;R40", "96413": "C;Z51",
     "96415": "C;Z51", "78815": "C;R91", "88305": "K;C;D;N;L", "73562": "M17;M23;M25.56;S83;S89",
     "72100": "M54;M51;M48;S32", "73030": "M75;M25.51;S43;S42", "74177": "R10;K35;K57;C;N20;K80",
-    "76700": "R10;K80;K76;N10;K35;R74;N20", "76705": "R10;K35;K80;N10;N20", "93000": "R07;I10;I20;I21;I25;I48;I50;R00;Z01.8",
+    "76700": "R10;K80;K76;N10;K35;R74;N20", "76705": "R10;K35;K80;N10;N20;N18;N40;K21;E11", "93000": "R07;I10;I20;I21;I25;I48;I50;R00;Z01.8",
 }
 
 _PROHIBITED = [

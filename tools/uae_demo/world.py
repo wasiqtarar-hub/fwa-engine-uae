@@ -122,10 +122,27 @@ class World:
 
     def set_values(self, name: str, mask, **values: Any) -> None:
         frame = self.tables[name]
+        mask = pd.Series(mask, index=frame.index) if not isinstance(mask, pd.Series) else mask
+        target = frame.index[mask.reindex(frame.index, fill_value=False).astype(bool)]
         for column, value in values.items():
             if column not in frame.columns:
                 frame[column] = None
-            frame.loc[mask, column] = value
+            # pandas 3 refuses a bare array assigned through .loc when lengths or
+            # dtypes do not line up exactly; an index-aligned Series is explicit.
+            if isinstance(value, (list, tuple, np.ndarray, pd.Series)) and not isinstance(value, str):
+                series = value if isinstance(value, pd.Series) else pd.Series(list(value), index=target)
+                new = series.reindex(target)
+            else:
+                new = pd.Series([value] * len(target), index=target, dtype=object)
+            col = frame[column]
+            if pd.api.types.is_numeric_dtype(col) and not pd.api.types.is_numeric_dtype(
+                    pd.to_numeric(new, errors="coerce").dropna() if new.notna().any() else new):
+                frame[column] = col.astype(object)
+            try:
+                frame.loc[target, column] = new.values
+            except (TypeError, ValueError):
+                frame[column] = frame[column].astype(object)
+                frame.loc[target, column] = new.values
 
     # ---------------------------------------------------------------- claims
 
@@ -185,6 +202,11 @@ class World:
         """Re-sum gross/net/patient share on the headers from their lines."""
         ids = set(claim_ids)
         lines = self.tables["claim_line"]
+        # An injector that appended rows with a missing money value can leave
+        # a column as object dtype; summing that raises. Coerce once here.
+        for col in ("gross_amount", "net_amount", "patient_share"):
+            if col in lines.columns and not pd.api.types.is_numeric_dtype(lines[col]):
+                lines[col] = pd.to_numeric(lines[col], errors="coerce").fillna(0.0)
         sub = lines[lines["claim_sk"].isin(ids)]
         sums = sub.groupby("claim_sk")[["gross_amount", "net_amount", "patient_share"]].sum()
         header = self.tables["claim_header"]

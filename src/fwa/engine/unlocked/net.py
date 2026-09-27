@@ -23,7 +23,7 @@ from scipy import stats as _st
 
 from ...cases import exposure as _exp
 from ...presentation import aed, count_phrase, pct, plain_date, times_phrase
-from ..controls import _claim_frame, _f, _sig
+from ..controls import _claim_frame, _sig
 from ..evallib import is_missing, period_bucket
 
 __all__ = ["IMPLEMENTATIONS"]
@@ -57,6 +57,18 @@ def _norm(value: Any) -> str:
     return re.sub(r"[\s\-/]+", "_", _s(value).lower())
 
 
+def _vs(series) -> pd.Series:
+    """Vectorised :func:`_s`: strings, stripped, with missing values as ''."""
+    s = pd.Series(series)
+    out = s.astype(object).where(s.notna(), "")
+    return out.astype(str).str.strip()
+
+
+def _vn(series) -> pd.Series:
+    """Vectorised :func:`_norm`."""
+    return _vs(series).str.lower().str.replace(r"[\s\-/]+", "_", regex=True)
+
+
 def _claims(ctx) -> pd.DataFrame:
     df = _claim_frame(ctx)
     if df is None or df.empty or "claim_sk" not in df.columns:
@@ -65,7 +77,7 @@ def _claims(ctx) -> pd.DataFrame:
     df["claim_sk"] = df["claim_sk"].astype(str)
     for col in ("member_sk", "provider_sk"):
         if col in df.columns:
-            df[col] = df[col].map(_s)
+            df[col] = _vs(df[col])
     if "service_date" in df.columns:
         df["service_date"] = pd.to_datetime(df["service_date"], errors="coerce")
     if "gross_amount_aed" not in df.columns:
@@ -80,19 +92,19 @@ def _referrals(ctx) -> pd.DataFrame:
     if ref.empty:
         return pd.DataFrame()
     ref = ref.copy()
-    a = ref["referrer_provider_sk"].map(_s) if "referrer_provider_sk" in ref.columns else pd.Series("", index=ref.index)
-    b = ref["recipient_provider_sk"].map(_s) if "recipient_provider_sk" in ref.columns else pd.Series("", index=ref.index)
+    a = _vs(ref["referrer_provider_sk"]) if "referrer_provider_sk" in ref.columns else pd.Series("", index=ref.index)
+    b = _vs(ref["recipient_provider_sk"]) if "recipient_provider_sk" in ref.columns else pd.Series("", index=ref.index)
     if "referrer_id" in ref.columns:
-        a = a.where(a != "", ref["referrer_id"].map(_s))
+        a = a.where(a != "", _vs(ref["referrer_id"]))
     if "recipient_id" in ref.columns:
-        b = b.where(b != "", ref["recipient_id"].map(_s))
+        b = b.where(b != "", _vs(ref["recipient_id"]))
     ref["src"], ref["dst"] = a, b
     ref = ref[(ref["src"] != "") & (ref["dst"] != "") & (ref["src"] != ref["dst"])]
     if ref.empty:
         return ref
-    ref["referral_sk"] = ref["referral_sk"].map(_s) if "referral_sk" in ref.columns else ref.index.astype(str)
-    ref["member_sk"] = ref["member_sk"].map(_s) if "member_sk" in ref.columns else ""
-    ref["resulting_claim_sk"] = ref["resulting_claim_sk"].map(_s) if "resulting_claim_sk" in ref.columns else ""
+    ref["referral_sk"] = _vs(ref["referral_sk"]) if "referral_sk" in ref.columns else ref.index.astype(str)
+    ref["member_sk"] = _vs(ref["member_sk"]) if "member_sk" in ref.columns else ""
+    ref["resulting_claim_sk"] = _vs(ref["resulting_claim_sk"]) if "resulting_claim_sk" in ref.columns else ""
     ref["referral_date"] = pd.to_datetime(ref["referral_date"], errors="coerce") \
         if "referral_date" in ref.columns else pd.NaT
     return ref
@@ -103,7 +115,7 @@ def _providers(ctx) -> pd.DataFrame:
     if prov.empty or "provider_sk" not in prov.columns:
         return pd.DataFrame()
     prov = prov.copy()
-    prov["provider_sk"] = prov["provider_sk"].map(_s)
+    prov["provider_sk"] = _vs(prov["provider_sk"])
     return prov.drop_duplicates("provider_sk").set_index("provider_sk")
 
 
@@ -295,28 +307,41 @@ def net_01_r03_high_cost_conversion(ctx, control) -> list:
     ref["converted"] = ref["resulting_claim_sk"].isin(high.index)
     ref["high_value"] = ref["resulting_claim_sk"].map(high).fillna(0.0)
     prov = _providers(ctx)
-    ref["specialty"] = ref["dst"].map(
-        lambda p: _norm(prov.at[p, "specialty"]) if not prov.empty and p in prov.index and "specialty" in prov.columns else "")
-    ref["reason"] = ref["reason_code"].map(_norm) if "reason_code" in ref.columns else ""
+    spec = {} if prov.empty or "specialty" not in prov.columns else         dict(zip(prov.index, _vn(prov["specialty"])))
+    ref["specialty"] = ref["dst"].map(spec).fillna("")
+    ref["reason"] = _vn(ref["reason_code"]) if "reason_code" in ref.columns else ""
+    ref["converted"] = ref["converted"].astype(bool)
+
+    # Expected conversions, indirectly standardised on (recipient specialty,
+    # referral reason), with the recipient LEFT OUT of its own expectation so a
+    # heavy recipient cannot raise the bar it is measured against.
+    keys = ["specialty", "reason"]
+    cell = ref.groupby(keys)["converted"].agg(cell_n="size", cell_conv="sum")
+    own = ref.groupby(["dst"] + keys)["converted"].agg(n="size", conv="sum").reset_index()
+    own = own.join(cell, on=keys)
+    total_n, total_conv = len(ref), int(ref["converted"].sum())
+    dst_n = own.groupby("dst")["n"].transform("sum")
+    dst_conv = own.groupby("dst")["conv"].transform("sum")
+    overall = (total_conv - dst_conv) / (total_n - dst_n).clip(lower=1)
+    other_n = own["cell_n"] - own["n"]
+    loo = np.where(other_n > 0, (own["cell_conv"] - own["conv"]) / other_n.clip(lower=1), overall)
+    own["expected"] = own["n"] * loo
+    summary = own.groupby("dst").agg(n=("n", "sum"), observed=("conv", "sum"), expected=("expected", "sum"))
 
     out = []
-    for dst, sub in ref.groupby("dst", sort=True):
-        n = len(sub)
+    for dst, srow in summary.iterrows():
+        n = int(srow["n"])
         if n < min_ref:
             continue
-        # Leave the provider out of its own expectation, so one heavy recipient
-        # cannot raise the bar it is measured against.
-        others = ref[ref["dst"] != dst]
-        rates = others.groupby(["specialty", "reason"])["converted"].mean()
-        overall = float(others["converted"].mean()) if len(others) else float(ref["converted"].mean())
-        expected = float(sum(rates.get((s, r), overall) for s, r in zip(sub["specialty"], sub["reason"])))
-        observed = int(sub["converted"].sum())
+        expected = float(srow["expected"])
+        observed = int(srow["observed"])
         if observed == 0:
             continue
         ratio = observed / max(expected, 1e-9)
         tail = float(_st.poisson.sf(observed - 1, max(expected, 1e-9)))
         if ratio < min_ratio or tail > alpha:
             continue
+        sub = ref[ref["dst"] == dst]
         conv = sub[sub["converted"]]
         last = sub["referral_date"].max()
         referrers = sub["src"].value_counts()
@@ -392,9 +417,10 @@ def net_01_r04_closed_downstream_chain(ctx, control) -> list:
     narrow = set()
     contract = _table(ctx, "contract")
     if not contract.empty and "network_tier" in contract.columns:
-        narrow = set(contract.loc[contract["network_tier"].map(_norm).str.contains("narrow"), "provider_sk"].map(_s))
+        narrow = set(contract.loc[_vn(contract["network_tier"]).str.contains("narrow"), "provider_sk"].map(_s))
 
-    down = ref[ref["dst"].map(lambda p: _is_downstream(prov, p))].copy()
+    kind = {p: _is_downstream(prov, p) for p in ref["dst"].unique()}
+    down = ref[ref["dst"].map(kind).fillna(False).astype(bool)].copy()
     if down.empty:
         return []
     out = []
@@ -475,7 +501,7 @@ def net_02_r01_shared_admin_identity(ctx, control) -> list:
         if col not in frame.columns:
             continue
         vals = frame[["provider_sk", col] + ([legal] if legal else [])].copy()
-        vals[col] = vals[col].map(_s)
+        vals[col] = _vs(vals[col])
         vals = vals[vals[col] != ""]
         for token, grp in vals.groupby(col, sort=True):
             members = sorted(set(grp["provider_sk"]))
@@ -563,14 +589,14 @@ def net_02_r04_structural_change(ctx, control) -> list:
     contracts = _table(ctx, "contract")
     contract_starts: dict[str, list[pd.Timestamp]] = {}
     if not contracts.empty and {"provider_sk", "valid_from"} <= set(contracts.columns):
-        c = contracts.assign(_p=contracts["provider_sk"].map(_s),
+        c = contracts.assign(_p=_vs(contracts["provider_sk"]),
                              _d=pd.to_datetime(contracts["valid_from"], errors="coerce"))
         contract_starts = c.dropna(subset=["_d"]).groupby("_p")["_d"].apply(list).to_dict()
     cred = pd.to_datetime(prov["credentialing_date"], errors="coerce") if "credentialing_date" in prov.columns \
         else pd.Series(pd.NaT, index=prov.index)
     owned = pd.to_datetime(prov["ownership_changed_on"], errors="coerce") if "ownership_changed_on" in prov.columns \
         else pd.Series(pd.NaT, index=prov.index)
-    owner = prov["owner_entity_id"].map(_s) if "owner_entity_id" in prov.columns else pd.Series("", index=prov.index)
+    owner = _vs(prov["owner_entity_id"]) if "owner_entity_id" in prov.columns else pd.Series("", index=prov.index)
 
     rv = rank.to_numpy()
     out = []
@@ -627,7 +653,7 @@ def net_02_r04_structural_change(ctx, control) -> list:
                     "centrality_measure": "monthly percentile rank of distinct members served",
                     "plain_language": (
                         f"In the {w} months before {plain_date(start)} this provider saw about "
-                        f"{pre_members / w:.0f} patients a month ({aed(pre_value)} in total, busier than "
+                        f"{pre_members / w:.0f} patients a month ({aed(pre_value)} in total, among the quietest "
                         f"{pct(pre)} of providers); in the {w} months from then it saw about "
                         f"{post_members / w:.0f} a month ({aed(post_value)}, busier than {pct(post)})"
                         + (f", after its ownership changed on {plain_date(ownership_note)}" if ownership_note else "")
@@ -671,11 +697,11 @@ def net_03_r02_closed_member_group(ctx, control) -> list:
     min_closure = float(ctx.cfg("net03r02_min_closure_share"))
 
     mem = members.copy()
-    mem["member_sk"] = mem["member_sk"].map(_s)
-    mem["employer"] = mem["employer_id"].map(_s)
+    mem["member_sk"] = _vs(mem["member_sk"])
+    mem["employer"] = _vs(mem["employer_id"])
     if "sponsor_id" in mem.columns:
-        mem["employer"] = mem["employer"].where(mem["employer"] != "", mem["sponsor_id"].map(_s))
-    mem["emirate"] = mem["emirate"].map(_s) if "emirate" in mem.columns else ""
+        mem["employer"] = mem["employer"].where(mem["employer"] != "", _vs(mem["sponsor_id"]))
+    mem["emirate"] = _vs(mem["emirate"]) if "emirate" in mem.columns else ""
     mem = mem.drop_duplicates("member_sk")
     emp = dict(zip(mem["member_sk"], mem["employer"]))
     df = claims.assign(employer=claims["member_sk"].map(emp).fillna(""))
@@ -808,17 +834,17 @@ def net_03_r03_inducement_signature(ctx, control) -> list:
     ref = _table(ctx, "activity_code_reference")
     if not benefit.empty and not cover.empty and {"product", "patient_share_pct", "service_family"} <= set(benefit.columns):
         pct_share = pd.to_numeric(benefit["patient_share_pct"], errors="coerce").fillna(0)
-        charging = {(a, b) for a, b, v in zip(benefit["product"].map(_s), benefit["service_family"].map(_norm), pct_share) if v > 0}
+        charging = {(a, b) for a, b, v in zip(_vs(benefit["product"]), _vn(benefit["service_family"]), pct_share) if v > 0}
         eligible_products = {a for a, _ in charging}
-        prod = cover.assign(_m=cover["member_sk"].map(_s), _p=cover["product"].map(_s)).drop_duplicates("_m", keep="last")
+        prod = cover.assign(_m=_vs(cover["member_sk"]), _p=_vs(cover["product"])).drop_duplicates("_m", keep="last")
         product_of = dict(zip(prod["_m"], prod["_p"]))
         fam = {}
         cfam = {}
         if not ref.empty and {"activity_code", "service_family"} <= set(ref.columns):
-            fam = dict(zip(ref["activity_code"].map(_s), ref["service_family"].map(_norm)))
+            fam = dict(zip(_vs(ref["activity_code"]), _vn(ref["service_family"])))
             if "code_family" in ref.columns:
-                cfam = dict(zip(ref["activity_code"].map(_s), ref["code_family"].map(_norm)))
-        billed = lines[lines["net_amount"].fillna(0) > 0].assign(_code=lambda f: f["activity_code"].map(_s))
+                cfam = dict(zip(_vs(ref["activity_code"]), _vn(ref["code_family"])))
+        billed = lines[lines["net_amount"].fillna(0) > 0].assign(_code=lambda f: _vs(f["activity_code"]))
         billed = billed.assign(_fam=billed["_code"].map(fam).fillna(""),
                                _case=billed["_code"].map(cfam).fillna("") == "case_rate")
         case_fam = billed[billed["_case"]].groupby("claim_sk")["_fam"].first()
@@ -848,23 +874,26 @@ def net_03_r03_inducement_signature(ctx, control) -> list:
     rx = _table(ctx, "prescription_dispense")
     subst = {}
     if not rx.empty and {"billed_product", "dispensed_product", "claim_sk"} <= set(rx.columns):
-        diff = rx[(rx["billed_product"].map(_s) != "") & (rx["dispensed_product"].map(_s) != "")
-                  & (rx["billed_product"].map(_s) != rx["dispensed_product"].map(_s))]
+        diff = rx[(_vs(rx["billed_product"]) != "") & (_vs(rx["dispensed_product"]) != "")
+                  & (_vs(rx["billed_product"]) != _vs(rx["dispensed_product"]))]
         cp = dict(zip(df["claim_sk"], df["provider_sk"]))
         subst = diff["claim_sk"].astype(str).map(cp).value_counts().to_dict()
 
+    by_p = df.groupby("provider_sk").agg(n=("claim_sk", "size"), zero_rate=("_zero", "mean"))
+    by_p["repeat_rate"] = per_member.groupby("provider_sk")["repeat_high"].mean()
+    both_all = per_member[(per_member["zero"] > 0) & per_member["repeat_high"]]
+    by_p["both"] = both_all.groupby("provider_sk").size()
+    by_p = by_p.fillna(0)
+    flagged = by_p[(by_p["n"] >= min_claims) & (by_p["zero_rate"] >= multiple * pooled_zero)
+                   & (by_p["repeat_rate"] >= multiple * pooled_repeat) & (by_p["both"] >= min_both)]
     out = []
-    for p, sub in df.groupby("provider_sk", sort=True):
-        if len(sub) < min_claims or not p:
+    for p in sorted(flagged.index):
+        if not p:
             continue
-        zero_rate = float(sub["_zero"].mean())
-        pm = per_member[per_member["provider_sk"] == p]
-        repeat_rate = float(pm["repeat_high"].mean())
-        if zero_rate < multiple * pooled_zero or repeat_rate < multiple * pooled_repeat:
-            continue
-        both = pm[(pm["zero"] > 0) & pm["repeat_high"]]
-        if len(both) < min_both:
-            continue
+        sub = df[df["provider_sk"] == p]
+        zero_rate = float(flagged.at[p, "zero_rate"])
+        repeat_rate = float(flagged.at[p, "repeat_rate"])
+        both = both_all[both_all["provider_sk"] == p]
         hit_claims = sub[sub["member_sk"].isin(set(both["member_sk"])) & (sub["_zero"] | sub["_high"])]
         last = sub["service_date"].max() if "service_date" in sub.columns else None
         out.append(_sig(
@@ -1065,8 +1094,8 @@ def net_04_r04_shared_identifiers_actors(ctx, control) -> list:
                 continue
             sub = frame[[key, col]].copy()
             sub.columns = ["actor_id", "value"]
-            sub["actor_id"] = sub["actor_id"].map(_s)
-            sub["value"] = sub["value"].map(_s)
+            sub["actor_id"] = _vs(sub["actor_id"])
+            sub["value"] = _vs(sub["value"])
             sub = sub[(sub["actor_id"] != "") & (sub["value"] != "")].drop_duplicates()
             sub["actor_type"] = actor
             sub["identifier"] = col
@@ -1103,13 +1132,13 @@ def net_04_r04_shared_identifiers_actors(ctx, control) -> list:
         if provs and not claims.empty:
             related = claims[claims["provider_sk"].isin(provs)]
             if agents and "agent_id" in related.columns:
-                related = related[related["agent_id"].map(_s).isin(agents)]
+                related = related[_vs(related["agent_id"]).isin(agents)]
             elif members:
                 related = related[related["member_sk"].isin(members)]
             elif employers:
                 mem = _table(ctx, "member")
                 if not mem.empty and "employer_id" in mem.columns:
-                    emp_members = set(mem.loc[mem["employer_id"].map(_s).isin(employers), "member_sk"].map(_s))
+                    emp_members = set(mem.loc[_vs(mem["employer_id"]).isin(employers), "member_sk"].map(_s))
                     related = related[related["member_sk"].isin(emp_members)]
         else:
             related = claims.iloc[0:0] if not claims.empty else claims
@@ -1160,6 +1189,174 @@ def net_04_r04_shared_identifiers_actors(ctx, control) -> list:
                 ),
             },
             exposure=_at_stake(amounts, "claims touched by a cross-party identifier link"),
+        ))
+    return out
+
+
+# ===========================================================================
+# NET-03-R01 on a multi-table file — the dyad compared with like-for-like pairs
+# ===========================================================================
+
+
+#: Diagnoses whose care legitimately brings one patient back to one provider
+#: many times (declared exclusions: chronic, rare-disease and oncology pathways).
+_PATHWAY_PREFIXES = ("C", "D5", "D6", "E10", "E11", "E84", "N18", "I50", "J45", "K50", "K51", "M05", "M06",
+                     "B20", "Z51", "O")
+
+
+def net_03_r01_repeated_high_value_dyad_multitable(ctx, control) -> list:
+    """NET-03-R01 where the file carries lines, a provider register and benefit rules.
+
+    The claim-header proxy compares every patient-provider pair with ALL pairs, so
+    on a multi-table file a patient's ordinary pharmacy refills or chronic-care
+    visits look like an abnormal pair. Here each pair is compared only with pairs
+    of the SAME provider type and the same benefit family (the family of the
+    pair's highest-value service; a case-rate admission counts as its case-rate
+    family), and must sit above the governed peer percentile on BOTH frequency
+    and value. Benefit exhaustion — the member's paid amount in that family
+    against the benefit limit for the year — is evaluated from the benefit rules
+    and reported as the third limb. Chronic, rare-disease, oncology and maternity
+    pathways are excluded by the pair's principal diagnosis.
+
+    NOT registered in ``IMPLEMENTATIONS``: NET-03-R01 is classified EXECUTABLE in
+    the catalogue, and the unlock mechanism (and its governance test) only lets a
+    PARTIAL control be upgraded. It becomes reachable once the catalogue entry is
+    re-classified PARTIAL and an ``upgrades_partial: true`` unlock is declared.
+    """
+    claims = _claims(ctx)
+    lines = _table(ctx, "claim_line")
+    prov = _providers(ctx)
+    ref = _table(ctx, "activity_code_reference")
+    if claims.empty or lines.empty or prov.empty or ref.empty or "provider_type" not in prov.columns:
+        return []
+    if not {"activity_code", "service_family"} <= set(ref.columns) or "net_amount" not in lines.columns:
+        return []
+    q = float(ctx.cfg("net03r01_dyad_peer_percentile"))
+    exhaustion_share = float(ctx.cfg("net03r01_benefit_exhaustion_share"))
+    min_peer = int(ctx.cfg("min_peer_group_n"))
+
+    fam = dict(zip(_vs(ref["activity_code"]), _vn(ref["service_family"])))
+    cfam = dict(zip(_vs(ref["activity_code"]), _vn(ref["code_family"]))) if "code_family" in ref.columns else {}
+    L = pd.DataFrame({"claim_sk": _vs(lines["claim_sk"]), "code": _vs(lines["activity_code"]),
+                      "net": pd.to_numeric(lines["net_amount"], errors="coerce").fillna(0.0)})
+    L["family"] = L["code"].map(fam).fillna("")
+    case = L[L["code"].map(cfam) == "case_rate"].drop_duplicates("claim_sk").set_index("claim_sk")["family"]
+    in_case = L["claim_sk"].isin(set(case.index))
+    L.loc[in_case, "family"] = L.loc[in_case, "claim_sk"].map(case)
+    claim_family = L.sort_values(["net", "code"], ascending=[False, True]).drop_duplicates("claim_sk") \
+        .set_index("claim_sk")["family"]
+
+    df = claims[["claim_sk", "member_sk", "provider_sk", "gross_amount_aed"]].copy()
+    df["service_date"] = claims["service_date"] if "service_date" in claims.columns else pd.NaT
+    df["dx"] = _vs(claims["diagnosis_primary"]) if "diagnosis_primary" in claims.columns else ""
+    df["family"] = df["claim_sk"].map(claim_family).fillna("")
+    df["ptype"] = df["provider_sk"].map(dict(zip(prov.index, _vn(prov["provider_type"])))).fillna("")
+    df = df[(df["member_sk"] != "") & (df["provider_sk"] != "")]
+    if df.empty:
+        return []
+
+    top = df.sort_values(["gross_amount_aed", "claim_sk"], ascending=[False, True]).drop_duplicates(
+        ["member_sk", "provider_sk"]).set_index(["member_sk", "provider_sk"])
+    dy = df.groupby(["member_sk", "provider_sk"]).agg(n=("claim_sk", "size"), total=("gross_amount_aed", "sum"),
+                                                        last=("service_date", "max"))
+    dy = dy.join(top[["family", "ptype", "dx"]])
+    dy = dy.reset_index()
+
+    # Peer thresholds: pairs at the same provider type for the same benefit family.
+    # With fewer than cfg.min_peer_group_n such pairs no like-for-like comparison
+    # exists, and no judgement is made (rather than comparing with unlike pairs).
+    fine = dy.groupby(["ptype", "family"]).agg(size=("n", "size"), n_cut=("n", lambda v: v.quantile(q)),
+                                               v_cut=("total", lambda v: v.quantile(q)))
+    dy = dy.join(fine, on=["ptype", "family"])
+    dy = dy[dy["size"] >= min_peer]
+    dy["peer_level"] = "provider type and benefit family"
+    pathway = dy["dx"].str.upper().str.startswith(_PATHWAY_PREFIXES)
+    hits = dy[(dy["n"] >= 2) & (dy["n"] > dy["n_cut"]) & (dy["total"] > dy["v_cut"]) & ~pathway]
+    if hits.empty:
+        return []
+
+    # Chronic-disease pathway: most of the pair's claims treat a condition the member
+    # already had (declared at enrolment, or treated under earlier cover).
+    known: dict[str, set[str]] = {}
+    for table, column in (("policy_application", "declared_conditions"), ("prior_coverage_history", "conditions_treated")):
+        f = _table(ctx, table)
+        if not f.empty and {"member_sk", column} <= set(f.columns):
+            for m, v in zip(_vs(f["member_sk"]), _vs(f[column])):
+                for code in v.upper().split(";"):
+                    if code and code != "NONE":
+                        known.setdefault(m, set()).add(code)
+                        known[m].add(code[:3])
+    pairs = df[df.set_index(["member_sk", "provider_sk"]).index.isin(
+        pd.MultiIndex.from_frame(hits[["member_sk", "provider_sk"]]))]
+    chronic_share = pairs.assign(_c=[bool(known.get(m)) and (d.upper() in known[m] or d.upper()[:3] in known[m])
+                                     for m, d in zip(pairs["member_sk"], pairs["dx"])])         .groupby(["member_sk", "provider_sk"])["_c"].mean()
+    hits = hits[hits.set_index(["member_sk", "provider_sk"]).index.map(chronic_share).fillna(0.0) < 0.5]
+    if hits.empty:
+        return []
+
+    # Benefit exhaustion: the member's paid amount in the family that year against the limit.
+    limit_of: dict[tuple[str, str], float] = {}
+    product_of: dict[str, str] = {}
+    benefit = _table(ctx, "benefit_rule_version")
+    cover = _table(ctx, "coverage_period")
+    if not benefit.empty and not cover.empty and {"product", "service_family", "benefit_limit"} <= set(benefit.columns):
+        lim = pd.to_numeric(benefit["benefit_limit"], errors="coerce")
+        limit_of = pd.Series(lim.to_numpy(), index=pd.MultiIndex.from_arrays(
+            [_vs(benefit["product"]), _vn(benefit["service_family"])])).groupby(level=[0, 1]).max().to_dict()
+        c = cover.assign(_m=_vs(cover["member_sk"]), _p=_vs(cover["product"])).drop_duplicates("_m", keep="last")
+        product_of = dict(zip(c["_m"], c["_p"]))
+    used = L.join(df.set_index("claim_sk")[["member_sk", "service_date"]], on="claim_sk")
+    used["year"] = pd.to_datetime(used["service_date"], errors="coerce").dt.year
+    used_by = used.groupby(["member_sk", "family", "year"])["net"].sum().to_dict()
+
+    out = []
+    for r in hits.sort_values(["member_sk", "provider_sk"]).itertuples(index=False):
+        sub = df[(df["member_sk"] == r.member_sk) & (df["provider_sk"] == r.provider_sk)]
+        year = pd.Timestamp(r.last).year if not pd.isna(r.last) else None
+        limit = limit_of.get((product_of.get(r.member_sk, ""), r.family))
+        spent = float(used_by.get((r.member_sk, r.family, year), 0.0)) if year is not None else 0.0
+        exhaustion = None if not limit or pd.isna(limit) else spent / float(limit)
+        exhausted = exhaustion is not None and exhaustion >= exhaustion_share
+        claim_amounts = dict(zip(sub["claim_sk"], sub["gross_amount_aed"].astype(float)))
+        family_words = r.family.replace("_", " ") or "services"
+        out.append(_sig(
+            ctx, control, subject_type="member", subject_id=r.member_sk,
+            fact_key=f"dyad:{r.member_sk}:{r.provider_sk}",
+            claim_ids=sorted(claim_amounts),
+            event_time=r.last,
+            period=period_bucket(r.last),
+            confidence=0.75 if exhausted else 0.6,
+            peer_level_used=str(r.peer_level),
+            evidence={
+                "member_sk": r.member_sk,
+                "provider_sk": r.provider_sk,
+                "dyad_claim_count": int(r.n),
+                "dyad_total_aed": round(float(r.total), 2),
+                "peer_group": {"provider_type": r.ptype, "benefit_family": r.family, "level": str(r.peer_level)},
+                "peer_count_threshold": round(float(r.n_cut), 2),
+                "peer_value_threshold_aed": round(float(r.v_cut), 2),
+                "peer_percentile": q,
+                "benefit_used_in_family_that_year_aed": round(spent, 2),
+                "benefit_limit_aed": None if not limit or pd.isna(limit) else round(float(limit), 2),
+                "benefit_exhaustion_share": None if exhaustion is None else round(exhaustion, 3),
+                "benefit_exhausted": bool(exhausted),
+                "limbs_evaluated": ["frequency", "value"] + (["benefit exhaustion"] if exhaustion is not None else []),
+                "diagnoses": sorted(set(sub["dx"]) - {""}),
+                "pathway_exclusion": ("chronic, rare-disease, oncology and maternity pathways excluded by diagnosis, "
+                                      "and pairs mostly treating a condition the member declared or was treated "
+                                      "for under earlier cover"),
+                "plain_language": (
+                    f"This patient has {r.n} claims with one {r.ptype.replace('_', ' ')} totalling "
+                    f"{aed(r.total)} for {family_words}; fewer than {pct(1 - q)} of comparable patient-provider "
+                    f"pairs have more than {float(r.n_cut):.0f} claims or more than {aed(r.v_cut)}"
+                    + (f", and the patient has used {pct(exhaustion)} of the yearly benefit for it." if exhaustion is not None else ".")
+                ),
+                "what_the_reviewer_must_verify": (
+                    "List the pair's claims and check the clinical reason for each, and whether a chronic or "
+                    "rare-disease care pathway explains the pattern."
+                ),
+            },
+            exposure=_at_stake(claim_amounts, "claims of one patient-provider pair"),
         ))
     return out
 

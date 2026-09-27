@@ -154,6 +154,26 @@ _RX_NUM = ("prescribed_qty", "dispensed_qty", "days_supply", "billed_qty", "bill
            "strength_mg", "dose_mg_per_day")
 
 
+def _cached(name: str):
+    """Memoise a derived frame on the context (one run, one dataset); callers get a copy."""
+
+    def deco(fn: Callable) -> Callable:
+        @functools.wraps(fn)
+        def wrapper(ctx):
+            key = (id(getattr(ctx, "dataset", None)), id(getattr(ctx, "claims", None)), str(ctx.tenant_id))
+            store = ctx.__dict__.setdefault("_phr_cache", {})
+            hit = store.get(name)
+            if hit is None or hit[0] != key:
+                hit = (key, fn(ctx))
+                store[name] = hit
+            return hit[1].copy()
+
+        return wrapper
+
+    return deco
+
+
+@_cached("rx")
 def _rx(ctx) -> pd.DataFrame:
     """Dispensing records, typed, with the claim's member, provider, payer and dates attached."""
     rx = _table(ctx, "prescription_dispense")
@@ -182,6 +202,14 @@ def _rx(ctx) -> pd.DataFrame:
     for c in ("provider_sk", "payer_id", "diagnosis_primary"):
         if c not in rx.columns:
             rx[c] = None
+    # the approval may be recorded on the billed line rather than on the dispensing record
+    lines = _table(ctx, "claim_line")
+    if not lines.empty and {"line_sk", "authorization_id"} <= set(lines.columns):
+        by_line = pd.Series(_str(lines["authorization_id"]).values, index=_str(lines["line_sk"]).values)
+        by_line = by_line[by_line.notna() & ~by_line.index.duplicated()]
+        if not by_line.empty:
+            rx["authorization_id"] = rx["authorization_id"].where(
+                rx["authorization_id"].notna(), rx["line_sk"].map(by_line))
     rx = rx[rx["rx_sk"].notna() & ~rx["claim_sk"].isin(_superseded_claims(ctx))]
     rx["billed_amount"] = rx["billed_amount"].fillna(0.0)
     return rx.reset_index(drop=True)
@@ -204,6 +232,7 @@ def _superseded_claims(ctx) -> set[str]:
     return out
 
 
+@_cached("drugs")
 def _drugs(ctx) -> pd.DataFrame:
     """The drug policy, one row per product, with a resolved equivalence group."""
     drugs = _table(ctx, "drug_policy")
@@ -454,6 +483,21 @@ def phr_01_r02_quantity_strength_mismatch(ctx, control) -> list[Signal]:
         & ((rx["dose_mg_per_day"] - prev_dose).abs() > dose_tol * prev_dose.abs())
     )
 
+    # vectorised pre-screen; the row loop below only explains the candidates
+    qtyv = rx["billed_qty"].where(rx["billed_qty"].notna(), rx["dispensed_qty"])
+    presc = rx["prescribed_product"].where(rx["prescribed_product"].notna(), rx["billed_product"])
+    p_strength = presc.map(drugs["strength_mg"]) if "strength_mg" in drugs.columns else pd.Series(np.nan, index=rx.index)
+    p_form = presc.map(drugs["form"]) if "form" in drugs.columns else pd.Series(None, index=rx.index)
+    appr = pd.Series([approved.get((a, g)) for a, g in zip(rx["authorization_id"], rx["g_billed"])],
+                     index=rx.index, dtype=float)
+    screen = (
+        (rx["prescribed_qty"] > 0) & (qtyv > rx["prescribed_qty"] * (1.0 + tol))
+        | (appr.notna() & (qtyv > appr * (1.0 + tol)))
+        | (~rx["titration"] & (p_strength > 0) & (rx["strength_mg"] > p_strength * (1.0 + tol)))
+        | (rx["form"].notna() & p_form.notna()
+           & (rx["form"].astype(str).str.strip().str.lower() != p_form.astype(str).str.strip().str.lower()))
+    )
+    rx = rx[screen.fillna(False)]
     out: list[Signal] = []
     for row in rx.itertuples(index=False):
         qty = row.billed_qty if not is_missing(row.billed_qty) else row.dispensed_qty
@@ -1029,7 +1073,7 @@ def phr_02_r04_multi_pharmacy(ctx, control) -> list[Signal]:
     if rx.empty:
         return []
     rx["end"] = rx["fill_date"] + pd.to_timedelta(rx["days_supply"].fillna(0), unit="D")
-    out_of_stock = _out_of_stock(ctx)
+    out_of_stock = _stock_shortfall(ctx)
     out: list[Signal] = []
     for (member, group), g in rx.groupby(["member_sk", "group"], sort=False):
         if g["pharmacy_id"].nunique() < need:
@@ -1045,7 +1089,7 @@ def phr_02_r04_multi_pharmacy(ctx, control) -> list[Signal]:
                 overlap = (min(ends[i], ends[j]) - max(starts[i], starts[j])).days
                 if overlap > allowed:
                     members.append(j)
-            # declared exclusion: a pharmacy that had run out of stock is not counted
+            # declared exclusion: a pharmacy whose stock could not cover that month is not counted
             counted = {pharm[k] for k in members
                        if (pharm[k], products[k], starts[k].strftime("%Y-%m")) not in out_of_stock}
             if len(counted) >= need and (best is None or len(counted) > len(best[0])):
@@ -1083,16 +1127,6 @@ def phr_02_r04_multi_pharmacy(ctx, control) -> list[Signal]:
     return out
 
 
-def _out_of_stock(ctx) -> set[tuple[str, str, str]]:
-    inv = _table(ctx, "pharmacy_inventory")
-    if inv.empty or not {"pharmacy_id", "product", "period", "closing_stock"} <= set(inv.columns):
-        return set()
-    closing = _num(inv["closing_stock"])
-    sub = inv[closing.notna() & (closing <= 0)]
-    return set(zip(_str(sub["pharmacy_id"]), _str(sub["product"]),
-                   _str(sub["period"]).map(lambda p: None if p is None else str(p)[:7])))
-
-
 # ===========================================================================
 # PHR-03  clinical appropriateness and wastage
 # ===========================================================================
@@ -1110,12 +1144,23 @@ def phr_03_r01_dose_weight_conflict(ctx, control) -> list[Signal]:
     rx["weight_kg"] = rx["member_sk"].map(members["weight_kg"])
     rx["height_cm"] = rx["member_sk"].map(members["height_cm"])
     rx["limit"] = rx["billed_product"].map(drugs["max_mg_per_kg_day"])
+    # The daily dose is the one the prescription records. Where none is recorded, an
+    # injectable's single administration is (billed units − wasted units) × strength —
+    # wastage is never counted as dose. Oral liquids and packs with no recorded dose are
+    # skipped: a bottle's volume says nothing reliable about the daily dose.
     strength = rx["strength_mg"].where(rx["strength_mg"].notna(), rx["billed_product"].map(drugs["strength_mg"]))
-    qty = rx["billed_qty"].where(rx["billed_qty"].notna(), rx["dispensed_qty"])
-    derived = qty * strength / rx["days_supply"].where(rx["days_supply"] > 0)
-    rx["dose"] = rx["dose_mg_per_day"].where(rx["dose_mg_per_day"].notna(), derived)
-    rx["dose_source"] = np.where(rx["dose_mg_per_day"].notna(), "recorded daily dose",
-                                 "billed quantity × strength ÷ days' supply")
+    lines = _table(ctx, "claim_line")
+    waste = pd.Series(dtype=float)
+    if not lines.empty and {"line_sk", "wastage_units"} <= set(lines.columns):
+        waste = pd.Series(_num(lines["wastage_units"]).values, index=_str(lines["line_sk"]).values)
+        waste = waste[~waste.index.duplicated()]
+    injectable = rx["form"].astype(object).map(
+        lambda f: any(k in str(f).upper() for k in ("VIAL", "SYRINGE", "INJECT", "AMPOULE")))
+    admin_units = rx["billed_qty"] - rx["line_sk"].map(waste).fillna(0.0)
+    derived = (admin_units * strength).where(injectable & (admin_units > 0))
+    rx["dose"] = rx["dose_mg_per_day"].where(rx["dose_mg_per_day"].notna() & (rx["dose_mg_per_day"] > 0), derived)
+    rx["dose_source"] = np.where(rx["dose_mg_per_day"].notna() & (rx["dose_mg_per_day"] > 0),
+                                 "recorded daily dose", "one administration: billed units less wastage × strength")
     rx["mgkg"] = rx["dose"] / rx["weight_kg"].where(rx["weight_kg"] > 0)
     # declared exclusion: a short first fill is a loading dose
     first = rx.groupby(["member_sk", "group"]).cumcount() == 0
@@ -1154,30 +1199,30 @@ def phr_03_r01_dose_weight_conflict(ctx, control) -> list[Signal]:
     return out
 
 
-def _member_diagnoses(ctx) -> dict[str, list[tuple[pd.Timestamp, str]]]:
-    """Member → (date, diagnosis code) from the diagnosis table and claim headers."""
+def _member_diagnoses(ctx) -> pd.DataFrame:
+    """One row per (member, date, diagnosis code) from the diagnosis table and claim headers."""
     claims = ctx.claims if ctx.claims is not None else pd.DataFrame()
+    cols = ["member_sk", "dx_date", "code"]
     if claims.empty or "claim_sk" not in claims.columns:
-        return {}
+        return pd.DataFrame(columns=cols)
     if "tenant_id" in claims.columns:
         claims = claims[claims["tenant_id"].astype(str) == str(ctx.tenant_id)]
-    head = claims[[c for c in ("claim_sk", "member_sk", "service_date", "diagnosis_primary")
-                   if c in claims.columns]].copy()
-    head["claim_sk"] = head["claim_sk"].astype(str)
-    head["service_date"] = _date(_col(head, "service_date"))
-    rows = [head.rename(columns={"diagnosis_primary": "code"})[["member_sk", "service_date", "code"]]]
+    head = pd.DataFrame({
+        "claim_sk": claims["claim_sk"].astype(str).tolist(),
+        "member_sk": _str(_col(claims, "member_sk")).tolist(),
+        "dx_date": _date(_col(claims, "service_date")).tolist(),
+        "code": _str(_col(claims, "diagnosis_primary")).tolist(),
+    })
+    parts = [head[cols]]
     dx = _table(ctx, "diagnosis")
     if not dx.empty and {"claim_sk", "code"} <= set(dx.columns):
-        dx["claim_sk"] = _str(dx["claim_sk"])
-        dx = dx.merge(head[["claim_sk", "member_sk", "service_date"]], on="claim_sk", how="inner")
-        rows.append(dx[["member_sk", "service_date", "code"]])
-    allrows = pd.concat(rows, ignore_index=True)
-    allrows = allrows[allrows["code"].notna() & allrows["member_sk"].notna()]
-    out: dict[str, list[tuple[pd.Timestamp, str]]] = {}
-    for m, d, c in zip(allrows["member_sk"].astype(str), allrows["service_date"],
-                       allrows["code"].astype(str).str.upper().str.replace(".", "", regex=False)):
-        out.setdefault(m, []).append((d, c))
-    return out
+        dx = pd.DataFrame({"claim_sk": _str(dx["claim_sk"]).tolist(), "code": _str(dx["code"]).tolist()})
+        dx = dx.merge(head[["claim_sk", "member_sk", "dx_date"]], on="claim_sk", how="inner")
+        parts.append(dx[cols])
+    out = pd.concat(parts, ignore_index=True)
+    out = out[out["code"].notna() & out["member_sk"].notna()].copy()
+    out["code"] = [str(c).upper().replace(".", "") for c in out["code"]]
+    return out.drop_duplicates()
 
 
 @_safe
@@ -1187,52 +1232,63 @@ def phr_03_r02_drug_diagnosis_step_conflict(ctx, control) -> list[Signal]:
     if rx.empty:
         return []
     lookback_dx = pd.Timedelta(days=int(ctx.cfg("phr03_indication_lookback_days")))
-    rare = [p.upper() for p in _cfg_list(ctx, "phr03_rare_disease_prefixes")]
+    rare = tuple(p.upper() for p in _cfg_list(ctx, "phr03_rare_disease_prefixes"))
     auth, _lines = _authorizations(ctx)
     approved = _approved_auth_ids(auth)
     dx = _member_diagnoses(ctx)
-    steps = _table(ctx, "step_therapy_policy")
-    step_map: dict[str, tuple[str, int]] = {}
-    if not steps.empty and {"product", "required_prior_group"} <= set(steps.columns):
-        for p, grp, lb in zip(_str(steps["product"]), _str(steps["required_prior_group"]),
-                              _num(_col(steps, "lookback_days"))):
-            if p and grp:
-                step_map[p] = (grp, int(lb) if not pd.isna(lb) else 365)
-    history_start = rx["fill_date"].min()
-    fills_by_member = {m: g for m, g in rx.groupby("member_sk", sort=False)}
-    indications = drugs["indication_prefixes"].map(_prefixes).to_dict() if "indication_prefixes" in drugs.columns else {}
-    out: list[Signal] = []
-    for row in rx.itertuples(index=False):
-        if row.authorization_id in approved:
-            continue  # declared exclusion: authorisation override
-        codes = [(d, c) for d, c in dx.get(str(row.member_sk), [])
-                 if pd.isna(d) or (row.fill_date - lookback_dx <= d <= row.fill_date + pd.Timedelta(days=1))]
-        code_set = sorted({c for _, c in codes})
-        if rare and any(c.startswith(p) for c in code_set for p in rare):
-            continue  # declared exclusion: rare disease
-        problems: list[str] = []
-        facts: dict[str, Any] = {}
-        prefixes = indications.get(row.billed_product) or []
-        if prefixes and code_set and not any(c.startswith(p) for c in code_set for p in prefixes):
-            problems.append(
-                f"none of the patient's diagnoses ({', '.join(code_set[:4])}) is an approved "
-                f"indication (expected codes starting {', '.join(prefixes[:4])})"
+    # declared exclusions: authorisation override; rare disease (a lifelong status)
+    rare_members = set(dx.loc[[c.startswith(rare) for c in dx["code"]], "member_sk"]) if rare else set()
+    base = rx[~rx["authorization_id"].isin(approved) & ~rx["member_sk"].isin(rare_members)]
+    problems: dict[str, list[str]] = {}
+    facts: dict[str, dict[str, Any]] = {}
+
+    # limb 1 — indication
+    indications = {p: tuple(_prefixes(v)) for p, v in drugs["indication_prefixes"].items()}         if "indication_prefixes" in drugs.columns else {}
+    cand = base[base["billed_product"].map(lambda p: bool(indications.get(p)))]
+    if not cand.empty and not dx.empty:
+        m = cand[["rx_sk", "member_sk", "fill_date", "billed_product"]].merge(dx, on="member_sk", how="inner")
+        m = m[m["dx_date"].isna() | ((m["dx_date"] >= m["fill_date"] - lookback_dx)
+                                     & (m["dx_date"] <= m["fill_date"] + pd.Timedelta(days=1)))]
+        m["hit"] = [c.startswith(indications[p]) for c, p in zip(m["code"], m["billed_product"])]
+        verdict = m.groupby("rx_sk").agg(hit=("hit", "any"), codes=("code", lambda s: sorted(set(s))))
+        for rx_sk, v in verdict[~verdict["hit"]].iterrows():
+            product = cand.loc[cand["rx_sk"] == rx_sk, "billed_product"].iloc[0]
+            pref = list(indications[product])
+            problems.setdefault(rx_sk, []).append(
+                f"none of the patient's recorded diagnoses ({', '.join(v['codes'][:4])}) is an approved "
+                f"indication (expected codes starting {', '.join(pref[:4])})"
             )
-            facts.update({"indication_prefixes": prefixes, "member_diagnoses": code_set[:10]})
-        if row.billed_product in step_map:
-            req, lb = step_map[row.billed_product]
-            since = row.fill_date - pd.Timedelta(days=lb)
-            if not pd.isna(history_start) and since >= history_start:
-                hist = fills_by_member.get(row.member_sk)
-                prior = hist[(hist["group"] == req) & (hist["fill_date"] < row.fill_date)
-                             & (hist["fill_date"] >= since)] if hist is not None else []
-                if len(prior) == 0:
-                    problems.append(
-                        f"no fill of the required first-line treatment ({req}) in the previous {lb} days"
-                    )
-                    facts.update({"required_prior_group": req, "step_lookback_days": lb})
-        if not problems:
-            continue
+            facts.setdefault(rx_sk, {}).update({"indication_prefixes": pref, "member_diagnoses": v["codes"][:10]})
+
+    # limb 2 — step therapy
+    steps = _table(ctx, "step_therapy_policy")
+    if not steps.empty and {"product", "required_prior_group"} <= set(steps.columns):
+        st = pd.DataFrame({"billed_product": _str(steps["product"]).tolist(),
+                           "required_prior_group": _str(steps["required_prior_group"]).tolist(),
+                           "lookback_days": _num(_col(steps, "lookback_days")).fillna(365).tolist()})
+        history_start = rx["fill_date"].min()
+        sc = base.merge(st, on="billed_product", how="inner")
+        # history must cover the whole look-back, or absence of a first-line fill proves nothing
+        sc = sc[sc["fill_date"] - pd.to_timedelta(sc["lookback_days"], unit="D") >= history_start]
+        if not sc.empty:
+            prior = rx[["member_sk", "group", "fill_date"]].rename(
+                columns={"group": "required_prior_group", "fill_date": "prior_fill"})
+            j = sc[["rx_sk", "member_sk", "required_prior_group", "fill_date", "lookback_days"]].merge(
+                prior, on=["member_sk", "required_prior_group"], how="left")
+            j["ok"] = (j["prior_fill"] < j["fill_date"]) & (
+                j["prior_fill"] >= j["fill_date"] - pd.to_timedelta(j["lookback_days"], unit="D"))
+            has_prior = j.groupby("rx_sk")["ok"].any()
+            for row in sc[sc["rx_sk"].map(has_prior).fillna(False) == False].itertuples(index=False):  # noqa: E712
+                lb = int(row.lookback_days)
+                problems.setdefault(row.rx_sk, []).append(
+                    f"no fill of the required first-line treatment ({row.required_prior_group}) in the "
+                    f"previous {lb} days"
+                )
+                facts.setdefault(row.rx_sk, {}).update(
+                    {"required_prior_group": row.required_prior_group, "step_lookback_days": lb})
+
+    out: list[Signal] = []
+    for row in base[base["rx_sk"].isin(set(problems))].itertuples(index=False):
         billed = _f(row.billed_amount)
         out.append(_sig(
             ctx, control, subject_type="claim", subject_id=row.claim_sk or row.rx_sk,
@@ -1242,7 +1298,7 @@ def phr_03_r02_drug_diagnosis_step_conflict(ctx, control) -> list[Signal]:
             evidence={
                 "plain_language": (
                     f"{_describe(row.billed_product, drugs)}, billed at {aed(billed)}, was dispensed on "
-                    f"{plain_date(row.fill_date)} with " + "; and ".join(problems) + "."
+                    f"{plain_date(row.fill_date)} with " + "; and ".join(problems[row.rx_sk]) + "."
                 ),
                 "what_the_reviewer_must_verify": (
                     "Check the patient's history for the indication and earlier treatment, and for an "
@@ -1251,7 +1307,7 @@ def phr_03_r02_drug_diagnosis_step_conflict(ctx, control) -> list[Signal]:
                 "rx_sk": row.rx_sk, "claim_sk": row.claim_sk, "member_sk": row.member_sk,
                 "billed_product": row.billed_product, "fill_date": _iso(row.fill_date),
                 "billed_amount_aed": _r(billed), "clinician_id": row.prescriber_id,
-                "indication_lookback_days": int(lookback_dx.days), **facts,
+                "indication_lookback_days": int(lookback_dx.days), **facts.get(row.rx_sk, {}),
             },
             exposure=_unestablished(billed, "the drug may be payable once the indication or earlier "
                                             "treatment is documented."),
@@ -1285,22 +1341,28 @@ def phr_03_r04_wastage_anomaly(ctx, control) -> list[Signal]:
     lines["unit_price"] = _num(_col(lines, "unit_price"))
     lines["net_amount"] = _num(_col(lines, "net_amount"))
     if not rx.empty:
-        dose = rx.dropna(subset=["line_sk"]).drop_duplicates("line_sk").set_index("line_sk")
-        lines["dose_mg"] = lines["line_sk"].map(dose["dose_mg_per_day"])
+        by_line = rx.dropna(subset=["line_sk"]).drop_duplicates("line_sk").set_index("line_sk")
         lines["product"] = lines["product"].where(lines["product"].notna(),
-                                                  lines["line_sk"].map(dose["billed_product"]))
-    else:
-        lines["dose_mg"] = np.nan
-    lines["vial_mg"] = lines["product"].map(drugs["vial_size_mg"])
-    work = lines[lines["vial_mg"].notna() & (lines["vial_mg"] > 0) & lines["wastage_units"].notna()].copy()
+                                                  lines["line_sk"].map(by_line["billed_product"]))
+    # Quantities on a drug line are billing units of the product's strength (e.g. "per 10 mg");
+    # billed units include the wasted units. Everything below is in billing units and is
+    # converted to mg only for the reviewer's sentence.
+    lines["strength"] = lines["product"].map(drugs["strength_mg"]).where(lambda v: v > 0, 1.0).fillna(1.0)
+    lines["vial_units"] = lines["product"].map(drugs["vial_size_mg"]) / lines["strength"]
+    work = lines[lines["vial_units"].notna() & (lines["vial_units"] > 0) & lines["wastage_units"].notna()
+                 & lines["units"].notna()].copy()
     if work.empty:
         return []
-    # units on a vial-drug line are milligrams administered (+ wastage); fall back to units
-    work["dose_mg"] = work["dose_mg"].where(work["dose_mg"].notna(), work["units"] - work["wastage_units"])
-    work = work[work["dose_mg"] > 0]
-    work["expected_waste"] = np.ceil(work["dose_mg"] / work["vial_mg"]) * work["vial_mg"] - work["dose_mg"]
-    work["excess_waste"] = (work["wastage_units"] - work["expected_waste"]).clip(lower=0)
-    work["excess_ratio"] = work["excess_waste"] / work["vial_mg"]
+    work["dose_units"] = work["units"] - work["wastage_units"]
+    work = work[work["dose_units"] > 0]
+    vials = np.ceil(work["dose_units"] / work["vial_units"] - 1e-6)
+    work["expected_waste"] = vials * work["vial_units"] - work["dose_units"]
+    # whole-unit rounding of the billed wastage is never a finding
+    work["excess_waste"] = (work["wastage_units"] - work["expected_waste"] - 0.5).clip(lower=0).round()
+    work["excess_ratio"] = work["excess_waste"] / work["vial_units"]
+    for col in ("wastage_units", "expected_waste", "excess_waste"):
+        work[f"{col}_mg"] = work[col] * work["strength"]
+    work["excess_amount"] = work["excess_waste"] * work["unit_price"].fillna(0.0)
     claims = ctx.claims if ctx.claims is not None else pd.DataFrame()
     if claims.empty or not {"claim_sk", "provider_sk"} <= set(claims.columns):
         return []
@@ -1314,9 +1376,9 @@ def phr_03_r04_wastage_anomaly(ctx, control) -> list[Signal]:
     work["service_date"] = line_date.where(line_date.notna(), _date(_col(work, "_claim_date")))
     per = work.groupby(["product", "provider_sk"], as_index=False).agg(
         lines=("line_sk", "count"), mean_excess_ratio=("excess_ratio", "mean"),
-        excess_mg=("excess_waste", "sum"), billed_waste_mg=("wastage_units", "sum"),
-        expected_waste_mg=("expected_waste", "sum"),
-        unit_price=("unit_price", "median"), last=("service_date", "max"),
+        excess_mg=("excess_waste_mg", "sum"), billed_waste_mg=("wastage_units_mg", "sum"),
+        expected_waste_mg=("expected_waste_mg", "sum"), excess_amount=("excess_amount", "sum"),
+        last=("service_date", "max"),
         claim_ids=("claim_sk", lambda s: sorted(set(s))),
     )
     out: list[Signal] = []
@@ -1334,8 +1396,7 @@ def phr_03_r04_wastage_anomaly(ctx, control) -> list[Signal]:
             bar = floor * multiple if floor > 0 else float(ctx.cfg("phr03_wastage_min_excess_vials"))
             if row.mean_excess_ratio < bar:
                 continue
-            price = _f(row.unit_price)
-            amount = float(row.excess_mg) * price if price > 0 else 0.0
+            amount = _f(row.excess_amount)
             out.append(_sig(
                 ctx, control, subject_type="provider", subject_id=row.provider_sk,
                 fact_key=f"wastage:{row.provider_sk}:{product}",
@@ -1415,9 +1476,15 @@ def phr_04_r01_top_pharmacy_concentration(ctx, control) -> list[Signal]:
     pres["specialty"] = [facts.get(p, {}).get("specialty") for p in pres.index]
     pres["emirate"] = [facts.get(p, {}).get("emirate") or _pfield(providers, facility.get(p), "emirate")
                        for p in pres.index]
-    # pharmacies serving each emirate (narrow-network exclusion)
-    rx["pharm_emirate"] = rx["pharmacy_id"].map(lambda p: _pfield(providers, p, "emirate"))
-    pharm_by_emirate = rx.groupby("pharm_emirate")["pharmacy_id"].nunique().to_dict()
+    # pharmacies in each emirate (narrow-network exclusion): the provider register when it
+    # types providers, otherwise the pharmacies seen dispensing there
+    pharm_by_emirate: dict[str, int] = {}
+    if {"provider_type", "emirate"} <= set(providers.columns):
+        is_pharm = providers["provider_type"].astype(object).map(lambda t: "PHARM" in str(t).upper())
+        pharm_by_emirate = providers[is_pharm].groupby("emirate").size().to_dict()
+    if not pharm_by_emirate:
+        rx["pharm_emirate"] = rx["pharmacy_id"].map(lambda p: _pfield(providers, p, "emirate"))
+        pharm_by_emirate = rx.groupby("pharm_emirate")["pharmacy_id"].nunique().to_dict()
     out: list[Signal] = []
     for pid, row in pres.iterrows():
         peers, level = _peer_shares(pres, pid, min_peers)
@@ -1466,8 +1533,8 @@ def _peer_shares(pres: pd.DataFrame, pid: str, min_peers: int) -> tuple[pd.Serie
     options = [
         ("same specialty and emirate",
          (others["specialty"] == row["specialty"]) & (others["emirate"] == row["emirate"])),
-        ("same specialty", others["specialty"] == row["specialty"]),
-        ("all prescribers", pd.Series(True, index=others.index)),
+        # pharmacy choice is local, so a broader peer group stays within the emirate
+        ("same emirate", others["emirate"] == row["emirate"]),
     ]
     for level, mask in options:
         peers = others.loc[mask.fillna(False), "share"]
@@ -1623,13 +1690,21 @@ def phr_04_r04_rapid_relationship_formation(ctx, control) -> list[Signal]:
         for p, d in zip(_str(contracts["provider_sk"]), _date(_col(contracts, "valid_from"))):
             if p and not pd.isna(d):
                 contract_start.setdefault(p, []).append(d.to_period("M"))
+    # pre-screen: only links that carry enough prescriptions to become dominant, of prescribers
+    # active long enough to have an established pattern
+    edge_n = rx.groupby(["prescriber_id", "pharmacy_id"]).size()
+    active = rx.groupby("prescriber_id")["month"].nunique()
+    big = edge_n[edge_n >= min_rx].reset_index()
+    big = big[big["prescriber_id"].map(active) > prior_months]
+    keep = set(zip(big["prescriber_id"], big["pharmacy_id"]))
+    rx = rx[rx["prescriber_id"].isin(set(big["prescriber_id"]))]
     out: list[Signal] = []
     for pid, g in rx.groupby("prescriber_id", sort=False):
         months = sorted(g["month"].unique())
-        if len(months) <= prior_months:
-            continue
         first_edge = g.groupby("pharmacy_id")["month"].min()
         for pharmacy, start in first_edge.items():
+            if (pid, pharmacy) not in keep:
+                continue
             prior = [m for m in months if m < start]
             if len(prior) < prior_months:
                 continue  # the link is only "new" against an established prescribing history
@@ -1739,9 +1814,20 @@ _WORDS_BUY = ("purchase", "buy", "sale", "sold", "outright")
 
 
 def _billed_terms(text: Any) -> tuple[str | None, str | None]:
-    """What a line's description/indicator says: (condition, payment method)."""
+    """What a line's modifier or description says: (condition, payment method).
+
+    HCPCS modifiers are read first: NU new equipment (purchase), UE used equipment
+    (purchase), RR rental.
+    """
     if is_missing(text):
         return None, None
+    tokens = set(re.findall(r"[A-Za-z]+", str(text).upper()))
+    if "NU" in tokens:
+        return "new", "purchase"
+    if "UE" in tokens:
+        return "used", "purchase"
+    if "RR" in tokens:
+        return None, "rental"
     t = str(text).lower()
     cond = "used" if any(w in t for w in _WORDS_USED) else ("new" if re.search(r"\bnew\b", t) else None)
     pay = "rental" if any(w in t for w in _WORDS_RENT) else (
@@ -1823,9 +1909,18 @@ def phr_05_r01_new_used_rental_mismatch(ctx, control) -> list[Signal]:
 _OPERATIVE_WORDS = ("operative", "operation", "surgical", "implant", "procedure")
 
 
+_SIDES = {"RT": "right", "LT": "left"}
+
+
 @_safe
 def phr_05_r02_implant_not_linked(ctx, control) -> list[Signal]:
-    """PHR-05-R02 — an implant billed on a claim with no qualifying procedure line."""
+    """PHR-05-R02 — an implant with no qualifying procedure, the wrong body side, or no operation record.
+
+    A qualifying procedure is a surgical, invasive or interventional code (or a day-surgery
+    case) on the same claim, or on another claim for the patient that day. Laterality is read
+    from the RT/LT modifier on the implant and on the procedure lines. The operation-record
+    limb runs only on a file whose documents include operation notes at all.
+    """
     lines = _device_lines(ctx)
     ref = _activity_ref(ctx)
     if lines.empty or ref.empty or not ref["is_implant"].any():
@@ -1833,55 +1928,68 @@ def phr_05_r02_implant_not_linked(ctx, control) -> list[Signal]:
     lookback = pd.Timedelta(days=int(ctx.cfg("phr05_replacement_lookback_days")))
     implants = set(ref.index[ref["is_implant"]])
     lines["is_implant"] = lines["activity_code"].isin(implants)
-    ref_type = ref["activity_type"].str.lower() if "activity_type" in ref.columns else pd.Series(dtype=object)
-    fam = (ref["service_family"].fillna("") + " " + ref["code_family"].fillna("")).str.lower()
+    cfam = ref["code_family"].fillna("").astype(str).str.upper()
+    sfam = ref["service_family"].fillna("").astype(str).str.upper()
     qualifying = set(ref.index[(~ref["is_implant"]) & (
-        fam.str.contains("surg|procedur|operat|orthop|cardiac|interven", regex=True)
-        | ref_type.fillna("").str.contains("procedur|surg", regex=True))])
+        cfam.str.contains("SURG|INVASIVE|INTERVEN|OPERAT", regex=True) | (sfam == "DAY_SURGERY"))])
     lines["is_procedure"] = lines["activity_code"].isin(qualifying)
+    lines["side"] = lines["indicator"].map(lambda v: _SIDES.get(str(v).upper()) if v else None)
     per_claim = lines.groupby("claim_sk")["is_procedure"].any()
+    proc_sides = lines[lines["is_procedure"] & lines["side"].notna()].groupby("claim_sk")["side"].agg(set)
     docs = _table(ctx, "document")
     operative: set[str] = set()
+    records_kept = False
     if not docs.empty and "claim_sk" in docs.columns:
-        kind = _str(_col(docs, "doc_type")).fillna("").str.lower()
-        operative = set(_str(docs.loc[kind.map(lambda k: any(w in k for w in _OPERATIVE_WORDS)), "claim_sk"]).dropna())
-    # a procedure for the same member on another claim that day links the implant too
+        kind = _str(_col(docs, "doc_type")).map(lambda k: (k or "").upper())
+        is_op = kind.str.contains("OPERATIVE|OPERATION", regex=True)
+        records_kept = bool(is_op.any())
+        operative = set(_str(docs.loc[is_op, "claim_sk"]).dropna())
     procs = lines[lines["is_procedure"] & lines["member_sk"].notna() & lines["service_date"].notna()]
     proc_days = set(zip(procs["member_sk"], procs["service_date"].dt.normalize()))
     proc_by_member = procs.groupby("member_sk")["service_date"].apply(list).to_dict()
-    cand = lines[lines["is_implant"] & ~lines["claim_sk"].map(per_claim).fillna(False).astype(bool)]
     out: list[Signal] = []
-    for row in cand.itertuples(index=False):
+    for row in lines[lines["is_implant"]].itertuples(index=False):
         if pd.isna(row.service_date):
             continue
-        if (row.member_sk, row.service_date.normalize()) in proc_days:
-            continue
-        earlier = [d for d in proc_by_member.get(row.member_sk, []) if row.service_date - lookback <= d < row.service_date]
-        if earlier:
-            continue  # declared exclusion: replacement/staged implant after an earlier procedure
-        billed = _f(row.net_amount, _f(row.gross_amount))
+        issues: list[str] = []
+        facts: dict[str, Any] = {}
+        linked = bool(per_claim.get(row.claim_sk, False)) or (row.member_sk, row.service_date.normalize()) in proc_days
+        if not linked:
+            earlier = [d for d in proc_by_member.get(row.member_sk, [])
+                       if row.service_date - lookback <= d < row.service_date]
+            if not earlier:  # declared exclusion: a staged or replacement implant after an earlier procedure
+                issues.append("no procedure on this claim or on any claim for the patient that day")
+        sides = proc_sides.get(row.claim_sk, set())
+        if row.side and sides and row.side not in sides:
+            issues.append(f"the implant is marked {row.side} side but the procedure is on the {'/'.join(sorted(sides))}")
+            facts["procedure_sides"] = sorted(sides)
         has_note = row.claim_sk in operative
+        if records_kept and not has_note and linked:
+            issues.append("no operation note is on file for the claim")
+        if not issues:
+            continue
+        billed = _f(row.net_amount, _f(row.gross_amount))
         desc = ref["description"].get(row.activity_code) if "description" in ref.columns else None
         out.append(_sig(
             ctx, control, subject_type="claim", subject_id=row.claim_sk,
             fact_key=f"implant:{row.line_sk}",
             claim_ids=[row.claim_sk], event_time=row.service_date, period=period_bucket(row.service_date),
-            confidence=0.7 if has_note else 0.9,
+            confidence=0.9 if not linked else 0.8,
             evidence={
                 "plain_language": (
-                    f"An implant ({desc or row.activity_code}, {aed(billed)}) is billed on "
-                    f"{plain_date(row.service_date)} with no procedure on this claim or on any claim for the "
-                    f"patient that day" + ("" if has_note else ", and no operation note is attached") + "."
+                    f"An implant ({desc or row.activity_code}, {aed(billed)}) billed on "
+                    f"{plain_date(row.service_date)}: " + "; ".join(issues) + "."
                 ),
                 "what_the_reviewer_must_verify": (
-                    "Ask for the operation note and implant record, and check the replacement and spare-device policy."
+                    "Ask for the operation note and implant record, and check the replacement and "
+                    "spare-device policy."
                 ),
                 "claim_sk": row.claim_sk, "line_sk": row.line_sk, "member_sk": row.member_sk,
                 "provider_sk": row.provider_sk, "activity_code": row.activity_code,
                 "device_serial": row.device_serial, "billed_amount_aed": _r(billed),
-                "operative_record_attached": bool(has_note),
-                "laterality_checked": False,
-                "replacement_lookback_days": int(lookback.days),
+                "implant_side": row.side, "qualifying_procedure_linked": linked,
+                "operative_record_attached": bool(has_note), "operative_records_kept": records_kept,
+                "replacement_lookback_days": int(lookback.days), **facts,
             },
             exposure=_unestablished(billed, "the implant may be payable once the procedure is documented."),
         ))
@@ -1943,10 +2051,14 @@ def phr_05_r03_supply_quantity_excess(ctx, control) -> list[Signal]:
                 exposure=_unestablished(billed * excess_share, "units above the item's usual quantity."),
             ))
 
-    # limb 2: the same device re-issued to a member before its useful life
+    # limb 2: the same device re-issued to a member before its useful life. Implants are left
+    # out: a second implant of one kind (the other knee, another stent) is a new procedure,
+    # not a replacement, and PHR-05-R02 examines each implant on its own.
     if not inv.empty:
         members = _member_frame(ctx)
-        issued = inv[inv["member_sk"].notna() & inv["issued_date"].notna() & inv["device_code"].notna()]
+        implant_codes = set(ref.index[ref["is_implant"]]) if not ref.empty else set()
+        issued = inv[inv["member_sk"].notna() & inv["issued_date"].notna() & inv["device_code"].notna()
+                     & ~inv["device_code"].isin(implant_codes)]
         issued = issued.sort_values(["member_sk", "device_code", "issued_date", "serial_number"])
         prev_date = issued.groupby(["member_sk", "device_code"])["issued_date"].shift(1)
         prev_serial = issued.groupby(["member_sk", "device_code"])["serial_number"].shift(1)

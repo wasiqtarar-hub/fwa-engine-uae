@@ -240,8 +240,8 @@ def drift_rows(results: Iterable[Any], *, warn: float, breach: float) -> list[di
                             f"above {breach:g} is a big change)"
                             + (f". It is in {top}." if top else "."))
         elif name.startswith("Score-distribution"):
-            sentence = ("Can't be measured yet: it needs the scores from a previous run to compare "
-                        "with, and this is the first run." if v is None else
+            sentence = ("It needs the scores from a previous run to compare with, and this is the "
+                        "first run." if v is None else
                         f"The scores moved by {v:.2f} since the previous run.")
         elif name.startswith("Alert volume"):
             if d.warn_threshold is None:
@@ -250,8 +250,8 @@ def drift_rows(results: Iterable[Any], *, warn: float, breach: float) -> list[di
             else:
                 sentence = f"It flagged {ratio_words(v)} the expected number of claims."
         elif name.startswith("Review yield"):
-            sentence = ("We can't measure this yet because no reviewer has recorded a decision on "
-                        "its flags." if v is None else f"{pct(v)} of its reviewed flags were confirmed.")
+            sentence = ("No reviewer has recorded a decision on its flags yet, so there is nothing "
+                        "to measure." if v is None else f"{pct(v)} of its reviewed flags were confirmed.")
         else:
             sentence = status(d.status).meaning
         phrase = status(d.status)
@@ -266,7 +266,11 @@ def drift_rows(results: Iterable[Any], *, warn: float, breach: float) -> list[di
 def peer_group_words(level_name: Any) -> str:
     names = words("peer_group_names")
     key = str(level_name)
-    return str(names.get(key) or key.replace("_", " ").lower())
+    if key in names:
+        return str(names[key])
+    from fwa.presentation import field_label
+
+    return "same " + field_label(key).lower()
 
 
 # ------------------------------------------------------------------ network

@@ -363,3 +363,39 @@ def test_unlock_yaml_matches_implementations():
     declared = {u["implementation"] for u in raw["unlocks"]}
     assert declared == set(N.IMPLEMENTATIONS)
     assert "NET-04-R01" not in {u["rule_id"] for u in raw["unlocks"]}  # needs real reviewer decisions
+
+
+# ------------------------------------------------------------------ NET-03-R01 on a multi-table file
+
+def _dyads(planted: bool, chronic: bool = False):
+    rows, lines = [], []
+    k = 0
+    for i in range(60):  # ordinary pairs: one or two consultations each
+        for j in range(1 + i % 2):
+            rows.append(_claim(f"C{k}", f"M{i}", f"P{i % 4}", amount=250.0, diagnosis_primary="J06.9"))
+            lines.append({"line_sk": f"L{k}", "claim_sk": f"C{k}", "activity_code": "99213", "net_amount": 250.0})
+            k += 1
+    if planted:
+        for j in range(9):
+            rows.append(_claim(f"C{k}", "MX", "P1", amount=900.0, diagnosis_primary="M17.11"))
+            lines.append({"line_sk": f"L{k}", "claim_sk": f"C{k}", "activity_code": "99213", "net_amount": 900.0})
+            k += 1
+    ref = pd.DataFrame([{"activity_code": "99213", "service_family": "CONSULTATION", "code_family": "EM_OFFICE_EST"}])
+    tables = {"claim_line": pd.DataFrame(lines), "provider": _providers(), "activity_code_reference": ref}
+    if chronic:
+        tables["policy_application"] = pd.DataFrame([{"application_sk": "A1", "member_sk": "MX",
+                                                      "declared_conditions": "M17.11", "tenant_id": "T001"}])
+    return tables, pd.DataFrame(rows)
+
+
+def test_net_03_r01_multitable_compares_like_with_like(config, registry):
+    ctrl = registry.get("NET-03-R01")
+    fn = N.net_03_r01_repeated_high_value_dyad_multitable
+    tables, claims = _dyads(True)
+    sigs = fn(_ctx(config, tables, claims), ctrl)
+    assert [s.subject_id for s in sigs] == ["MX"] and sigs[0].evidence["plain_language"]
+    tables, claims = _dyads(False)
+    assert fn(_ctx(config, tables, claims), ctrl) == []
+    tables, claims = _dyads(True, chronic=True)  # a condition the member declared: a chronic pathway
+    assert fn(_ctx(config, tables, claims), ctrl) == []
+    assert fn(_ctx(config, {}, pd.DataFrame(columns=["claim_sk"])), ctrl) == []

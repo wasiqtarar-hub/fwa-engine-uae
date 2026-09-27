@@ -57,6 +57,8 @@ _ALLOW = [
 ]
 
 _TAG = re.compile(r"<[^>]+>")
+#: The stylesheet ``boot()`` injects is page chrome, not text a user reads.
+_STYLE = re.compile(r"<style.*?</style>", re.S | re.I)
 _MISSING_WORD = re.compile(r"(?<![\w-])(?:nan|NaN|NaT|<NA>)(?![\w-])")
 #: A whole value that is a missing marker or a raw boolean — never shown by default.
 _BARE = {"None", "nan", "NaN", "NaT", "<NA>", "True", "False", "null"}
@@ -70,7 +72,7 @@ class Seen:
     def add(self, kind: str, text) -> None:
         if text is None:
             return
-        text = html.unescape(_TAG.sub(" ", str(text)))
+        text = html.unescape(_TAG.sub(" ", _STYLE.sub(" ", str(text))))
         if text.strip():
             self.items.append((kind, text))
 
@@ -78,7 +80,7 @@ class Seen:
 def session_for(role: Role, username: str | None = None) -> SessionState:
     now = _dt.datetime.now(_dt.timezone.utc)
     name = username or role.value.lower()
-    return SessionState(session_id=f"test-{name}", username=name, display_name=f"Test {name}",
+    return SessionState(session_id=f"test-{name}", username=name, display_name="Test user",
                         role=role, tenant_id="T001", started_at=now, last_seen=now)
 
 

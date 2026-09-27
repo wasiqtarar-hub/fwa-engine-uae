@@ -1,0 +1,75 @@
+# Plain-language entries used by the reviewer pages (Overview, Review queue,
+# Case evidence). Presentation only: these keys are the display-frame column
+# names those pages build; nothing in the engine is renamed. Only NEW keys are
+# added here — existing entries in the other vocabulary files are not redefined.
+
+fields:
+  subject_masked:
+    label: "Who or what"
+    meaning: "The provider, patient, agent, claim or group the case is about. Identities are hidden for roles that should not see them."
+  policy_suggests:
+    label: "What policy suggests"
+    meaning: "What the rules say should happen next. It is a suggestion for a reviewer to confirm, never a finding of fraud."
+  urgency:
+    label: "Urgency"
+    meaning: "How soon to look at the case, out of 100. It only orders the queue; it never changes what should happen to a claim."
+  amount_at_risk:
+    label: "Amount at risk"
+    meaning: "The money involved. 'Not yet established' means no clear rule has been shown to fail, so it is the gross amount, not money owed. Money flagged is not money saved."
+  pattern_kind:
+    label: "Kind of pattern"
+    meaning: "The broad kind of problem the flags point to, such as coding, duplicates or unusual amounts of care."
+  case_month:
+    label: "Month"
+    meaning: "The month the flagged activity happened in."
+  flag_count:
+    label: "Flags"
+    meaning: "How many separate flags were grouped into this case. Flags resting on the same fact count once as evidence."
+  looked_at_as:
+    label: "Grouped as"
+    meaning: "How the flags were grouped into one case: by claim, by episode of care, by provider, by connected group or by agent."
+  priority_score:
+    label: "Urgency score"
+    meaning: "The urgency score as a number from 0 to 100, for sorting."
+  evidence_kinds:
+    label: "Kinds of evidence"
+    meaning: "The independent kinds of evidence behind the case, such as rules, comparisons with similar providers, connections or documents."
+  watch_only:
+    label: "Watch-only"
+    meaning: "Yes when every check behind the case runs in watch-only (shadow) mode, so it changes no payment by itself."
+  check_name:
+    label: "Check"
+    meaning: "What the check looks for, in plain words."
+  checks_count:
+    label: "Checks"
+    meaning: "How many checks."
+  missing_group:
+    label: "What the file lacks"
+    meaning: "The information these checks need but the loaded file does not contain."
+  table_rows:
+    label: "Rows in this file"
+    meaning: "How many records of this kind the loaded file contains."
+  table_status:
+    label: "Filled in?"
+    meaning: "Whether the loaded file provides this kind of information."
+  table_name:
+    label: "Kind of information"
+    meaning: "A kind of record the engine can use, such as claim summaries or prior approvals."
+  profile_item:
+    label: "About the file"
+    meaning: ""
+  profile_value:
+    label: "Value"
+    meaning: ""
+  term_label:
+    label: "What pushes urgency up or down"
+    meaning: ""
+  term_effect:
+    label: "Effect"
+    meaning: ""
+  flagged_amount:
+    label: "Amount"
+    meaning: "The amount this check attached to the case."
+  amount_status:
+    label: "Established?"
+    meaning: "Whether a clear rule was shown to fail for this amount."

@@ -79,13 +79,13 @@ unlocks:
     requires_tables: [encounter]
     requires_columns: [encounter.encounter_type, encounter.admission_type]
     data_support: PARTIAL
-    reason: "Runs on encounters: emergency presentations and emergency admissions per hospital against the rate expected from its main-diagnosis mix, with observation stays not counted as admissions. Severity beyond the diagnosis chapter and referral mix are not adjusted for."
+    reason: "Runs on encounters: each hospital's unplanned admissions as a share of its emergency and outpatient attendances plus those admissions, against the rate expected from its main-diagnosis mix, with observation stays not counted. Outpatient attendances stand in for emergency presentations, which the file records only sparsely, and severity beyond the diagnosis chapter and referral mix are not adjusted for."
 
   - rule_id: CLN-06-R01
     implementation: cln_06_r01_missing_order_result_trail
     requires_tables: [claim_line, observation, activity_code_reference]
     data_support: PARTIAL
-    reason: "Runs on imaging and therapy lines and the results or administration records linked to them, after the latency allowance. Laboratory results are left to CLN-08-R03, and service-specific documentation requirements are not modelled."
+    reason: "Runs on imaging lines and the reports or results linked to them, after the latency allowance. Laboratory results are left to CLN-08-R03; therapy administration records are not carried by the file, so therapy lines are not checked."
 
   - rule_id: CLN-06-R04
     implementation: cln_06_r04_member_denial_attendance
@@ -150,3 +150,26 @@ unlocks:
     data_support: PARTIAL
     upgrades_partial: true
     reason: "On a file with service lines the proxy (the diagnosis-procedure mismatch flag) is replaced by the catalogue's own measure: each provider's share of graded visits billed at the top level of their code family, shrunk toward specialty peers and cut at the peer percentile. Case mix and setting are not risk-adjusted beyond the specialty peer group."
+
+  - rule_id: CLN-04-R01
+    implementation: cln_04_r01_repeat_within_policy_interval
+    requires_tables: [claim_line, repeat_interval_policy]
+    data_support: PARTIAL
+    upgrades_partial: true
+    reason: "On a file with service lines the proxy (same principal diagnosis within a fixed interval) is replaced by the catalogue's own test: the same activity code for the same patient on another claim inside that code's minimum interval in the repeat-interval policy, excluding lines with a repeat indicator, a failed earlier result, and oncology, dialysis or maternity pathways. Equivalent (not identical) codes are not grouped."
+
+  - rule_id: CLN-04-R02
+    implementation: cln_04_r02_service_frequency_excess
+    requires_tables: [claim_line, activity_code_reference]
+    requires_columns: [activity_code_reference.service_family]
+    data_support: PARTIAL
+    upgrades_partial: true
+    reason: "On a file with service lines the proxy (any claims in a window) is replaced by service days per patient and service family in a trailing window, compared with the peer percentile for that family, excluding inpatient stays and oncology, dialysis and maternity pathways. Age risk adjustment is not applied."
+
+  - rule_id: CLN-06-R03
+    implementation: cln_06_r03_line_signature_repeat
+    requires_tables: [claim_line]
+    requires_columns: [claim_line.service_start_time]
+    data_support: PARTIAL
+    upgrades_partial: true
+    reason: "On a file with service lines the proxy (diagnosis, stay length and amount) is replaced by an identical line-level signature (codes, units, amounts and start times) recurring for several different patients at one provider, excluding inpatient packages, laboratory panels and dispensing. Clinical notes are not compared."

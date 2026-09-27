@@ -101,10 +101,12 @@ def pol_01_r01_roster_conflict(ctx, control) -> list:
         c = c.merge(m, on="member_sk", how="inner")
         # direct listing, or listed through the sponsor (dependant) on the same roster
         direct = c.merge(r[["employer_id", "member_sk", "rvf", "rvt"]], on=["employer_id", "member_sk"], how="left")
-        via = c.dropna(subset=["sponsor_id"]).merge(
+        dep = c.dropna(subset=["sponsor_id"])
+        dep = dep[dep["sponsor_id"] != dep["member_sk"]]  # a principal is not their own sponsor route
+        via = dep.merge(
             r[["employer_id", "member_sk", "rvf", "rvt"]].rename(columns={"member_sk": "sponsor_id"}),
             on=["employer_id", "sponsor_id"], how="left")
-        via2 = c.dropna(subset=["sponsor_id"]).merge(
+        via2 = dep.merge(
             r[["employer_id", "sponsor_id", "rvf", "rvt"]].dropna(subset=["sponsor_id"]),
             on=["employer_id", "sponsor_id"], how="left")
         allj = pd.concat([direct, via, via2], ignore_index=True)
@@ -297,13 +299,20 @@ def pol_01_r03_application_history_conflict(ctx, control) -> list:
     raw = ctx.claims if ctx.claims is not None else pd.DataFrame()
     if "diagnosis_primary" in raw.columns:
         dx = raw.set_index(raw["claim_sk"].astype(str))["diagnosis_primary"]
+    # screen row by row on plain Python lists (fast), then build evidence only for conflicts
+    j = j.assign(no_prior=_falsy(j["declared_prior_cover"]).values)
+    decl_l = [_codes(v) for v in j["declared"].tolist()]
+    cond_l = [_codes(v) for v in j["conditions"].tolist()]
+    j = j.assign(conflict=[bool(np_) or any(not _covered_by(c, d) for c in cs)
+                           for np_, d, cs in zip(j["no_prior"].tolist(), decl_l, cond_l)])
+    j = j[j.groupby("application_sk", dropna=False)["conflict"].transform("any")]
     out = []
     for app_sk, g in j.groupby("application_sk", sort=False, dropna=False):
         g0 = g.iloc[0]
         declared = _codes(g0["declared"])
         history = sorted({c for v in g["conditions"] for c in _codes(v)})
         undisclosed = [c for c in history if not _covered_by(c, declared)]
-        said_no_prior = bool(_falsy(pd.Series([g0["declared_prior_cover"]])).iloc[0])
+        said_no_prior = bool(g0["no_prior"])
         limbs = []
         if undisclosed:
             limbs.append("undisclosed_conditions")
@@ -408,25 +417,32 @@ def pol_01_r05_enrolment_cluster(ctx, control) -> list:
     early = c[((c["service_date"] - c["joined"]).dt.days >= 0) & ((c["service_date"] - c["joined"]).dt.days <= early_days)].copy()
     early["group"] = early["provider_sk"].map(groups)
     early["linked"] = early["group"].map(gsize).fillna(1) >= 2
-    rows = []
+    has_early = set(early["member_sk"])
+    frames = []
     for kind, col in (("employer", "employer"), ("broker", "broker")):
-        a = adds.dropna(subset=[col])
-        for (origin, bucket), g in a.groupby([col, "bucket"], sort=False):
-            members = set(g["member_sk"])
-            e = early[early["member_sk"].isin(members)]
-            n = len(members)
-            rate = e["member_sk"].nunique() / n if n else 0.0
-            linked = e[e["linked"]]
-            top_share, top_group = 0.0, None
-            if not e.empty and not linked.empty:
-                vc = linked["group"].value_counts()
-                top_group = vc.index[0]
-                top_share = float(vc.iloc[0]) / len(e)
-            rows.append({"kind": kind, "origin": origin, "bucket": bucket, "n": n, "rate": rate,
-                         "top_share": top_share, "top_group": top_group, "members": members})
-    if not rows:
+        a = adds.dropna(subset=[col])[["member_sk", col, "bucket"]].rename(columns={col: "origin"})
+        if a.empty:
+            continue
+        a = a.assign(kind=kind, early=a["member_sk"].isin(has_early))
+        coh = a.groupby(["kind", "origin", "bucket"]).agg(n=("member_sk", "nunique"), k=("early", "sum")).reset_index()
+        coh = coh[coh["n"] >= min_members]
+        if coh.empty:
+            continue
+        a = a.merge(coh[["kind", "origin", "bucket"]], on=["kind", "origin", "bucket"])
+        ec = early.merge(a[["member_sk", "kind", "origin", "bucket"]], on="member_sk")
+        tot = ec.groupby(["kind", "origin", "bucket"]).size().rename("early_claims")
+        lk = ec[ec["linked"]].groupby(["kind", "origin", "bucket", "group"]).size().rename("c").reset_index()
+        lk = lk.sort_values("c", ascending=False).drop_duplicates(["kind", "origin", "bucket"])
+        coh = coh.merge(tot.reset_index(), on=["kind", "origin", "bucket"], how="left").merge(
+            lk, on=["kind", "origin", "bucket"], how="left")
+        coh["rate"] = coh["k"] / coh["n"]
+        coh["top_share"] = (coh["c"] / coh["early_claims"]).fillna(0.0)
+        coh["top_group"] = coh["group"]
+        mem = a.groupby(["kind", "origin", "bucket"])["member_sk"].apply(set).rename("members").reset_index()
+        frames.append(coh.merge(mem, on=["kind", "origin", "bucket"]))
+    if not frames:
         return []
-    cohorts = pd.DataFrame(rows)
+    cohorts = pd.concat(frames, ignore_index=True)
     big = cohorts[cohorts["n"] >= min_members]
     if big.empty:
         return []
@@ -439,7 +455,7 @@ def pol_01_r05_enrolment_cluster(ctx, control) -> list:
         cut = float(np.quantile(peers["rate"], q))
         med = float(peers["rate"].median())
         for r in peers.itertuples(index=False):
-            if r.rate <= cut or r.top_share < linked_min or r.top_group is None:
+            if r.rate <= cut or r.top_share < linked_min or is_missing(r.top_group):
                 continue
             e = early[early["member_sk"].isin(r.members)]
             ring = sorted(p for p, gid in groups.items() if gid == r.top_group)

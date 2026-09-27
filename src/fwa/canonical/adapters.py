@@ -746,7 +746,16 @@ _ADAPTERS: dict[str, type[SourceAdapter]] = {
 }
 
 
+def _register_late() -> None:
+    """Adapters defined in their own modules (they import this one, so register lazily)."""
+    if "uae_multitable" not in _ADAPTERS:
+        from .uae_adapter import UaeMultiTableAdapter
+
+        _ADAPTERS["uae_multitable"] = UaeMultiTableAdapter
+
+
 def get_adapter(name: str) -> type[SourceAdapter]:
+    _register_late()
     try:
         return _ADAPTERS[name]
     except KeyError as exc:

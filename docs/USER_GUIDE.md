@@ -1,551 +1,379 @@
-# User guide — `uae-fwa-engine`
+# User guide — UAE FWA Engine
 
-This is an operational manual for the people who use the tool: a claims reviewer working a queue,
-a policy owner deciding whether a control may go live, an analyst deciding whether a model has
-earned promotion, an auditor checking that what happened is what was supposed to happen.
+This guide is for the people who use the tool day to day: claims reviewers working through a
+queue, audit managers deciding what to follow up, and examiners checking what the tool does and
+does not claim. You need to know health insurance. You do not need to know statistics or
+programming.
 
-Every screenshot in it was captured by `tools/capture_screenshots.py` from a running instance,
-signed in with the real seeded credentials for the role named in the caption. None is a mock-up, a
-wireframe or an edited image. Where a screen shows an unflattering number — a gate that does not
-pass, a model that stays in shadow, a metric reported as unmeasurable — that is what the system
-actually rendered.
-
-The figures quoted throughout come from a run over the 20,893 claims in
-`data/claims_demo_synthetic.csv`, the synthetic file this project generates to exercise the engine
-(`docs/DEMO_DATASET.md` explains what it is for and what no figure derived from it may be used to
-claim). Load a different file on the **Data** page and every one of them changes, which is the
-point of that page existing.
+The same guide is built into the app: open **Help** in the sidebar. The Help page also has a
+searchable glossary of every technical term the tool uses.
 
 ---
 
-## 1. What the tool does, and what it refuses to do
+## Start here
 
-The engine takes a file of claims, runs a catalogue of 164 governed controls over it, correlates
-what those controls find into cases, prices the exposure conservatively, and puts a prioritised,
-evidence-backed queue in front of a human reviewer.
+1. **Choose or load data.** Open **Data**. The UAE demo file is already loaded when you sign in,
+   so you can skip this step the first time.
+2. **Review the most urgent cases.** Open **Review queue**. The most urgent cases are at the top.
+3. **Read why they were flagged.** Pick a case and open **Case evidence**. It starts with one
+   sentence, then the reasons in order, how strong the evidence is, and what to check next.
 
-It does not decide that anyone committed fraud. That refusal is the single constraint the whole
-system is organised around, and it is worth stating in the form the tool itself uses:
+---
 
-> **A signal is not a fraud finding.** This system can establish non-payability, inconsistency or
-> statistical abnormality. It cannot establish intent, and intent is what distinguishes fraud from
-> waste, abuse or honest error. Only a human reviewer, on evidence, may reach a conclusion about
-> conduct.
+## The one rule: a reason to look, not proof
 
-That statement appears on every page and cannot be dismissed. It is also enforced in code rather
-than by convention: a control whose type is statistical, network, text or model is *rejected at
-registration time* if it declares `REJECT` or `REPRICE`. The application will not start with one
-loaded. There is no configuration flag, threshold or override that makes an anomaly score into a
-denial, because the check happens before any of those exist.
+Everything in this tool is built around one rule:
 
-Only a **hard, objective, effective-dated condition** may deny a claim. "This member's coverage
-had lapsed on the service date" can deny. "This provider's amounts are 3.2 robust standard
-deviations above its peer group" cannot, at any threshold, under any configuration.
+> **A flag is a reason to look, not proof of fraud.** The tool can show that a claim breaks a
+> dated rule, does not add up, or is unusual compared with similar claims. It cannot show
+> intent, and intent is what separates fraud from waste, abuse or an honest mistake. Only a
+> reviewer, looking at the evidence, can decide.
 
-### The eight dispositions
+In practice this means:
 
-Every case carries exactly one of eight outcomes. They are not severity levels; they are different
-kinds of instruction to a different person.
+- **Only clear-cut rules can lead to a claim being denied.** For example, "the patient had no
+  cover on the date of treatment" can. "This hospital bills more than similar hospitals" cannot,
+  however unusual it is. Only 21 of the 164 checks are allowed to suggest denying or repricing a
+  claim, and the tool refuses to start if any other check tries.
+- **Urgency only decides the order of the queue.** It never changes what should happen to a
+  claim.
+- **Money flagged is not money saved.** Nothing has been reviewed, confirmed, stopped or
+  recovered, so flagged amounts are never added up as savings.
+- **Two kinds of amount are always kept apart.** An *established* amount rests on a clear rule
+  that failed. An amount *not yet established* is the full value of a claim that looks unusual.
+  The two are shown side by side and never added together.
+- **Everything runs in watch-only mode.** Every check and both pattern-finding models record and
+  measure their results, but none is used for real payment decisions yet.
+- **Patient and provider identities are hidden by default.** Only roles that are allowed can
+  reveal them, and each reveal needs a reason and is logged.
 
-| Disposition | What it means | Who acts |
+---
+
+## How do I find the most urgent cases?
+
+Open **Review queue**. Cases are listed most urgent first, with a coloured urgency label
+(Urgent, High, Medium, Low, Watch only) and what the rules suggest should happen next, such as
+"Hold before paying" or "Pay, but check afterwards".
+
+- To see only the most urgent cases, raise **"Show only cases at least this urgent"**.
+- To work on one kind of problem, for example only medicines or only coding, use the
+  **"Kind of pattern"** filter.
+- The sliders for **team size** and **cases per reviewer per day** tell you how long the whole
+  queue would take your team. They do not change the cases or their order.
+
+The **Overview** page also lists the top cases to look at first, each with its one-line summary.
+
+---
+
+## How do I read why a claim was flagged?
+
+Open a case on **Case evidence**. Every explanation has the same six parts, in the same order:
+
+1. **Headline.** One sentence: who, what, how much, and what we suggest. For example, "Hospital
+   H1023 billed AED 815,607 across 80 claims in November 2025, with three unusual patterns. We
+   suggest checking it after payment."
+2. **Reasons**, most important first, at most five. Each reason is a sentence with the actual
+   fact and a comparison, such as "It charged AED 2,649 per day of hospital stay. Similar
+   hospitals charge about AED 912 per day, so this is roughly 3 times higher."
+3. **How strong the evidence is:** Strong, Moderate or Weak, with one line on why. When several
+   reasons rest on the same underlying fact, the explanation says so and they count once. Three
+   checks noticing the same high amount are one piece of evidence, not three.
+4. **What this does not mean.** Always: "This is a reason to look, not proof of fraud." When only
+   a pattern-finding model flagged the claim, it also says that no rule was broken and the amount
+   at risk has not been established.
+5. **What to check next.** Two to four concrete steps, such as "Ask for the discharge summary"
+   or "Compare the invoice with the pharmacy dispensing record."
+6. **Technical details**, folded away, for auditors and examiners: check ids, scores,
+   thresholds, the model's reasons in numbers, and field names.
+
+You can download a **one-page summary** of the case (printable HTML, or plain text) from the same
+screen.
+
+---
+
+## How do I record a decision?
+
+At the bottom of **Case evidence**:
+
+1. Choose what you decided: confirm what the rules suggest, change it, clear the case (no issue),
+   or refer it to the investigations team.
+2. Pick the kind of issue you found, if any, and the amount you actually confirmed. The amount
+   you confirm is often less than the amount flagged; that difference is exactly what the tool
+   needs to learn from.
+3. Write a short reason: what you checked, what you found, and why that settles it. A decision
+   without a reason is refused.
+4. Press **Submit decision**.
+
+Every decision goes into a permanent audit log that records who decided what, when, and why.
+Changing what the rules suggested is a separate permission; not every role has it.
+
+---
+
+## How do I load my own data?
+
+Open **Data** (available to analysts and administrators).
+
+- **To use a demo file**, choose "A demo file that comes with the app", pick one, and press
+  **Use this file**.
+- **To upload a file**, choose "Upload a file from my computer". Upload either a single **.csv**
+  with one row per claim, or a **.zip** holding several tables (claims, service lines,
+  providers, patients and so on).
+- **For a large file or one on a shared drive**, choose "A file or folder already on this
+  machine" and type its full path. The file is read where it is and never copied.
+
+Leave **File format** on "Work it out from the file" unless your file comes from a regulator's
+system. A .zip or folder is read as UAE multi-table; a single .csv as a generic claim list. The
+Shafafiya and eClaimLink layouts are available but have not been tested against a live
+regulator feed.
+
+Loading a file re-runs everything: all 164 checks, the comparisons with similar providers, the
+connections, and both pattern-finding models. Every page then describes the new file. If the
+file cannot be read, the page says what is wrong and how to fix it, and the file in use before
+stays in use. Files you used earlier in the session open again instantly.
+
+---
+
+## What does 'watch only' mean?
+
+"Watch only" appears in two places, and both mean the same thing: **recorded and measured, but
+not acted on yet.**
+
+- **For a case**, "Watch only" means there is nothing to act on yet. The pattern is being
+  watched, and the case sits at the bottom of the queue.
+- **For a check or a model**, watch-only (also called shadow mode) means it runs and its results
+  are kept and measured, but they are not used for real payment decisions. Every check in this
+  tool starts in watch-only mode. Switching one on for real use needs a policy owner who did not
+  write it, and a period of watching to show it works.
+
+A check that raises far more flags than a team could handle is also moved to watch-only
+automatically, so it cannot flood the queue.
+
+---
+
+## Why couldn't some checks run?
+
+Each check needs certain information. Some need only the claim summary (who, when, how much);
+many need more, such as line-by-line service details, prior approvals, payment records,
+provider licences or prescriptions.
+
+The **Data** page tells you, in one sentence, how many checks ran fully, how many ran in a
+simplified form, and how many could not run. It then groups the checks that could not run by
+what is missing, for example "needs line-level service details (41 checks)".
+
+- **Ran fully:** the file had everything the check needs.
+- **Ran in a simplified form:** the file had only a stand-in for part of what the check needs.
+  Its flags say so, and its evidence counts for less.
+- **Could not run:** the information is missing, so the check was not run rather than guessed.
+  That is a fact about the file, not a failure of the check.
+
+On the older one-row-per-claim demo file, only 9 checks run fully, 28 in a simplified form, and
+127 cannot run. The UAE demo file carries the extra tables: at the time of writing, 163 of the 164
+checks run on it (77 fully and 86 in a simplified form). The one that cannot run needs reviewers'
+recorded decisions, which no file can supply until reviewers have worked the queue.
+
+---
+
+## What do the Simple and Advanced views show?
+
+The **Simple view** switch is in the sidebar. It is on by default and the app remembers your
+choice.
+
+- **Simple view** shows the pages you need to review cases: **Overview**, **Review queue**,
+  **Case evidence**, **Data** and **Help**.
+- **Advanced view** adds the analysis and governance pages: **Pattern-finding models**,
+  **Compare hospitals**, **Connections between providers, agents and patients**, **Settings and
+  thresholds**, **Checks library**, **Validation report** and **Governance**.
+
+The switch never changes what you are allowed to see. Your role decides that; the switch only
+decides how many of your pages are listed. On every page, technical detail stays one click away
+in sections titled "Technical details" or behind a "Show all columns" tick box.
+
+---
+
+## Can I trust the pattern-finding models?
+
+Not for real decisions yet, and the tool says so. Two automated pattern-finders rank how unusual
+each claim is:
+
+- **Isolation Forest** looks for claims that are easy to separate from the crowd.
+- **Local Outlier Factor** looks for claims that are unusual compared with their nearest
+  neighbours.
+
+To keep the test fair, each model learns from earlier claims and is then tested on later claims
+from providers it has never seen. That is why many claims get no score.
+
+Before a model may be used, it must pass a five-question checklist (the promotion gate): Was it
+tested fairly? Does it find more real issues than the simple scorecard? When it sounds sure, is
+it right that often? Are the claims it sees now like the ones it learned from? Can it explain
+each flag in real units? A question that cannot be answered counts as a "no". Even when every
+answer is "yes", a second person who did not propose the model must approve it. The
+**Pattern-finding models** page shows the checklist with a plain answer to each question.
+
+---
+
+## How do I tell whether an amount is money at risk or money saved?
+
+It is never money saved. Look for one of two labels:
+
+- **Established:** a clear rule failed, for example no cover on the service date, so the amount
+  at risk rests on a fact a reviewer can check.
+- **Not yet established:** the claim looks unusual, and the figure is simply its full value. It
+  is not a loss.
+
+The two are always shown separately and never added together. Measures such as money confirmed,
+money recovered and net savings need reviewers' recorded decisions; until those exist, the tool
+says "can't be measured yet" instead of showing a number.
+
+---
+
+## The demo files
+
+Three files come with the app. The **Data** page describes each one and lets you switch.
+
+| File | What it is | When to use it |
 |---|---|---|
-| `REJECT` | An objective condition failed. Do not pay. | Claims |
-| `REPRICE` | The amount is wrong by a computable rule. | Claims |
-| `RETURN` | The submission is incomplete or malformed. | Provider |
-| `PREPAY_PEND` | Hold before payment; something needs checking. | Reviewer |
-| `POSTPAY_AUDIT` | Pay, then examine the pattern. | Audit |
-| `SIU_LEAD` | Worth an investigator's time. Not an accusation. | SIU |
-| `PROVIDER_EDUCATION` | Looks like a billing habit, not misconduct. | Network |
-| `MONITOR_ONLY` | Watch. Do nothing yet. | Analytics |
+| **UAE demo claims (multi-table)**, `uae_demo.zip` — **SYNTHETIC**, the default | 24,735 claims over eighteen months (July 2024 to December 2025) of generated claims from UAE-style hospitals, clinics, pharmacies, labs and radiology centres, in AED, with the supporting tables most checks need: service lines, diagnoses, visits, prior approvals, payments, resubmissions, provider licences, clinicians, contracts, patients and cover, prescriptions and dispensing, referrals, documents, complaints and reference tables. At least one realistic pattern is planted for every kind of problem the checks look for. | Start here. Most checks and both models can run on it. |
+| **Earlier demo claims**, `claims_demo_synthetic.csv` — **SYNTHETIC** | 20,893 generated claims over five years, one row per claim, in Indian rupees converted to AED. | To see how much less the engine can do with claim summaries only. |
+| **Sample claim extract**, `claims.csv` | A 5,000-claim sample in the same one-row-per-claim layout, in Indian rupees converted to AED. | To compare results on a small file in the simple layout. |
 
-The first three are available only to hard controls. The rest are where everything statistical
-ends up.
+**About synthetic data.** The two demo files were generated by a program; no row describes a
+real person, provider or claim. They are labelled SYNTHETIC wherever their numbers appear. The
+record of which patterns were planted where (the answer key) is kept in a separate file that the
+detection code never reads. **A check that passes on data built to pass it is a test of the
+check, not evidence that it detects fraud.** No figure from these files says anything about how
+well the tool would do on real claims.
 
----
-
-## 2. Getting in
-
-```bash
-pip install -e .
-streamlit run app/Home.py
-```
-
-The tool runs with **no API key and no network access**. Nothing in it calls out.
-
-On first start it seeds one account per role and prints the credentials to the console **once**.
-Every seeded account is forced to change its password at first sign-in.
-
-| Sign in as | Role | Typical job title |
-|---|---|---|
-| `reviewer` | CLAIMS_REVIEWER | Claims reviewer |
-| `clinical` | CLINICAL_REVIEWER | Clinical / coding policy |
-| `siu` | SIU_INVESTIGATOR | SIU investigator |
-| `policy` | POLICY_OWNER | Policy owner |
-| `admin` | ADMIN | Administrator |
-| `analyst` | ANALYST | Analytics / ML engineering |
-| `qa` | QA | Quality assurance |
-| `auditor` | AUDITOR | Regulator / internal audit |
-
-What a role can reach is decided by its permissions, and the navigation is *built* from them. A
-page a role may not see does not appear in its sidebar and is not registered with the router for
-that session, so it cannot be reached by URL either. The guard re-checks on entry, so a forged
-page reference fails closed and the attempt is written to the access log.
-
-This authentication layer demonstrates the access-control model. It uses Argon2 password hashing,
-enforces separation of duties and masks patient identity by default — and it is **not hardened for
-real PHI**.
+For reference, on the earlier demo file the tool raised 9,074 flags, grouped into 8,502 cases,
+with AED 61,838,054 established and, separately, AED 17,028,427 not yet established. None of it
+has been reviewed.
 
 ---
 
-## 3. Overview — what this run found
+## Page by page
+
+| Page | What it is for |
+|---|---|
+| **Overview** | A one-screen summary of the file: how many cases need review, how much is at risk, and which cases to open first. |
+| **Data** | Choose the claim file, load your own, and see which checks could run and what was missing. |
+| **Review queue** | Your list of cases, most urgent first, with filters and how long the queue would take your team. |
+| **Case evidence** | One case: why it was flagged, how strong the evidence is, what to check next, and where to record your decision. |
+| **Compare hospitals** | How each provider compares with similar providers and with its own past. |
+| **Connections** | Who is connected to whom through shared patients, referrals and sales agents. |
+| **Pattern-finding models** | What the two models found, why, and whether they are ready to be trusted (so far they are not). |
+| **Checks library** | All 164 checks: what each looks for, why it matters, and whether it could run on this file. |
+| **Settings and thresholds** | Every number the engine uses, split into numbers measured from your data and numbers chosen by policy with a named owner. |
+| **Validation report** | A one-screen plain summary of the run, then the full technical report and its files. |
+| **Governance** | The audit log, who owns each setting, switching a check off, and whether checks stayed within their expected workload. |
+| **Users and access** | Creating users, changing roles and assigning cases (administrators only). |
+| **Help** | This guide, a page-by-page list, what each role sees, and the searchable glossary. |
 
 ![Overview, signed in as admin](screenshots/overview-admin.png)
 
-*Overview, signed in as `admin`. The two exposure figures are deliberately side by side and are
-never added together.*
-
-The Overview answers "what happened in this run" in five numbers and then immediately qualifies
-them. On the shipped dataset: 20,893 claims ingested; 164 controls in the catalogue; **37** of
-them could run, and all 37 fired; 9,074 signals; 8,502 cases. **Zero controls active** — every one
-is in shadow, because activation requires a prospective shadow period and a policy owner who did
-not author the rule, and neither exists in a single retrospective run.
-
-Below that sits the distinction the whole system is organised around:
-
-- **Established exposure** (AED 61,838,054 here) — an objective condition was shown to fail.
-- **Exposure not established** (AED 17,028,427) — the gross amount, shown with the literal words
-  *"exposure not yet established"*.
-
-**These two figures are never added together, anywhere in this system.** Gross flagged value is
-not savings: nothing here has been reviewed, confirmed, prevented or recovered, and reporting it as
-if it were would overstate what the system has contributed. The tool treats that as an ethical
-failure rather than a rounding one, which is why the two numbers are rendered as separate tiles
-with separate labels and no total beneath them.
-
-The dataset profile at the foot of the page names the file, its row count, its date range and its
-adapter, alongside the canonical model's population report — sixteen tables, each marked
-`POPULATED`, `PARTIAL` or `NOT_POPULATED` with a reason. A table that is empty because the source
-has no such data is a **finding**; a table filled with plausible invented rows would be a lie that
-propagates into every downstream number.
-
----
-
-## 4. Data — loading a file and re-running everything
-
-![The Data page, signed in as analyst](screenshots/data-analyst.png)
-
-*The Data page. Available to ANALYST and ADMIN.*
-
-Every figure in the application is a property of one input file. This page is where that file is
-chosen.
-
-**Upload a file** takes a delimited claim-header extract by drag-and-drop. The file is written
-under `data/uploads/` with a content-addressed name, which has a useful consequence: uploading the
-same file twice resolves to the same cached run instead of repeating twenty seconds of work.
-
-**Point at a file on this machine** takes a full path instead. Use it for anything large, and for
-anything the browser is not permitted to read — which is the ordinary case for a file on a work
-share. The file is read in place and never copied.
-
-**Source schema** picks the adapter that maps the file's columns into the canonical model. Choosing
-the wrong one does not silently mis-map: columns the adapter cannot find are recorded as missing,
-and the controls that need them are classified `NOT_EXECUTABLE_ON_THIS_DATASET` rather than run on
-a guess.
-
-### What "re-runs everything" means
-
-Pressing **Run the engine on this file** re-runs the pipeline end to end. The adapter maps the
-source schema; the feature store rebuilds; all 164 controls are re-evaluated; the peer groups and
-their Beta priors are refitted; the graph is rebuilt; the unsupervised models are retrained on the
-new temporal and entity-isolated split; the promotion gate is re-run against the transparent
-composite. Nothing carries over from the previous dataset except the rule catalogue and the
-parameter registry, which are governance artefacts rather than properties of the data.
-
-Each run is cached on the **content hash** of its input file, so switching back to a dataset loaded
-earlier is free and does not discard what has already been computed.
-
-### Reading the comparison
-
-The most interesting difference between two datasets is usually not how many signals each produced
-but **which controls could run at all**. A file carrying an authorisation table brings an entire
-scenario family to life; a file without `agent_id` kills the distribution-channel controls
-outright. Once a second dataset is loaded, the control table gains a comparison column reporting
-exactly that: *Newly runnable*, *No longer runnable*, *±N signals*, or *Unchanged*.
-
-Three tiles above it summarise the same thing at a glance, and the whole table downloads as CSV.
-
-A control that did not run is not a control that failed. It is a control whose required canonical
-fields this source does not carry — a fact about the data, recorded as such, rather than a silent
-zero.
-
----
-
-## 5. Review Queue — one reviewer's work, in order
+*The Overview page.*
 
 ![The review queue, signed in as reviewer](screenshots/review-queue-reviewer.png)
 
-*The review queue as a CLAIMS_REVIEWER sees it. Identity is masked by default.*
-
-The queue is ordered by a priority score, and the score orders the queue **only**. It never sets,
-overrides or softens a disposition: disposition is a policy decision, priority is a scheduling one,
-and conflating them would let a scoring tweak change what happens to a claim.
-
-Each row carries its disposition chip, its priority band, the number of signals behind it, the
-number of claims those signals touch, and its exposure — with `exposure_established` shown
-explicitly, so a large number that has not been established is never mistaken for one that has.
-
-Filters narrow by disposition, band, correlation dimension and scenario family. The capacity line
-above the table is worth reading: it computes how many cases the configured review team can
-actually process in a day, and shows precision *at that volume* rather than at an arbitrary
-threshold. A detector that looks excellent on the top ten and mediocre on the top four hundred is
-described honestly by the second number and flattered by the first.
-
-Patient and provider identifiers are masked. Unmasking is a separate, reason-required action
-available only to roles that hold the permission, and it writes an entry to the access log naming
-who unmasked what and why.
-
----
-
-## 6. Case Evidence — reaching a defensible decision
+*The Review queue, as a claims reviewer sees it. Identities are hidden by default.*
 
 ![A case, signed in as reviewer](screenshots/case-evidence-reviewer.png)
 
-*One case. The verdict sentence first, then the evidence, then the decision.*
-
-This is the screen the tool is designed around. The target is that a reviewer can open a case and
-reach a defensible disposition in under a minute, without training.
-
-It leads with a **sentence**, not a score: what fired, on what, and what the reviewer is being
-asked to do about it. Underneath sit, in order:
-
-- **The signals**, each with the control that raised it, the control's version, the exact
-  expression it tests, the exclusions it declares, and the evidence fields it rendered. Where a
-  control ran against a stand-in for the field it actually wanted, that substitution is named on
-  the signal itself.
-- **The priority arithmetic**, term by term, with each term's weight, its normalised value and its
-  contribution — so the score can be reconstructed by hand rather than taken on trust.
-- **The exposure basis**, in words, saying what the amount is and whether it has been established.
-- **The AI panel**, if one is present, on a dashed border and a different background, labelled
-  *AI-generated summary — not evidence*. A reviewer should never have to work out whether they are
-  reading evidence or a generated paraphrase of it.
-
-Where several signals rest on the **same underlying fact**, they are capped at the strongest rather
-than summed. Three controls noticing the same unusual amount is one piece of evidence noticed three
-times, and adding them would manufacture confidence out of redundancy.
-
-### Recording the decision
-
-The disposition form is the one primary action on the screen. It requires a rationale in free text;
-a disposition without one is refused. If an exclusion applies, name it in the rationale — the
-control's declared exclusions are listed directly above the form for exactly this purpose.
-
-Everything recorded here goes to the append-only audit log: who, when, which case, which
-disposition, which rationale, and the hash chaining it to the entry before it.
-
-### The copilot
-
-The copilot answers questions about the case, bounded to three sources and no others: the case's
-own evidence bundle, the rule text of the controls that fired, and the parameter registry entries
-those rules reference. There is no path from it to the full claim table, to another tenant's data,
-or to the held-out labels.
-
-Ask it *"why did this fire?"*, *"what exclusion might apply?"* or *"what would I need to confirm
-this?"* and it will answer. Ask it *"is this fraud?"* — in any phrasing — and it returns the safety
-boundary statement instead. That refusal is classified before any model is called, so it is not
-something a sufficiently determined rephrasing can talk its way past.
+*One case: the headline first, then the reasons, the evidence strength, and the decision.*
 
 ---
 
-## 7. Provider Analytics — comparing like with like
+## Who sees what
 
-![Provider analytics, signed in as analyst](screenshots/provider-analytics-analyst.png)
+What you can open depends on your role. Pages you may not open are not listed and cannot be
+reached by link.
 
-*Peer comparison, shrinkage and change detection.*
+| Role | Sees |
+|---|---|
+| Administrator | Everything, including real names and IDs; manages users, access and the emergency switch-off for checks. |
+| Policy owner | The checks library, settings and thresholds; drafts, edits and approves checks. |
+| Claims reviewer | The review queue and case evidence, with identities hidden by default; records decisions. |
+| Clinical reviewer | Clinical cases, documents and coding evidence; records clinical decisions. |
+| Investigator (special investigations) | Cases referred to investigations and the connections view; sees real identities only on cases assigned to them. |
+| Analyst | Data loading, pattern-finding models, hospital comparisons, settings and the validation report. |
+| Quality assurance | Test evidence and the release checks. |
+| Auditor | Read-only access to everything, including the audit log. |
 
-A provider is never compared to the whole book. It is compared to a peer group built by walking a
-six-level hierarchy — activity/code family, specialty, encounter/facility type,
-payment-method/contract family, geography, provider volume band — from the most granular level
-down, stopping at the first group large enough to support an estimate. **Which level was used is
-stamped on every comparison**, because a residual computed against 2,000 providers nationally and
-one computed against 31 providers in the same specialty are not the same claim.
-
-Where the walk runs out before reaching `min_peer_group_n`, the comparison is **refused** and
-reported as `INSUFFICIENT_PEER_EVIDENCE`. That is a different statement from scoring zero, and the
-tool keeps it different everywhere it appears.
-
-### Shrinkage, and why the page demonstrates it
-
-A provider with five claims and one adverse event has an observed rate of 20%, which is close to
-meaningless. A provider with five thousand claims and the same 20% is a genuine outlier. The page
-shows both, side by side, with the same observed rate and visibly different shrunk rates and
-interval widths. It is the whole argument for the estimator in one table.
-
-Every shrunk rate is reported **with its posterior interval**, and an entity whose interval is
-wider than the configured maximum is marked `excluded_from_ranking` rather than flagged on an
-artificially precise point estimate.
-
-### Change detection
-
-CUSUM and EWMA detect shifts in a provider's monthly behaviour. A change point is only *declared*
-once there is a configured minimum of history behind it, and each declared point comes with a
-plain-language explanation of what shifted, when, and by how much.
+Some rules are enforced by the tool itself: the person who writes a check cannot approve it for
+real use, and the person who proposes a model cannot approve it either.
 
 ---
 
-## 8. Network — structure, not accusation
+## Signing in
 
-![The network page, signed in as analyst](screenshots/network-analyst.png)
+The tool runs on your own computer with **no internet connection and no API key**; nothing in it
+calls out. On first start it creates one demo account per role (reviewer, clinical, siu, policy,
+admin, analyst, qa, auditor) and shows their passwords once. Every demo account must change its
+password at first sign-in.
 
-*Typed, time-bounded graph with community detection and entity-resolution candidates.*
+The sign-in and access controls demonstrate how access would work. They are **not hardened for
+real patient data**.
 
-Edges are materialised into weekly, time-bounded snapshots: an edge exists only within its window,
-so a relationship that existed in March is not silently available as evidence about June.
-
-Communities are detected per snapshot, and a community's unusualness is tested against
-**size-matched** comparison communities rather than against a global average — otherwise every
-large community looks unusual for no better reason than being large.
-
-Entity-resolution candidates — two legally distinct providers sharing a bank account, a phone
-number, an address token — are **surfaced for human confirmation and never merged automatically**,
-at any confidence. The configured auto-merge threshold is set deliberately above 1.0, which is to
-say unreachable, and the page says so.
+To switch the app between light and dark, an administrator changes the theme in
+`.streamlit/config.toml` and restarts the app.
 
 ---
 
-## 9. Models — candidates, not products
+## Glossary
 
-![The models page, signed in as analyst](screenshots/models-analyst.png)
+The full glossary, with an everyday comparison for each term, is on the **Help** page and can be
+searched. The terms you will meet most often:
 
-*The promotion gate verdict comes first, before any score distribution.*
-
-Two unsupervised baselines are fitted: an Isolation Forest and a Local Outlier Factor. Both are
-**candidates**. The transparent statistical composite is the incumbent, and a model reaches
-`active` only by beating it.
-
-The page leads with the gate verdict rather than with score distributions, because a models page
-that opens with a histogram invites the reader to treat the model as the product.
-
-### What the gate checks
-
-- **Temporal holdout** — training data is strictly earlier than scoring data.
-- **Entity isolation** — no provider appears in both training and scoring. Without this a model can
-  score a provider it was trained on and post a lift figure that is partly memory.
-- **Prospective lift over the composite** — measured on a strictly later period.
-- **Calibration** — expected calibration error within the configured maximum.
-- **Drift** — PSI within threshold.
-- **Explanation quality** — every flagged entity must produce feature attributions in original
-  units beside the peer value.
-
-`NOT_ASSESSABLE` is **never** a pass. A criterion that cannot be evaluated is a reason not to
-promote, not a reason to shrug. On the shipped dataset `local_outlier_factor` clears all five
-criteria and may be promoted by a policy owner who did not propose it, while `isolation_forest`
-clears four — including the *higher* lift, 2.2× against 1.6× — and fails calibration alone. The
-page names the criterion it failed rather than quietly reporting a score. That asymmetry is not a
-defect in either model: two unsupervised scores judged against one outcome series cannot both
-satisfy the calibration criterion, and `docs/DEMO_DATASET.md` gives the proof.
-
-### Explanations
-
-SHAP contributions are rendered in **original units beside the peer value**, not as bare
-magnitudes:
-
-> Amount per inpatient day — AED 6,804/day, peer median AED 1,081/day (6.3×) → pushed this
-> provider's composite score up the most
-
-The explainer actually used is named on the page. Where the estimator has a tree structure, SHAP's
-exact tree method is used; where it does not, the kernel approximation over a k-means-summarised
-background is used instead — and being an approximation, it is named rather than presented as the
-exact thing.
+- **Flag (signal):** one check's output about one claim, provider or group. A reason to look,
+  not a finding of fraud.
+- **Case:** related flags about the same thing, grouped so you read one story instead of
+  several alerts.
+- **What the rules suggest (disposition):** the one next step a check's policy recommends, such
+  as hold before paying, pay but check afterwards, refer to investigations, talk to the
+  provider, or watch only. Fixed in the check, never changed by a score.
+- **Urgency (priority):** decides the order of the queue, nothing else.
+- **Established / not yet established:** whether an amount rests on a clear rule that failed,
+  or is only the full value of an unusual claim. Never added together.
+- **Watch-only (shadow) mode:** results are recorded and measured but not used for real
+  decisions.
+- **Similar providers (peer group):** the providers a provider is compared with, for example the
+  same specialty and size. The comparison is refused when too few similar providers exist.
+- **Pattern-finding model:** a program that ranks how unusual a claim is. Isolation Forest and
+  Local Outlier Factor are the two used here.
+- **Promotion gate:** the five-question checklist a model must pass before it may be used.
+- **Can't be measured yet:** the tool will not invent a figure that needs information which
+  does not exist yet, usually reviewers' decisions.
+- **Synthetic:** generated by a program to test the tool; not real claims.
 
 ---
 
-## 10. Parameters & Models — every number, and where it came from
+## For technical readers
 
-![Parameters and models, signed in as analyst](screenshots/parameters-models-analyst.png)
+This guide describes the tool for its users. For the engineering and the evidence:
 
-*Four tabs, separating measurements from decisions.*
+- **`README.md`** — the architecture, how to install, run and test it (`streamlit run
+  app/Home.py`, `python -m fwa.run_validation`, `pytest`), and what the artefact does not claim.
+- **`docs/DEMO_DATASET.md`** — how the synthetic datasets were generated, what was planted and
+  why, and why no figure derived from them may be used to claim detection performance.
+- **`reports/`** — the validation report, release-gate report, model card, limitations, the
+  control coverage matrix and the other artefacts, regenerated by `python -m fwa.run_validation`
+  and viewable on the **Validation report** page. Two runs from the same input and seed produce
+  identical findings; only wall-clock fields differ.
 
-There are two kinds of number in this system, and confusing them is the most expensive mistake a
-reader can make.
+A few facts that sit behind the plain wording above:
 
-A **configured threshold** is a governance decision. Somebody owns it, somebody approved it, it has
-a written rationale and a date from which it takes effect. It does not change because the data
-changed. `min_peer_group_n = 30` is a statement about how much evidence the organisation requires
-before it will allow a comparison, and it would be the same number on a dataset a hundred times the
-size.
-
-A **fitted quantity** is a measurement. A Beta prior's α and β, a peer group's median and MAD, a
-model's decision threshold: each is estimated from the file currently loaded and is meaningless
-away from it.
-
-The four tabs keep them apart:
-
-**Fitted on this run.** Robust location and scale per composite feature, with the count of
-providers each was estimated from; which scale estimator was used, since a residual computed on an
-IQR fallback is weaker evidence than one computed on a MAD; the empirical-Bayes priors, with their
-strength in pseudo-observations and the α and β that follow from it; and the run's own facts —
-parameter fingerprint, random seed, stage timings.
-
-**Configured thresholds.** Every `cfg.*` value with its owner, approver, effective dates and prose
-rationale, filterable and downloadable. No threshold in this system is a literal in a source file,
-and the reason is simple: a number without an owner is a number nobody can be asked about. The tab
-also counts the parameters past their review date — still in force, and surfaced rather than
-silently applied.
-
-**Model hyperparameters.** Read off the trained estimators rather than off the configuration that
-requested them, so a value that was clipped, defaulted or overridden shows as what it became. The
-split the models were fitted under is shown beside them, with the provider overlap between training
-and scoring stated explicitly.
-
-**Peer baselines.** The six hierarchy levels with their availability on this dataset, the back-off
-order, and the count of providers whose comparison actually landed on each step.
-
----
-
-## 11. Rule Registry — the catalogue as configuration
-
-![The rule registry, signed in as policy](screenshots/rule-registry-policy.png)
-
-*All 164 controls across 39 scenarios, each with its verbatim trigger and its governed mapping.*
-
-Every control is a configuration record, not a function buried in a module. Each carries its
-identifier, version, type, execution stage, the population it tests, the expression it evaluates,
-its parameters *as references to the registry rather than as literals*, its declared exclusions,
-its grouping key, its disposition, and its data support on the loaded dataset.
-
-Data support is the honest part. On the shipped file: 9 controls `EXECUTABLE`, 28 `PARTIAL`, 127
-`NOT_EXECUTABLE_ON_THIS_DATASET`. Each of the 127 names the canonical field that would unlock it,
-which turns "what would real data buy us?" from a rhetorical question into a list.
-
-Where the catalogue's first-named disposition would be illegal for a control's type — a statistical
-control the catalogue describes as "reject/pend", for instance — the substitution is recorded in a
-`governance_note` on the control, visible here. The catalogue is followed; the boundary is not
-crossed; and the place where the two disagreed is written down instead of being smoothed over.
-
-Every control starts in `shadow`. Activation requires a policy owner **who did not author it**.
-
----
-
-## 12. Governance — effective dating, ceilings and the kill switch
-
-![Governance, signed in as admin](screenshots/governance-admin.png)
-
-*Parameter provenance, alert ceilings, stage latency, and the audit log.*
-
-This page is where the machinery that makes the rest trustworthy is visible.
-
-**Parameter provenance.** Every value with its owner, rationale, source, approval and review date.
-Values past their review date are flagged. Unapproved values are flagged. Neither is silently
-dropped or silently honoured.
-
-**Alert ceilings.** A runaway control must not flood the queue. A control exceeding its configured
-ceiling is automatically routed to `MONITOR_ONLY` and raises a governance event. Breaches from this
-run are listed.
-
-**Stage latency.** Observed time per execution stage against the configured ceiling. The observed
-figure is the *batch* time across the whole file rather than a per-claim online latency, and the
-page says so — a real synchronous prepay deployment would be measured per claim, and this artefact
-runs as a batch.
-
-**Kill switch and rollback.** Any control can be suspended, and any control can be rolled back to a
-prior registered version, without a code deployment. Both write to the audit log.
-
-**The audit log** itself is append-only and hash-chained: each entry carries the hash of the one
-before it, so a deletion or an edit breaks the chain visibly. Unmasking, overriding and
-kill-switching are reason-required actions — the entry is refused without one.
-
----
-
-## 13. Validation Report — the honest scorecard
-
-![The validation report, signed in as analyst](screenshots/validation-report-analyst.png)
-
-*Generated from the same run the rest of the application is showing.*
-
-The report is built from the same `PipelineResult` the pages render, so the report and the
-interface cannot disagree about what the run found.
-
-Every number in it is one of three things: a measured output of this run, a configuration threshold
-labelled as such, or `NOT_MEASURABLE_ON_THIS_DATASET`. Nothing is illustrative-but-unlabelled.
-
-A good deal is reported as unmeasurable, and deliberately so. Precision in the strict sense is
-*confirmed ÷ reviewed*; nothing here has been reviewed by a human, so precision, review yield,
-confirmed AED, prevented and recovered AED, net savings, abrasion, turnaround and overturn rate are
-all unmeasurable. They are implemented and reported as unmeasurable rather than dropped, because a
-metric that quietly disappears is a metric nobody notices is missing.
-
-Where precision-like figures do appear, they are computed against labels that were themselves
-produced by detection processes, so they are **upper bounds** on what a real review would confirm —
-and a rule-based detector scoring well against rule-engine labels is close to tautological. The
-report says this in the same place it prints the number.
-
-`python -m fwa.run_validation` regenerates every report file. Two runs from the same input and seed
-produce identical findings; only wall-clock fields — elapsed milliseconds, timestamps — differ.
-
----
-
-## 14. User Management — accounts, roles and separation of duties
-
-![User management, signed in as admin](screenshots/user-management-admin.png)
-
-*Available to ADMIN only.*
-
-Accounts are created, assigned a role and a tenant, and activated or deactivated here. Role changes
-are audited. Tenant assignment is enforced everywhere: a session sees its own tenant's cases and no
-others, and that isolation is tested rather than assumed.
-
-Separation of duties is enforced in code, not by policy document. The user who authors a rule may
-not approve its transition from shadow to active. The user who proposes a model promotion may not
-approve it. Attempting either raises an error and writes the attempt to the audit log.
-
----
-
-## 15. Help — this guide, in the tool
-
-![The Help page, signed in as auditor](screenshots/help-auditor.png)
-
-*The same file you are reading, rendered in the application it documents.*
-
-The Help page renders `docs/USER_GUIDE.md` directly, split by section. Nothing is duplicated
-between the two, so the guide in the tool cannot drift out of step with the guide on disk. The
-screenshots render inline, and a screenshot missing from the checkout is shown as missing rather
-than silently skipped.
-
-The card at the top of the page describes the signed-in role: what it maps to in an insurer's
-organisation, what it can see, what it can do, and exactly which pages are available to it.
-
----
-
-## 16. Light and dark
-
-The interface ships light. To switch it to dark, open `.streamlit/config.toml`,
-comment out the `LIGHT` theme block, uncomment the `DARK` one, and restart the app.
-
-Both halves of the interface — Streamlit's own widgets and this application's
-stylesheet — read that one setting, so they cannot end up disagreeing. If you have
-seen a Streamlit app render dark text on a dark background after changing your
-desktop theme, that disagreement is the cause: the stylesheet asks the operating
-system what it prefers, which is a different question from what theme the
-application is actually running. Nothing here asks the operating system anything.
-
----
-
-## 17. Reading a number in this tool
-
-A short checklist, because most of the design decisions above amount to the same few habits.
-
-1. **Check whether exposure is established.** A large number with "exposure not yet established"
-   beside it is a gross amount, not a loss.
-2. **Check the peer level.** A residual is only as strong as the group it was measured against, and
-   the group is always named.
-3. **Check the posterior interval.** A shrunk rate without one, or with one too wide to rank, is
-   not a finding.
-4. **Check the data support.** A `PARTIAL` control is running against a stand-in, and it says which
-   one on every signal.
-5. **Check whether anything has been reviewed.** Almost every precision-shaped number in this
-   artefact is an upper bound derived from labels, not a measurement of review outcomes.
-6. **Check the disposition against the control type.** If something statistical appears to be
-   denying a claim, that is a bug, and the contract validator should have refused to load it.
-
-And the one that outranks the rest: a signal is not a fraud finding. The tool is built so that
-nothing it produces can be mistaken for one — and where it might be, it says so on the screen.
+- The contract in `src/fwa/engine/contract.py` refuses, at registration time, any control of type
+  S, N, T or M that declares a REJECT or REPRICE disposition. There is no override.
+- Signals sharing an underlying fact contribute `max(evidence_strength)`, never the sum.
+- Data support per control is `EXECUTABLE`, `PARTIAL` or `NOT_EXECUTABLE_ON_THIS_DATASET`,
+  computed per run from the canonical tables the dataset populates (`rules/unlocks/` can make a
+  control runnable when a dataset carries the tables it needs). Each non-executable control names
+  the canonical fields that would unlock it.
+- The models are fitted on a temporal split with provider hold-out; a criterion that cannot be
+  evaluated is `NOT_ASSESSABLE`, which is never a pass. An optional exploratory mode scores every
+  claim, under a banner, and is excluded from the gate and every metric.
+- Precision in the strict sense is confirmed ÷ reviewed. With nothing reviewed it is
+  `NOT_MEASURABLE_ON_THIS_DATASET`. Precision-like figures computed against labels in a file
+  are upper bounds, not review results.
+- The audit log is append-only and hash-chained; unmasking, overriding and kill-switching require
+  a reason.
+- Each run is cached on the content hash of the input file and the adapter, so switching back to
+  a dataset is free.

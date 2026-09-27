@@ -57,7 +57,7 @@ pages:
     simple: false
     purpose: >-
       Two automated pattern-finders rank how unusual each claim is. This page explains what they
-      found, why, and whether they are ready to be trusted for real decisions (so far they are not).
+      found, why, and whether they are ready to be trusted for real decisions.
   Rule Registry:
     title: "Checks library"
     icon: "📐"

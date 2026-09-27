@@ -5,6 +5,23 @@
 # reviewer-confirmed outcomes (review_outcome), which no dataset may synthesise — doing so
 # would invent the performance the control is meant to measure. It stays not executable
 # until real reviewer decisions exist.
+#
+# NET-03-R01 (repeated high-value dyad) has a multi-table implementation ready in
+# fwa.engine.unlocked.net (net_03_r01_repeated_high_value_dyad_multitable: pairs compared only with
+# pairs of the same provider type and benefit family, chronic/rare/oncology/maternity pathways and
+# members' declared conditions excluded, benefit exhaustion reported). It is NOT declared here because
+# the catalogue classifies NET-03-R01 as EXECUTABLE, and an unlock may only upgrade a PARTIAL control
+# (tests/governance/test_dataset_unlocks.py). Once rules/NET/NET-03.yaml classifies it PARTIAL (its own
+# reason already says the benefit-exhaustion limb is missing), register the function in net.py's
+# IMPLEMENTATIONS and declare:
+#
+#  - rule_id: NET-03-R01
+#    implementation: net_03_r01_repeated_high_value_dyad_multitable
+#    requires_tables: [claim_header, claim_line, provider, activity_code_reference, benefit_rule_version, coverage_period]
+#    requires_columns: [provider.provider_type, activity_code_reference.service_family, benefit_rule_version.benefit_limit]
+#    data_support: EXECUTABLE
+#    upgrades_partial: true
+#    reason: "Compares each patient-provider pair only with pairs at the same kind of provider for the same benefit family, on both number of claims and value, excludes chronic, rare-disease, oncology and maternity pathways and conditions the member declared, and evaluates benefit exhaustion from the benefit rules."
 unlocks:
   - rule_id: NET-01-R02
     implementation: net_01_r02_reciprocal_referral_loop

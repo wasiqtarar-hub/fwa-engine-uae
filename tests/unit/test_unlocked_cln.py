@@ -416,7 +416,39 @@ def s_cln08r05(dirty):
     return b, "provider", "P1"
 
 
+def s_cln04r01(dirty):
+    b = Builder()
+    b.add("repeat_interval_policy", activity_code="83036", min_interval_days=80, requires_result_before_repeat=True)
+    b.line(b.claim("C1", "M1", "P1", 10, dx="E11.9"), "83036", 110.0)
+    b.line(b.claim("C2", "M1", "P1", 40 if dirty else 120, dx="E11.9"), "83036", 110.0)
+    return b, "member", "M1"
+
+
+def s_cln04r02(dirty):
+    b = Builder()
+    n = 0
+    for m in range(1, 1201):  # a population that sees a doctor once or twice a month
+        for k in range(1 + m % 2):
+            n += 1
+            b.line(b.claim(f"C{n:05d}", f"M{m}", "P1", 10 + 7 * k), "99213", 230.0)
+    for k in range(12 if dirty else 2):
+        n += 1
+        b.line(b.claim(f"C{n:05d}", "MX", "P1", 10 + 2 * k), "99213", 230.0)
+    return b, "member", "MX"
+
+
+def s_cln06r03(dirty):
+    b = Builder()
+    for k in range(4):
+        cid = b.claim(f"C{k}", f"M{k}", "P1", 10 + 7 * k, dx="R07.9")
+        for code, amount in (("99213", 230.0), ("93306", 1100.0), ("20610", 550.0)):
+            minute = 0 if dirty else 7 * k
+            b.line(cid, code, amount, service_start_time=_day(10 + 7 * k) + pd.Timedelta(hours=10, minutes=minute))
+    return b, "provider", "P1"
+
+
 SCENARIOS = {
+    "CLN-04-R01": s_cln04r01, "CLN-04-R02": s_cln04r02, "CLN-06-R03": s_cln06r03,
     "CLN-01-R01": s_cln01r01, "CLN-01-R04": s_cln01r04, "CLN-02-R01": s_cln02r01, "CLN-02-R02": s_cln02r02,
     "CLN-02-R03": s_cln02r03, "CLN-02-R04": s_cln02r04, "CLN-02-R05": s_cln02r05,
     "CLN-03-R02": s_cln03r02, "CLN-03-R03": s_cln03r03, "CLN-03-R04": s_cln03r04,

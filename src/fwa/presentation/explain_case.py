@@ -231,6 +231,12 @@ def _days(v: Any) -> str:
     return "the same day" if n == 0 else f"{n:,.0f} day{'s' if round(n) != 1 else ''}"
 
 
+def _duration(v: Any) -> str:
+    """A length of time, where 0 means zero days (not "the same day")."""
+    n = _num(v, 0) or 0
+    return f"{n:,.0f} day{'s' if round(n) != 1 else ''}"
+
+
 def _unit_value(value: Any, unit: str) -> str:
     v = _num(value)
     if v is None:
@@ -391,9 +397,9 @@ def _b_cln_04_r04(ev, c):
 
 
 def _b_cln_05_r01(ev, c):
-    return (f"The stay lasted {_days(ev.get('length_of_stay_days'))} for "
+    return (f"The stay lasted {_duration(ev.get('length_of_stay_days'))} for "
             f"{c.dx(ev.get('diagnosis_code'))}; similar stays usually last about "
-            f"{_days(ev.get('peer_median_los'))}.")
+            f"{_duration(ev.get('peer_median_los'))}.")
 
 
 def _b_cln_05_r02(ev, c):
@@ -791,10 +797,11 @@ def explain_case(
     n_patterns = len({r.fact_key for r in shown})
     pattern_words = (f"{_number_word(n_patterns)} unusual pattern" + ("s" if n_patterns != 1 else ""))
     verb = {"provider": "billed", "agent": "sold policies whose claims total",
-            "patient": "had claims totalling"}.get(subject_kind, "involves claims totalling")
+            "patient": "had claims totalling", "claim": "was billed at"}.get(
+        subject_kind, "involves claims totalling")
     money = f" {verb} {aed(billed)}" if billed is not None else ""
     claims_part = (f" across {len(claim_ids):,} claim{'s' if len(claim_ids) != 1 else ''}"
-                   if claim_ids else "")
+                   if claim_ids and not (subject_kind == "claim" and len(claim_ids) == 1) else "")
     when = f" in {period_label}" if period_label else ""
     headline = (f"{subject_label}{money}{claims_part}{when}, with {pattern_words}. "
                 f"We suggest {suggestion}.")

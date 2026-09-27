@@ -1,0 +1,910 @@
+{
+  "claims": 24855,
+  "generator": "tools/make_uae_demo_dataset.py",
+  "injectors": {
+    "inject_anl": "not present",
+    "inject_cln": "1332 answer-key rows",
+    "inject_doc": "101 answer-key rows",
+    "inject_ent": "401 answer-key rows",
+    "inject_net": "398 answer-key rows",
+    "inject_pay_a": "416 answer-key rows",
+    "inject_pay_b": "333 answer-key rows",
+    "inject_phr": "363 answer-key rows",
+    "inject_pol": "144 answer-key rows"
+  },
+  "notes": [],
+  "positive_claims": 2627,
+  "requested_claims": 24000,
+  "seed": 20260927,
+  "strata": {
+    "CLN ECG billed for an upper respiratory infection with no cardiac reason": {
+      "claims": 12,
+      "rows": 12
+    },
+    "CLN ECG billed for chest pain (look-alike)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "CLN HbA1c repeated twelve days later, before the first result was recorded": {
+      "claims": 16,
+      "rows": 16
+    },
+    "CLN HbA1c repeated while the first result was a day from being reported (look-alike)": {
+      "claims": 4,
+      "rows": 4
+    },
+    "CLN MRI scans billed beyond one day's scanner capacity (18)": {
+      "claims": 27,
+      "rows": 27
+    },
+    "CLN a general practice billing electroencephalograms": {
+      "claims": 49,
+      "rows": 49
+    },
+    "CLN all basic metabolic panel components billed one by one": {
+      "claims": 8,
+      "rows": 8
+    },
+    "CLN clinic ordering genetic tests for a large share of its patients": {
+      "claims": 34,
+      "rows": 34
+    },
+    "CLN clinic passing reference-laboratory tests through at a normal margin (look-alike)": {
+      "claims": 39,
+      "rows": 39
+    },
+    "CLN clinic re-billing a reference laboratory's tests at three times its price": {
+      "claims": 13,
+      "rows": 13
+    },
+    "CLN clinician billing more than seventeen hours of visits in one day": {
+      "claims": 78,
+      "rows": 78
+    },
+    "CLN complication code lifts the case rate but is not in the discharge summary": {
+      "claims": 13,
+      "rows": 13
+    },
+    "CLN complication code that the discharge summary records (look-alike)": {
+      "claims": 3,
+      "rows": 3
+    },
+    "CLN component repeated as a reflex test (look-alike)": {
+      "claims": 1,
+      "rows": 1
+    },
+    "CLN denial given ten months after the visit (look-alike)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "CLN denial through an unverified channel (look-alike)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "CLN diabetes billed repeatedly with no medicine or result ever recorded": {
+      "claims": 24,
+      "rows": 24
+    },
+    "CLN hospital admitting overnight presentations others treat as outpatients": {
+      "claims": 70,
+      "rows": 70
+    },
+    "CLN hospital records (and documents) complication codes on most stays": {
+      "claims": 86,
+      "rows": 86
+    },
+    "CLN hospital severity index jumps from May 2025 with unchanged stays": {
+      "claims": 56,
+      "rows": 56
+    },
+    "CLN identical multi-value results reported for unrelated patients": {
+      "claims": 6,
+      "rows": 6
+    },
+    "CLN identical three-service encounter at 10:00 for different patients": {
+      "claims": 6,
+      "rows": 6
+    },
+    "CLN imaging paid with no report or result on file": {
+      "claims": 10,
+      "rows": 10
+    },
+    "CLN knee MRI for a patient referred in from elsewhere (look-alike)": {
+      "claims": 3,
+      "rows": 3
+    },
+    "CLN knee MRI with no knee X-ray first": {
+      "claims": 9,
+      "rows": 9
+    },
+    "CLN laboratory tests paid with no result recorded": {
+      "claims": 8,
+      "rows": 8
+    },
+    "CLN laboratory tests with no ordering clinician, or one on no roster": {
+      "claims": 8,
+      "rows": 8
+    },
+    "CLN level jump coinciding with a declared change of ownership (look-alike)": {
+      "claims": 354,
+      "rows": 354
+    },
+    "CLN level migration to top-level visits from April 2025": {
+      "claims": 280,
+      "rows": 280
+    },
+    "CLN lipid panel billed together with its own cholesterol component": {
+      "claims": 3,
+      "rows": 3
+    },
+    "CLN long-standing condition on one claim only, absent from a long history": {
+      "claims": 9,
+      "rows": 9
+    },
+    "CLN main diagnosis marked not present on admission": {
+      "claims": 8,
+      "rows": 8
+    },
+    "CLN member says the visit did not happen (verified app response)": {
+      "claims": 10,
+      "rows": 10
+    },
+    "CLN minor clinic visits reliably followed by a large specialist, CT and echo bundle": {
+      "claims": 32,
+      "rows": 32
+    },
+    "CLN obstetric main diagnosis not present on admission (exempt look-alike)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "CLN occasional genetic test at an ordinary practice (background)": {
+      "claims": 10,
+      "rows": 10
+    },
+    "CLN screening-programme test without an individual order (look-alike)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "CLN ten consultations for a cold within one month": {
+      "claims": 30,
+      "rows": 30
+    },
+    "CLN the same diagnosis code listed twice on a claim": {
+      "claims": 3,
+      "rows": 3
+    },
+    "DOC-01 approval request that describes exactly what was billed": {
+      "claims": 12,
+      "rows": 12
+    },
+    "DOC-01 approval requested for a plain X-ray or ultrasound, advanced scan billed": {
+      "claims": 6,
+      "rows": 6
+    },
+    "DOC-01 high-cost service without the required indication in the record": {
+      "claims": 8,
+      "rows": 8
+    },
+    "DOC-01 report not yet due (inside the document deadline)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "DOC-01 required document never sent (operative note, discharge summary or imaging report)": {
+      "claims": 8,
+      "rows": 8
+    },
+    "DOC-02 discharge summary carries another patient's age or sex": {
+      "claims": 8,
+      "rows": 8
+    },
+    "DOC-02 discharge summary rewritten after a denial (longer stay, severity added)": {
+      "claims": 6,
+      "rows": 6
+    },
+    "DOC-02 discharge summary with the patient's correct age and sex": {
+      "claims": 22,
+      "rows": 22
+    },
+    "DOC-02 one-line discharge summaries for high-complexity admissions": {
+      "claims": 27,
+      "rows": 27
+    },
+    "DOC-02 signed addendum after a denial": {
+      "claims": 2,
+      "rows": 2
+    },
+    "ENT-01 clinic billing after leaving the payer network": {
+      "claims": 16,
+      "rows": 16
+    },
+    "ENT-01 cosmetic service billed under a plan that excludes it": {
+      "claims": 6,
+      "rows": 6
+    },
+    "ENT-01 emergency visit after cover ended (exclusion look-alike)": {
+      "claims": 1,
+      "rows": 1
+    },
+    "ENT-01 physiotherapy course billed past the annual benefit limit": {
+      "claims": 6,
+      "rows": 6
+    },
+    "ENT-01 service after cover ended": {
+      "claims": 8,
+      "rows": 8
+    },
+    "ENT-02 death reported by an unreliable source (exclusion look-alike)": {
+      "claims": 3,
+      "rows": 3
+    },
+    "ENT-02 one Emirates-ID reference on two records with different dates of birth": {
+      "claims": 23,
+      "rows": 23
+    },
+    "ENT-02 one member's cover used in two distant emirates on the same days": {
+      "claims": 20,
+      "rows": 20
+    },
+    "ENT-02 same-day visits in neighbouring emirates (look-alike)": {
+      "claims": 4,
+      "rows": 4
+    },
+    "ENT-02 services after the member's recorded death": {
+      "claims": 10,
+      "rows": 10
+    },
+    "ENT-03 GP billing specialist consultation codes": {
+      "claims": 4,
+      "rows": 4
+    },
+    "ENT-03 GP whose privileges exclude joint injections billing one": {
+      "claims": 6,
+      "rows": 6
+    },
+    "ENT-03 burst right after an acquisition (exclusion look-alike)": {
+      "claims": 48,
+      "rows": 48
+    },
+    "ENT-03 clinic billing after its facility licence expired": {
+      "claims": 16,
+      "rows": 16
+    },
+    "ENT-03 clinician billing after their licence expired": {
+      "claims": 13,
+      "rows": 13
+    },
+    "ENT-03 newly credentialed clinic billing far above peers at once": {
+      "claims": 48,
+      "rows": 48
+    },
+    "ENT-03 service inside the licence grace period (exclusion look-alike)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "ENT-04 clinician billed in two distant emirates twenty minutes apart": {
+      "claims": 2,
+      "rows": 2
+    },
+    "ENT-04 clinician billed while on recorded annual leave": {
+      "claims": 3,
+      "rows": 4
+    },
+    "ENT-04 clinician from another facility billed as the treating clinician": {
+      "claims": 5,
+      "rows": 5
+    },
+    "ENT-04 consultation line with a clinician ID on no roster": {
+      "claims": 1,
+      "rows": 1
+    },
+    "ENT-04 consultation line with no treating clinician": {
+      "claims": 3,
+      "rows": 3
+    },
+    "ENT-04 consultation line with the facility's own code as treating clinician": {
+      "claims": 2,
+      "rows": 2
+    },
+    "ENT-04 physiotherapist billed for three overlapping timed sessions": {
+      "claims": 6,
+      "rows": 6
+    },
+    "ENT-05 hospital recording ordinary visits as day cases from August 2025": {
+      "claims": 21,
+      "rows": 21
+    },
+    "ENT-05 inpatient stay billed with no bed assigned": {
+      "claims": 5,
+      "rows": 5
+    },
+    "ENT-05 outpatient visit billed at the same hospital during the stay": {
+      "claims": 10,
+      "rows": 10
+    },
+    "ENT-05 service billed by a pharmacy not licensed for it": {
+      "claims": 3,
+      "rows": 3
+    },
+    "ENT-05 service billed by a radiology centre not licensed for it": {
+      "claims": 2,
+      "rows": 2
+    },
+    "ENT-05 stay without a bed record, patient transferred (exclusion look-alike)": {
+      "claims": 1,
+      "rows": 1
+    },
+    "ENT-06 short telehealth call with no order (look-alike)": {
+      "claims": 1,
+      "rows": 1
+    },
+    "ENT-06 telehealth clinic sending nearly every prescription to one pharmacy": {
+      "claims": 36,
+      "rows": 36
+    },
+    "ENT-06 telehealth clinic whose calls turn into MRI referrals far more often than peers'": {
+      "claims": 57,
+      "rows": 57
+    },
+    "ENT-06 telehealth visit billing an ECG": {
+      "claims": 4,
+      "rows": 4
+    },
+    "ENT-06 three-minute teleconsult ending in a prescription": {
+      "claims": 4,
+      "rows": 4
+    },
+    "NET-01 clinic keeps its lab and imaging referrals inside providers sharing its bank account and phone": {
+      "claims": 14,
+      "rows": 14
+    },
+    "NET-01 clinic referring to its own declared group laboratory": {
+      "claims": 2,
+      "rows": 2
+    },
+    "NET-01 radiology centre turning every referral into a contrast CT": {
+      "claims": 24,
+      "rows": 24
+    },
+    "NET-01 two clinics referring patients back and forth": {
+      "claims": 22,
+      "rows": 22
+    },
+    "NET-02 pharmacy sharing a hospital's phone number and address under a different owner": {
+      "claims": 0,
+      "rows": 1
+    },
+    "NET-02 quiet clinic becomes one of the busiest right after an ownership change": {
+      "claims": 112,
+      "rows": 112
+    },
+    "NET-02 quiet clinic grows fast after joining a new payer network": {
+      "claims": 112,
+      "rows": 112
+    },
+    "NET-02 six clinics in one medical tower share its address": {
+      "claims": 0,
+      "rows": 1
+    },
+    "NET-02 two separately owned clinics paid into one bank account": {
+      "claims": 0,
+      "rows": 1
+    },
+    "NET-03 clinic waiving patient share on repeated knee injections for a small patient group": {
+      "claims": 32,
+      "rows": 32
+    },
+    "NET-03 employer's own on-site clinic serving its staff": {
+      "claims": 20,
+      "rows": 20
+    },
+    "NET-03 one small employer's staff all treated by the same two clinics": {
+      "claims": 42,
+      "rows": 42
+    },
+    "NET-03 several patients of one clinic say billed services were never given": {
+      "claims": 3,
+      "rows": 3
+    },
+    "NET-03 unverified web-form replies disputing visits": {
+      "claims": 2,
+      "rows": 2
+    },
+    "NET-04 clinic owned by the agent who sold its patients' policies": {
+      "claims": 10,
+      "rows": 10
+    },
+    "PAY approval exhausted: drug course beyond the approved units": {
+      "claims": 4,
+      "rows": 4
+    },
+    "PAY approval look-alike: approved extension": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PAY approval look-alike: doses beyond the approval refused": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PAY approval look-alike: emergency service": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PAY approval look-alike: equivalent code": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PAY approval refused, or service after the approval expired": {
+      "claims": 5,
+      "rows": 5
+    },
+    "PAY approval reused for other patients": {
+      "claims": 4,
+      "rows": 4
+    },
+    "PAY approval scope: another code or another provider": {
+      "claims": 5,
+      "rows": 5
+    },
+    "PAY bundling look-alike: permitted modifier separates the pair": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY claim cancelled after payment; payment never reversed": {
+      "claims": 6,
+      "rows": 6
+    },
+    "PAY claim cancelled and reversed in the next payment run (look-alike)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY claims wrongly named as originals by other members' resubmissions": {
+      "claims": 3,
+      "rows": 3
+    },
+    "PAY clinic bills a payable substitute code after refused services": {
+      "claims": 32,
+      "rows": 32
+    },
+    "PAY clinic systematically records zero or rounded-down patient share": {
+      "claims": 49,
+      "rows": 49
+    },
+    "PAY clinic's changed resubmissions after one refusal reason always paid": {
+      "claims": 22,
+      "rows": 22
+    },
+    "PAY clinical note describes a cosmetic service billed under a covered code": {
+      "claims": 8,
+      "rows": 8
+    },
+    "PAY covered procedure billed with a cosmetic-risk diagnosis": {
+      "claims": 6,
+      "rows": 6
+    },
+    "PAY cross-payer duplicate: second insurer also paid, no coordination record": {
+      "claims": 5,
+      "rows": 5
+    },
+    "PAY cross-payer duplicate: secondary insurer paid the full bill": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY cross-payer look-alike: coordinated payment within the bill": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY cross-provider look-alike: professional component split": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY cross-provider unbundling: ECG interpretation billed again": {
+      "claims": 4,
+      "rows": 4
+    },
+    "PAY demographic impossibility: service outside its sex or age restriction": {
+      "claims": 5,
+      "rows": 5
+    },
+    "PAY demographic look-alike: approved clinical exception": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PAY eyelid surgery after skin cancer, reconstructive (look-alike)": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PAY four formal appeals of one refusal, nothing changed (look-alike)": {
+      "claims": 5,
+      "rows": 5
+    },
+    "PAY invalid code: code absent from the code set": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY invalid code: deleted code billed after its end date": {
+      "claims": 4,
+      "rows": 4
+    },
+    "PAY legacy-route resubmission without a prior reference (look-alike)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY line settled in two instalments (look-alike)": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PAY member complaint of being charged more than the share": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY member receipt exceeds the approved patient share": {
+      "claims": 9,
+      "rows": 9
+    },
+    "PAY member receipt names a different item from the one billed": {
+      "claims": 5,
+      "rows": 5
+    },
+    "PAY member says the billed service did not take place": {
+      "claims": 8,
+      "rows": 8
+    },
+    "PAY modifier 22 without the supporting report": {
+      "claims": 5,
+      "rows": 5
+    },
+    "PAY modifier 25 appended to most visits": {
+      "claims": 278,
+      "rows": 278
+    },
+    "PAY modifier 59 used to bypass an edit that allows no modifier": {
+      "claims": 4,
+      "rows": 4
+    },
+    "PAY modifier look-alike: supporting report attached": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PAY negated or low-confidence cosmetic mention (look-alike)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY novel unbundling: inflammation markers always billed as a separate pair": {
+      "claims": 22,
+      "rows": 22
+    },
+    "PAY one adjudicator overrides one hospital's claims far more than colleagues": {
+      "claims": 10,
+      "rows": 10
+    },
+    "PAY one adjudicator pays one provider's pended claims in full, uniformly": {
+      "claims": 15,
+      "rows": 15
+    },
+    "PAY override by a clerk under emergency escalation (look-alike)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY package incomplete: core activities not itemised": {
+      "claims": 3,
+      "rows": 3
+    },
+    "PAY package leakage: included component charged and paid": {
+      "claims": 4,
+      "rows": 4
+    },
+    "PAY package look-alike: documented medical omission": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PAY package: included component charged, refused at remittance": {
+      "claims": 4,
+      "rows": 4
+    },
+    "PAY paid after settlement but recovery already opened (look-alike)": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PAY paid in full after a documented third-party settlement": {
+      "claims": 5,
+      "rows": 5
+    },
+    "PAY patient share below the benefit co-payment": {
+      "claims": 12,
+      "rows": 12
+    },
+    "PAY patient share left inside the amount claimed from the insurer": {
+      "claims": 7,
+      "rows": 7
+    },
+    "PAY patient share off by rounding only (look-alike)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY patient share waived and shifted onto the insurer": {
+      "claims": 6,
+      "rows": 6
+    },
+    "PAY payment check overridden without a reason or by an unauthorised role": {
+      "claims": 9,
+      "rows": 9
+    },
+    "PAY payment increased after an upheld appeal (look-alike)": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PAY payment increased after settlement with no reason on record": {
+      "claims": 6,
+      "rows": 6
+    },
+    "PAY payment reference reused across providers and dates": {
+      "claims": 4,
+      "rows": 4
+    },
+    "PAY post-edit migration: modifier 59 after a new edit": {
+      "claims": 9,
+      "rows": 9
+    },
+    "PAY post-edit: plain component billed with its parent after the edit": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY price above the contracted tariff": {
+      "claims": 6,
+      "rows": 6
+    },
+    "PAY price look-alike: within the rounding tolerance": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY prior approval missing for advanced imaging": {
+      "claims": 5,
+      "rows": 5
+    },
+    "PAY provider offsets credits against unrelated claims and bills negative lines": {
+      "claims": 9,
+      "rows": 9
+    },
+    "PAY provider refund received but never applied (one applied months late)": {
+      "claims": 6,
+      "rows": 6
+    },
+    "PAY receipt for a consented non-covered item (look-alike)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY refused claim resubmitted with diagnosis and code swapped": {
+      "claims": 20,
+      "rows": 20
+    },
+    "PAY resubmission with a missing, unknown or unrelated original": {
+      "claims": 7,
+      "rows": 7
+    },
+    "PAY road-traffic or work injury with no liable-party record": {
+      "claims": 9,
+      "rows": 9
+    },
+    "PAY same line paid twice": {
+      "claims": 7,
+      "rows": 7
+    },
+    "PAY second insurer paid the bill and we paid too": {
+      "claims": 6,
+      "rows": 6
+    },
+    "PAY secondary insurer paid only the member's share (look-alike)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY service resubmitted four times with a different change each time": {
+      "claims": 20,
+      "rows": 20
+    },
+    "PAY skateboard fall on the false-positive list (look-alike)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY time look-alike: within the rounding tolerance": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PAY time units: billed minutes exceed the recorded window": {
+      "claims": 4,
+      "rows": 4
+    },
+    "PAY time units: one clinician in two timed sessions at once": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PAY unbundling: panel component billed beside its panel": {
+      "claims": 6,
+      "rows": 6
+    },
+    "PAY unit look-alike: repeat procedure indicator": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PAY unit maximum: daily units split over two claims": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PAY unit maximum: units above the daily maximum": {
+      "claims": 4,
+      "rows": 4
+    },
+    "PHR-01 billed product differs from prescribed (non-equivalent)": {
+      "claims": 6,
+      "rows": 6
+    },
+    "PHR-01 billed quantity three times the prescription": {
+      "claims": 5,
+      "rows": 5
+    },
+    "PHR-01 dispensing record differs from billed product or quantity": {
+      "claims": 5,
+      "rows": 5
+    },
+    "PHR-01 generic substituted for prescribed brand (approved equivalent)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PHR-01 pharmacy billed more of a product in a month than its stock records allow": {
+      "claims": 6,
+      "rows": 6
+    },
+    "PHR-01 quantity rounded up to whole packs": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PHR-01 receipt shows a non-medical item billed as a covered medicine": {
+      "claims": 5,
+      "rows": 5
+    },
+    "PHR-02 early refill with a dose increase": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PHR-02 early refills (stockpiling)": {
+      "claims": 20,
+      "rows": 20
+    },
+    "PHR-02 long course with specialist approval": {
+      "claims": 6,
+      "rows": 6
+    },
+    "PHR-02 one care team prescribing the same medicine": {
+      "claims": 3,
+      "rows": 3
+    },
+    "PHR-02 partial fills across pharmacies": {
+      "claims": 3,
+      "rows": 3
+    },
+    "PHR-02 same controlled medicine from several unrelated prescribers": {
+      "claims": 14,
+      "rows": 14
+    },
+    "PHR-02 same medicine collected from several pharmacies": {
+      "claims": 12,
+      "rows": 12
+    },
+    "PHR-02 therapy continued beyond the policy duration on one prescription": {
+      "claims": 30,
+      "rows": 30
+    },
+    "PHR-03 daily dose above the mg/kg limit": {
+      "claims": 5,
+      "rows": 5
+    },
+    "PHR-03 second-line drug without first-line history, or drug not indicated": {
+      "claims": 6,
+      "rows": 6
+    },
+    "PHR-03 short loading course": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PHR-03 wastage billed far above vial arithmetic": {
+      "claims": 20,
+      "rows": 20
+    },
+    "PHR-04 adalimumab dispensed by several pharmacies (availability background)": {
+      "claims": 8,
+      "rows": 8
+    },
+    "PHR-04 clinic's flow to its own declared pharmacy": {
+      "claims": 27,
+      "rows": 27
+    },
+    "PHR-04 clinic-to-pharmacy flow with shared bank account and phone": {
+      "claims": 27,
+      "rows": 27
+    },
+    "PHR-04 established prescribing before the switch": {
+      "claims": 51,
+      "rows": 51
+    },
+    "PHR-04 high-cost prescriptions steered to one pharmacy": {
+      "claims": 20,
+      "rows": 20
+    },
+    "PHR-04 new prescriber-pharmacy link rapidly dominant": {
+      "claims": 24,
+      "rows": 24
+    },
+    "PHR-04 prescriber concentrated on one pharmacy": {
+      "claims": 30,
+      "rows": 30
+    },
+    "PHR-05 child re-issued a device (growth)": {
+      "claims": 2,
+      "rows": 2
+    },
+    "PHR-05 implant with no procedure, or on the opposite side": {
+      "claims": 4,
+      "rows": 4
+    },
+    "PHR-05 one device serial billed for two patients": {
+      "claims": 6,
+      "rows": 6
+    },
+    "PHR-05 rent-to-own device billed as purchase": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PHR-05 staged implant after an earlier procedure": {
+      "claims": 1,
+      "rows": 1
+    },
+    "PHR-05 supplies beyond usual consumption or useful life": {
+      "claims": 7,
+      "rows": 7
+    },
+    "PHR-05 used or rented equipment billed as a new purchase": {
+      "claims": 3,
+      "rows": 3
+    },
+    "POL-01 application conflict outside the contestability window (exclusion look-alike)": {
+      "claims": 10,
+      "rows": 10
+    },
+    "POL-01 application declared no existing conditions although earlier treatment is on record": {
+      "claims": 0,
+      "rows": 2
+    },
+    "POL-01 application declared no prior cover and no conditions although earlier treatment is on record": {
+      "claims": 19,
+      "rows": 19
+    },
+    "POL-01 approved retroactive correction over a costly service (exclusion look-alike)": {
+      "claims": 1,
+      "rows": 1
+    },
+    "POL-01 early claims after an enrolment campaign (exclusion look-alike)": {
+      "claims": 18,
+      "rows": 18
+    },
+    "POL-01 employer-sponsored member not on the employer's roster": {
+      "claims": 45,
+      "rows": 45
+    },
+    "POL-01 member added after a costly service with cover backdated over it": {
+      "claims": 5,
+      "rows": 5
+    },
+    "POL-01 member off the roster but on continuation cover (exclusion look-alike)": {
+      "claims": 13,
+      "rows": 13
+    },
+    "POL-01 new employer group claiming within weeks at two clinics sharing a bank account": {
+      "claims": 18,
+      "rows": 18
+    },
+    "POL-01 one person enrolled twice with overlapping cover": {
+      "claims": 13,
+      "rows": 13
+    }
+  },
+  "warning": "SYNTHETIC ANSWER KEY. A check that passes on data built to pass it is a test of the check, not evidence that it detects fraud. Never read by detection code."
+}

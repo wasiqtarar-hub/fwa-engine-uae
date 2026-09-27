@@ -230,9 +230,24 @@ def _line_benefits(ctx) -> pd.DataFrame:
     lines["_ldate"] = _dt(_col(lines, "service_date"))
     lines = lines.merge(claims[["claim_sk", "member_sk", "provider_sk", "_sdate"]], on="claim_sk", how="inner")
     lines["_date"] = lines["_ldate"].fillna(lines["_sdate"])
-    lines = lines.drop(columns=[c for c in ("service_family",) if c in lines.columns])
+    lines = lines.drop(columns=[c for c in ("service_family", "product", "covered", "exceptions") if c in lines.columns])
     lines = lines.merge(acr[["activity_code", "service_family"]].drop_duplicates("activity_code"),
                         on="activity_code", how="left")
+    # benefit family: dispensed products are PHARMACY, unknown codes PROCEDURE, and every line of an
+    # inpatient claim takes the family of the claim's case-rate (DRG) line, or of its first line
+    atype = _up(_col(lines, "activity_type"))
+    lines["service_family"] = lines["service_family"].where(
+        lines["service_family"].notna(), np.where(atype == "DRUG", "PHARMACY", "PROCEDURE"))
+    if "claim_type" in claims.columns:
+        ip = set(claims.loc[_up(claims["claim_type"]) == "INPATIENT", "claim_sk"])
+        if ip:
+            ipl = lines[lines["claim_sk"].isin(ip)].sort_values("line_sk")
+            drg = ipl[_up(_col(ipl, "activity_type")) == "DRG"].groupby("claim_sk")["service_family"].first()
+            first = ipl.groupby("claim_sk")["service_family"].first()
+            fam = first.copy()
+            fam.update(drg)
+            m = lines["claim_sk"].isin(ip)
+            lines.loc[m, "service_family"] = lines.loc[m, "claim_sk"].map(fam)
 
     cv = cov[["member_sk", "product"]].copy()
     cv["_vf"] = _dt(_col(cov, "valid_from"))
@@ -339,30 +354,77 @@ def pay_07_r01_expected_share_mismatch(ctx, control) -> list:
     return out
 
 
+def _discount_already_in_gross(ctx, claims: pd.DataFrame) -> bool:
+    """Which convention the file uses for the header discount.
+
+    Some sources record ``gross_amount`` BEFORE the provider discount (so the
+    catalogue equation is gross − discount − share = net); others record the
+    contracted, already-discounted price as gross and carry ``discount`` only for
+    information (then gross − share = net). The convention is read from the
+    file itself — whichever equation holds on more of the discounted claims.
+    """
+    if claims.empty or "discount" not in claims.columns:
+        return False
+    tol = float(ctx.cfg("pay07_net_equation_tolerance_aed"))
+    g, n = _num(_col(claims, "gross_amount")), _num(_col(claims, "net_amount"))
+    ps, d = _num(_col(claims, "patient_share")).fillna(0.0), _num(claims["discount"]).fillna(0.0)
+    m = (d > tol) & g.notna() & n.notna()
+    if not m.any():
+        return False
+    after = ((n - (g - ps)).abs() <= tol)[m].mean()
+    before = ((n - (g - d - ps)).abs() <= tol)[m].mean()
+    return bool(after > before)
+
+
 @_register("pay_07_r02_share_shifted_to_payer")
 def pay_07_r02_share_shifted_to_payer(ctx, control) -> list:
-    """PAY-07-R02 — gross − discount − patient share ≠ net, in the payer's disfavour."""
+    """PAY-07-R02 — gross − valid discount − patient share ≠ net in the payer's disfavour,
+    or a waived patient share included in the amount claimed from the insurer."""
     claims = _claims(ctx)
     if claims.empty or not {"gross_amount", "net_amount", "patient_share"} <= set(claims.columns):
         return []
     tol = float(ctx.cfg("pay07_net_equation_tolerance_aed"))
+    in_gross = _discount_already_in_gross(ctx, claims)
     df = claims.copy()
     df["_g"] = _num(df["gross_amount"])
     df["_n"] = _num(df["net_amount"])
     df["_ps"] = _num(df["patient_share"]).fillna(0.0)
     df["_disc"] = _num(_col(df, "discount")).fillna(0.0)
     df = df[df["_g"].notna() & df["_n"].notna()]
-    df["_expected_net"] = df["_g"] - df["_disc"] - df["_ps"]
+    df["_expected_net"] = df["_g"] - df["_ps"] - (0.0 if in_gross else df["_disc"])
     df["_diff"] = df["_n"] - df["_expected_net"]
-    hits = df[df["_diff"] > tol]
+    df["_limb"] = np.where(df["_diff"] > tol, "net_exceeds_equation", "")
+    # limb 2: the share was waived (recorded as zero) and the whole bill is claimed from the insurer
+    ce = _claim_expected_share(ctx)
+    if not ce.empty:
+        exp_share = ce.set_index("claim_sk")["expected_share"]
+        exempt = ce.set_index("claim_sk")["exempt"]
+        df["_exp_share"] = df["claim_sk"].map(exp_share)
+        waived = ((df["_ps"] <= tol) & (df["_exp_share"] > tol) & ~df["claim_sk"].map(exempt).fillna(False).astype(bool)
+                  & (df["_n"] >= df["_g"] - (0.0 if in_gross else df["_disc"]) - tol))
+        df.loc[waived & (df["_limb"] == ""), "_limb"] = "waived_share_in_net"
+        df.loc[waived, "_diff"] = np.maximum(df.loc[waived, "_diff"], df.loc[waived, "_exp_share"])
+    else:
+        df["_exp_share"] = np.nan
+    hits = df[df["_limb"] != ""]
     out = []
     for r in _rows(hits):
-        limb = "discount_not_deducted" if r._disc > tol and abs(r._diff - r._disc) <= tol else "net_exceeds_equation"
-        plain = (
-            f"Billed {aed(r._g, 2)}, less discount {aed(r._disc, 2)} and patient share {aed(r._ps, 2)}, "
-            f"should leave {aed(r._expected_net, 2)} for the insurer, but the claim asks for {aed(r._n, 2)} — "
-            f"{aed(r._diff, 2)} more."
-        )
+        disc_words = (f"(already net of a discount of {aed(r._disc, 2)})" if in_gross
+                      else f"less discount {aed(r._disc, 2)}")
+        if r._limb == "waived_share_in_net":
+            plain = (
+                f"The patient's share is recorded as {aed(r._ps, 2)} although the plan's terms give "
+                f"{aed(r._exp_share, 2)}, and the insurer is asked for the whole bill of {aed(r._n, 2)} "
+                f"{disc_words}: the waived share has been shifted onto the insurer."
+            )
+            payable = float(r._n) - float(r._exp_share)
+        else:
+            plain = (
+                f"Billed {aed(r._g, 2)} {disc_words}, less patient share {aed(r._ps, 2)}, should leave "
+                f"{aed(r._expected_net, 2)} for the insurer, but the claim asks for {aed(r._n, 2)} — "
+                f"{aed(r._diff, 2)} more."
+            )
+            payable = float(r._expected_net)
         out.append(_sig(
             ctx, control, subject_type="claim", subject_id=r.claim_sk,
             fact_key=f"net_eq:{r.claim_sk}", claim_ids=[r.claim_sk],
@@ -373,11 +435,13 @@ def pay_07_r02_share_shifted_to_payer(ctx, control) -> list:
                                                  "explains the difference; otherwise reprice.",
                 "member_sk": r.member_sk, "provider_sk": r.provider_sk,
                 "gross_amount_aed": round(float(r._g), 2), "discount_aed": round(float(r._disc), 2),
+                "discount_already_in_gross": in_gross,
                 "patient_share_aed": round(float(r._ps), 2), "net_amount_aed": round(float(r._n), 2),
                 "expected_net_aed": round(float(r._expected_net), 2),
-                "excess_aed": round(float(r._diff), 2), "limb": limb, "tolerance_aed": tol,
+                "benefit_patient_share_aed": None if is_missing(r._exp_share) else round(float(r._exp_share), 2),
+                "excess_aed": round(float(r._diff), 2), "limb": r._limb, "tolerance_aed": tol,
             },
-            exposure=_exp.line_edit_exposure(float(r._n), float(r._expected_net)),
+            exposure=_exp.line_edit_exposure(float(r._n), payable),
         ))
     return out
 
@@ -421,11 +485,12 @@ def pay_07_r03_systematic_zero_share(ctx, control) -> list:
     rest = t_cnt - o_cnt
     overall = float(opp["_event"].mean())
     opp["_exp_rate"] = np.where(rest > 0, (t_sum - o_sum) / np.where(rest > 0, rest, 1), overall)
+    opp["_gapv"] = (opp["expected_share"] - opp["patient_share"]).clip(lower=0.0)
     g = opp.groupby("provider_sk")
     agg = pd.DataFrame({
         "n": g["_event"].size(), "events": g["_event"].sum(), "zeros": g["_zero"].sum(),
         "expected_events": g["_exp_rate"].sum(),
-        "share_gap": g.apply(lambda s: float((s["expected_share"] - s["patient_share"]).clip(lower=0).sum())),
+        "share_gap": g["_gapv"].sum(),
     }).reset_index()
     prior = fit_beta_prior(agg["events"], agg["n"])
     out = []
@@ -549,8 +614,9 @@ def _versions(ctx) -> pd.DataFrame:
     cv["_rel"] = _up(_col(cv, "relationship"))
     cv["_type"] = _up(_col(cv, "resubmission_type"))
     prior = _col(cv, "prior_claim_sk")
-    cv["_prior"] = prior.where(prior.notna(), None)
-    cv["_prior"] = cv["_prior"].map(lambda v: None if is_missing(v) else str(v))
+    cv["_prior"] = pd.Series(
+        [None if is_missing(v) or str(v).strip().lower() in ("nan", "none", "nat") else str(v) for v in prior],
+        index=cv.index, dtype=object)
     cv["_at"] = _dt(_col(cv, "recorded_at"))
     cv["_vno"] = _num(_col(cv, "version_no"))
     cv["_changed"] = _col(cv, "changed_fields").map(_parse_changed)
@@ -595,16 +661,24 @@ def _computed_diffs(ctx, pairs: pd.DataFrame) -> dict[tuple[str, str], dict[str,
     ch = claims[claims["claim_sk"].isin(ids)].set_index("claim_sk")
     feats: dict[str, pd.Series] = {}
     for c in ("diagnosis_primary", "provider_sk"):
-        if c in ch.columns:
+        if c in ch.columns and ch[c].notna().any():
             feats[c] = ch[c].astype(str)
-    if not lines.empty and "claim_sk" in lines.columns:
+    if "diagnosis_primary" not in feats:
+        dx = _tbl(ctx, "diagnosis")
+        if not dx.empty and {"claim_sk", "code"} <= set(dx.columns):
+            dx = dx[dx["claim_sk"].astype(str).isin(ids)].copy()
+            dx["claim_sk"] = dx["claim_sk"].astype(str)
+            if "sequence" in dx.columns:
+                dx = dx.sort_values("sequence")
+            feats["diagnosis_primary"] = dx.groupby("claim_sk")["code"].first().astype(str)
+    codes: dict[str, dict[str, float]] = {}
+    if not lines.empty and {"claim_sk", "activity_code"} <= set(lines.columns):
         ls = lines[lines["claim_sk"].astype(str).isin(ids)].copy()
         ls["claim_sk"] = ls["claim_sk"].astype(str)
-        if "activity_code" in ls.columns:
-            feats["activity_code"] = ls.groupby("claim_sk")["activity_code"].agg(
-                lambda s: ",".join(sorted(s.dropna().astype(str))))
-        if "units" in ls.columns:
-            feats["units"] = ls.groupby("claim_sk")["units"].agg(lambda s: str(round(float(_num(s).sum()), 2)))
+        ls["_u"] = _num(_col(ls, "units")).fillna(1.0)
+        g = ls.groupby(["claim_sk", ls["activity_code"].astype(str)])["_u"].sum()
+        for (cs, code), u in g.items():
+            codes.setdefault(cs, {})[code] = float(u)
     if not enc.empty and {"claim_sk", "encounter_type"} <= set(enc.columns):
         e = enc[enc["claim_sk"].astype(str).isin(ids)]
         feats["encounter_type"] = e.groupby(e["claim_sk"].astype(str))["encounter_type"].first().astype(str)
@@ -616,6 +690,17 @@ def _computed_diffs(ctx, pairs: pd.DataFrame) -> dict[tuple[str, str], dict[str,
                 continue
             if str(a) != str(b):
                 d[name] = [str(a), str(b)]
+        # a resubmission may legitimately carry only the refused lines, so a code counts as
+        # changed only when the new version bills a code the refused version did not
+        pa, pb = codes.get(r._prior, {}), codes.get(r.claim_sk, {})
+        if pa and pb:
+            added = sorted(set(pb) - set(pa))
+            if added:
+                d["activity_code"] = [",".join(sorted(pa)), ",".join(sorted(pb))]
+            unit_changes = [c for c in set(pa) & set(pb) if abs(pa[c] - pb[c]) > 1e-9]
+            if unit_changes:
+                d["units"] = [";".join(f"{c}x{pa[c]:g}" for c in sorted(unit_changes)),
+                              ";".join(f"{c}x{pb[c]:g}" for c in sorted(unit_changes))]
         diffs[(r._prior, r.claim_sk)] = d
     return diffs
 
@@ -631,6 +716,10 @@ def _mutation_fields(ctx, changed: dict, computed: dict) -> dict[str, Any]:
 
 def _canonical_field(name: str) -> str:
     n = name.lower()
+    if "ordering" in n or "referr" in n:
+        return "ordering_clinician"
+    if "attach" in n or "document" in n:
+        return "attachment"
     if "diag" in n:
         return "diagnosis"
     if "unit" in n or "quantity" in n:
@@ -703,8 +792,10 @@ def pay_08_r01_broken_lineage(ctx, control) -> list:
     out = []
     for r in _rows(rs):
         problems = []
-        prior = r._prior
+        prior = None if is_missing(r._prior) else r._prior
         me = head.loc[r.claim_sk]
+        if prior is None and r._rel in _CANCEL:
+            continue  # a cancellation without a prior reference cancels this claim itself
         if prior is None:
             problems.append("no_prior_reference")
         elif prior == r.claim_sk:
@@ -873,7 +964,7 @@ def pay_08_r04_edit_learning(ctx, control) -> list:
     claims = _claims(ctx)
     if mr.empty or claims.empty:
         return []
-    mr = mr[mr["fields"].map(bool)]
+    mr = mr[mr["fields"].map(bool) & ~mr["accepted"]]  # accepted corrections are not edit-gaming
     mr = mr.merge(claims[["claim_sk", "provider_sk", "_sdate"]], on="claim_sk", how="inner")
     if mr.empty:
         return []
@@ -938,8 +1029,16 @@ def pay_08_r04_edit_learning(ctx, control) -> list:
 
 
 def _negated(text: str, start: int, negations: list[str], window: int) -> bool:
+    """A negation word (whole word, so 'no' does not match 'note') shortly before the term."""
     before = text[max(0, start - window):start].lower()
-    return any(n.lower() in before for n in negations)
+    for n in negations:
+        n = n.strip().lower()
+        if not n:
+            continue
+        tail = "" if n.endswith("-") else r"(?!\w)"
+        if re.search(r"(?<!\w)" + re.escape(n) + tail, before):
+            return True
+    return False
 
 
 @_register("pay_09_r01_document_conflict")
@@ -968,7 +1067,8 @@ def pay_09_r01_document_conflict(ctx, control) -> list:
     lb = _line_benefits(ctx)
     covered_claims: dict[str, list[str]] | None = None
     if not lb.empty:
-        cov = lb[lb["covered"].map(lambda v: str(v).strip().lower() in ("true", "1", "yes", "y"))]
+        lb = lb[lb["claim_sk"].isin(set(docs["claim_sk"]))]
+        cov = lb[lb["covered"].astype(str).str.strip().str.lower().isin(("true", "1", "yes", "y"))]
         covered_claims = cov.groupby("claim_sk")["activity_code"].agg(lambda s: sorted(set(s.astype(str)))).to_dict()
     else:
         lines = lines.copy()
@@ -1057,10 +1157,14 @@ def pay_09_r02_covered_code_substitution(ctx, control) -> list:
     r_line["_line"] = r_line["_line"].astype(str)
     denied_lines = set(r_line.loc[r_line["_denied"], "_line"])
     paid_lines = set(r_line.loc[(~r_line["_denied"]) & (r_line["_pay"] > 0), "_line"]) - denied_lines
-    D = lines[lines["line_sk"].isin(denied_lines)][["line_sk", "claim_sk", "member_sk", "provider_sk", "_date",
-                                                    "activity_code", "_fam"]]
-    P = lines[lines["line_sk"].isin(paid_lines)][["line_sk", "claim_sk", "member_sk", "provider_sk", "_date",
-                                                  "activity_code", "_fam"]]
+    # a substitute is billed in the same setting: an office visit after a refused inpatient stay is
+    # ordinary follow-up care, so inpatient claims are left out and claim types must match
+    ctype = _up(_col(claims, "claim_type"))
+    lines["_ctype"] = lines["claim_sk"].map(dict(zip(claims["claim_sk"], ctype)))
+    lines = lines[lines["_ctype"] != "INPATIENT"]
+    cols = ["line_sk", "claim_sk", "member_sk", "provider_sk", "_date", "activity_code", "_fam", "_ctype"]
+    D = lines[lines["line_sk"].isin(denied_lines)][cols]
+    P = lines[lines["line_sk"].isin(paid_lines)][cols]
     if D.empty or P.empty:
         return []
     # the resubmission of the denied claim itself is PAY-08 territory, not a substitution
@@ -1068,7 +1172,7 @@ def pay_09_r02_covered_code_substitution(ctx, control) -> list:
     lineage_pairs: set[tuple[str, str]] = set()
     if not cv.empty:
         lineage_pairs = set(zip(cv["_prior"].fillna(""), cv["claim_sk"]))
-    m = D.merge(P, on=["member_sk", "provider_sk"], suffixes=("_d", "_p"))
+    m = D.merge(P, on=["member_sk", "provider_sk", "_ctype"], suffixes=("_d", "_p"))
     gap = (m["_date_p"] - m["_date_d"]).dt.days
     m = m[(m["claim_sk_d"] != m["claim_sk_p"]) & (gap >= 0) & (gap <= window)
           & (m["activity_code_d"] != m["activity_code_p"])]
@@ -1150,7 +1254,15 @@ def pay_09_r03_cosmetic_disguise(ctx, control) -> list:
     dx = dx.copy()
     dx["claim_sk"] = dx["claim_sk"].astype(str)
     dx["_code"] = _up(dx["code"]).str.replace(".", "", regex=False)
+    all_prefixes = tuple({p.upper().replace(".", "") for v in pol["risk_diagnosis_prefixes"].dropna()
+                          for p in _as_list(v)})
+    if not all_prefixes:
+        return []
+    risky = set(dx.loc[dx["_code"].str.startswith(all_prefixes), "claim_sk"])
+    hit = hit[hit["claim_sk"].isin(risky)]
+    dx = dx[dx["claim_sk"].isin(risky)]
     codes_by_claim = dx.groupby("claim_sk")["_code"].agg(list).to_dict()
+    raw_codes = dict(zip(dx["_code"], dx["code"].astype(str)))
     enc = _tbl(ctx, "encounter")
     setting_by_claim = {}
     if not enc.empty and {"claim_sk", "encounter_type"} <= set(enc.columns):
@@ -1182,8 +1294,9 @@ def pay_09_r03_cosmetic_disguise(ctx, control) -> list:
         excluded = _s(getattr(r, "excluded_service", "")) or "an excluded service"
         amount = _f(getattr(r, "net_amount", None), _f(getattr(r, "gross_amount", None)))
         plain = (
-            f"Code {r.activity_code} ({aed(amount, 2)}) is billed with diagnosis {matched[0]}"
-            + (f" in a {setting.lower().replace('_', ' ')} setting" if setting else "")
+            f"Code {r.activity_code} ({aed(amount, 2)}) is billed with diagnosis {raw_codes.get(matched[0], matched[0])}"
+            + (f" in {'an' if setting[:1] in 'AEIOU' else 'a'} {setting.lower().replace('_', ' ')} setting"
+               if setting else "")
             + f" — a combination the plan's disguise-risk list links to {excluded.lower()}."
         )
         out.append(_sig(
@@ -1195,7 +1308,8 @@ def pay_09_r03_cosmetic_disguise(ctx, control) -> list:
                 "what_the_reviewer_must_verify": "Send for clinical review and check whether a "
                                                  "reconstructive or medical-need exception applies.",
                 "member_sk": me.get("member_sk"), "provider_sk": me.get("provider_sk"),
-                "line_sk": line_sk or None, "activity_code": r.activity_code, "matched_diagnoses": matched,
+                "line_sk": line_sk or None, "activity_code": r.activity_code,
+                "matched_diagnoses": [raw_codes.get(m, m) for m in matched],
                 "policy_risk_diagnosis_prefixes": prefixes, "policy_excluded_service": excluded,
                 "encounter_type": setting or None, "line_amount_aed": round(amount, 2),
             },
@@ -1334,16 +1448,21 @@ def pay_10_r02_multi_payer_overpayment(ctx, control) -> list:
     df = df.merge(ours, left_on="claim_sk", right_index=True, how="left")
     df["our_paid"] = df["our_paid"].fillna(0.0)
     df["_share"] = _num(_col(df, "patient_share")).fillna(0.0)
-    df["_allow"] = _num(_col(df, "gross_amount")).fillna(0.0) - _num(_col(df, "discount")).fillna(0.0)
-    df["_total"] = df["other_paid"] + df["our_paid"] + df["_share"]
+    in_gross = _discount_already_in_gross(ctx, claims)
+    df["_allow"] = _num(_col(df, "gross_amount")).fillna(0.0) - (
+        0.0 if in_gross else _num(_col(df, "discount")).fillna(0.0))
+    # what the member still owes after other payers: a secondary insurer that pays the member's
+    # share settles that liability, so it is not counted twice
+    df["_member_owes"] = (df["_share"] - df["other_paid"]).clip(lower=0.0)
+    df["_total"] = df["other_paid"] + df["our_paid"] + df["_member_owes"]
     df["_over"] = df["_total"] - df["_allow"]
     hits = df[(df["_over"] > tol) & (df["our_paid"] > 0)]
     out = []
     for r in _rows(hits):
         recoverable = min(float(r.our_paid), float(r._over))
         plain = (
-            f"Another insurer paid {aed(r.other_paid, 2)} and we paid {aed(r.our_paid, 2)}; with the patient's "
-            f"share of {aed(r._share, 2)} that is {aed(r._total, 2)} against an allowed charge of "
+            f"Another insurer paid {aed(r.other_paid, 2)} and we paid {aed(r.our_paid, 2)}; with what the patient "
+            f"still owes ({aed(r._member_owes, 2)}) that is {aed(r._total, 2)} against an allowed charge of "
             f"{aed(r._allow, 2)} — {aed(r._over, 2)} too much."
         )
         payers = r.other_payers if isinstance(r.other_payers, list) else []
@@ -1357,7 +1476,8 @@ def pay_10_r02_multi_payer_overpayment(ctx, control) -> list:
                                                  "lawful top-up applies.",
                 "member_sk": r.member_sk, "provider_sk": r.provider_sk, "other_payers": payers,
                 "other_payer_paid_aed": round(float(r.other_paid), 2), "our_paid_aed": round(float(r.our_paid), 2),
-                "patient_share_aed": round(float(r._share), 2), "allowed_charge_aed": round(float(r._allow), 2),
+                "patient_share_aed": round(float(r._share), 2), "member_still_owes_aed": round(float(r._member_owes), 2),
+                "allowed_charge_aed": round(float(r._allow), 2),
                 "overpayment_aed": round(float(r._over), 2), "tolerance_aed": tol,
             },
             exposure=_exp.line_edit_exposure(float(r.our_paid), float(r.our_paid) - recoverable),
@@ -1458,8 +1578,9 @@ def pay_10_r04_paid_after_settlement(ctx, control) -> list:
     paid_after = after.groupby("claim_sk")["_pay"].sum()
     df = claims.merge(st, left_on="claim_sk", right_index=True, how="inner")
     df["_paid_after"] = df["claim_sk"].map(paid_after).fillna(0.0)
-    df["_allow"] = _num(_col(df, "gross_amount")).fillna(0.0) - _num(_col(df, "discount")).fillna(0.0) \
-        - _num(_col(df, "patient_share")).fillna(0.0)
+    in_gross = _discount_already_in_gross(ctx, claims)
+    df["_allow"] = _num(_col(df, "gross_amount")).fillna(0.0) - _num(_col(df, "patient_share")).fillna(0.0) - (
+        0.0 if in_gross else _num(_col(df, "discount")).fillna(0.0))
     df["_limit"] = (df["_allow"] - df["settled"]).clip(lower=0.0)
     df["_over"] = df["_paid_after"] - df["_limit"]
     hits = df[(df["_paid_after"] > tol) & (df["_over"] > tol) & ~df["claim_sk"].isin(in_recovery)]
@@ -1639,7 +1760,9 @@ def pay_11_r03_post_settlement_increase(ctx, control) -> list:
     r = remit[remit["_settle"].notna()]
     first = r[r["_pay"] > 0].groupby("claim_sk")["_settle"].min().rename("_first")
     r = r.join(first, on="claim_sk")
-    later_up = r[(r["_settle"] > r["_first"]) & (r["_adj"] > tol)]
+    is_adj = r["_decision"].str.contains("ADJUST") | (r["_adj"] < -tol)
+    r = r.assign(_up=np.where(r["_adj"] < -tol, -r["_adj"], r["_pay"]))
+    later_up = r[(r["_settle"] > r["_first"]) & is_adj & (r["_pay"] > tol) & (r["_up"] > tol)]
     if later_up.empty:
         return []
     # valid workflow evidence: an adjudication event or a claim version naming appeal / true-up
@@ -1660,7 +1783,7 @@ def pay_11_r03_post_settlement_increase(ctx, control) -> list:
         if cs in justified or cs not in head.index:
             continue
         me = head.loc[cs]
-        inc = float(sub["_adj"].sum())
+        inc = float(sub["_up"].sum())
         base = float(first_paid.get(cs, 0.0))
         plain = (
             f"This claim was settled at {aed(base, 2)} on {plain_date(sub['_first'].iloc[0])}, then increased by "
@@ -1679,7 +1802,7 @@ def pay_11_r03_post_settlement_increase(ctx, control) -> list:
                 "first_settlement_paid_aed": round(base, 2),
                 "upward_adjustments": [
                     {"remittance_sk": _s(x.get("remittance_sk")) or None, "date": _date_str(x["_settle"]),
-                     "adjustment_aed": round(float(x["_adj"]), 2),
+                     "increase_aed": round(float(x["_up"]), 2),
                      "payment_reference": x["_ref"] or None}
                     for _, x in sub.iterrows()
                 ],
@@ -1815,7 +1938,8 @@ def pay_12_r02_duplicate_payment(ctx, control) -> list:
         return []
     tol = float(ctx.cfg("pay12_duplicate_payment_tolerance_aed"))
     head = claims.set_index("claim_sk")
-    pay = remit[(remit["_pay"] > 0) & (remit["_adj"] <= tol) & ~remit["_denied"]].copy()
+    adjust_rows = remit["_decision"].str.contains("ADJUST") | (remit["_adj"] < -tol)
+    pay = remit[(remit["_pay"] > 0) & ~adjust_rows & ~remit["_denied"]].copy()
     pay["_key"] = pay["_line"].map(lambda v: None if is_missing(v) else str(v))
     pay["_key"] = pay["_key"].fillna("claim:" + pay["claim_sk"])
     payable: dict[str, float] = {}
@@ -1825,8 +1949,8 @@ def pay_12_r02_duplicate_payment(ctx, control) -> list:
     claim_payable = _num(_col(claims, "net_amount")).fillna(_num(_col(claims, "gross_amount")))
     claim_payable = dict(zip(claims["claim_sk"], claim_payable))
     out = []
-    grp = pay.groupby("_key")
-    multi = grp.filter(lambda s: len(s) >= 2)
+    counts = pay["_key"].value_counts()
+    multi = pay[pay["_key"].isin(set(counts[counts >= 2].index))]
     for key, sub in multi.groupby("_key"):
         cs = sub["claim_sk"].iloc[0]
         if cs not in head.index:
@@ -1975,8 +2099,13 @@ def pay_12_r04_offset_manipulation(ctx, control) -> list:
     key = rm["_line"].map(lambda v: None if is_missing(v) else str(v)).fillna("claim:" + rm["claim_sk"])
     rm = rm.assign(_key=key)
     pos = rm[rm["_pay"] > 0].groupby("_key")["_pay"].sum()
-    neg = rm[(rm["_pay"] < 0) | (rm["_adj"] < 0)].copy()
-    neg["_neg"] = np.minimum(neg["_pay"], 0.0) + np.minimum(neg["_adj"], 0.0)
+    neg = rm[rm["_pay"] < 0].copy()
+    lines_all = _tbl(ctx, "claim_line")
+    if not lines_all.empty and {"line_sk", "net_amount"} <= set(lines_all.columns):
+        # the settlement of a negative billed line is limb 2, not a misapplied credit
+        neg_line_sks = set(lines_all.loc[_num(lines_all["net_amount"]) < 0, "line_sk"].astype(str))
+        neg = neg[~neg["_key"].isin(neg_line_sks)]
+    neg["_neg"] = neg["_pay"]
     neg["_paid_before"] = neg["_key"].map(pos).fillna(0.0)
     neg["_unrelated"] = (neg["_neg"].abs() > neg["_paid_before"] + tol).astype(float)
     per_claims = rm.groupby("provider_sk")["claim_sk"].nunique()

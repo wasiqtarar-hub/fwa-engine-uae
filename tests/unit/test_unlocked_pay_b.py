@@ -319,8 +319,8 @@ def plant_11_r02(w):
 
 
 def plant_11_r03(w):
-    add_rows(w, "remittance", [{"remittance_sk": "RUP", "claim_sk": "C013", "line_sk": "LC013", "decision": "PAID",
-                                "denial_code": None, "adjustment": 100.0, "payment_amount": 100.0,
+    add_rows(w, "remittance", [{"remittance_sk": "RUP", "claim_sk": "C013", "line_sk": "LC013", "decision": "ADJUSTED",
+                                "denial_code": None, "adjustment": -100.0, "payment_amount": 100.0,
                                 "payment_reference": "PAYREF-UP", "settlement_date": _d(13 + 60), "tenant_id": T}])
     return "C013"
 

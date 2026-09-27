@@ -115,7 +115,7 @@ DRUGS = pd.DataFrame([
     {"product": "MTX", "description": "Methotrexate 10mg", "equivalence_group": "MTX10", "strength_mg": 10,
      "form": "tablet", "unit_price": 0.8, "max_duration_days": None, "max_mg_per_kg_day": 1.0,
      "is_high_cost": False, "is_controlled": False, "indication_prefixes": "M05;L40", "therapeutic_class": "dmard"},
-    {"product": "ONC", "description": "Oncology vial drug", "equivalence_group": "ONC", "strength_mg": 100,
+    {"product": "ONC", "description": "Oncology drug, per 10 mg", "equivalence_group": "ONC", "strength_mg": 10,
      "form": "vial", "unit_price": 2.0, "max_duration_days": None, "max_mg_per_kg_day": 10.0,
      "is_high_cost": True, "is_controlled": False, "indication_prefixes": "C", "therapeutic_class": "oncology",
      "vial_size_mg": 100.0},
@@ -312,15 +312,16 @@ def case_phr_03_r04():
         for p in range(1, 5):
             for k in range(6):
                 n += 1
-                waste = bad_waste if p == 1 else 50.0  # dose 250 mg → 3 vials → 50 mg expected waste
+                # billing unit = 10 mg; dose 250 mg = 25 units → 3 vials of 100 mg → 5 units expected waste
+                waste = bad_waste if p == 1 else 5.0
                 lines.append({"line_sk": f"L{n}", "claim_sk": f"C{n}", "tenant_id": T, "product": "ONC",
-                              "units": 250.0 + waste, "wastage_units": waste, "unit_price": 2.0,
-                              "net_amount": 2.0 * (250.0 + waste), "service_date": "2025-04-01",
+                              "units": 25.0 + waste, "wastage_units": waste, "unit_price": 20.0,
+                              "net_amount": 20.0 * (25.0 + waste), "service_date": "2025-04-01",
                               "activity_code": "J9999", "_provider": f"HOSP{p}", "_member": f"M{n}"})
                 rx.append(_rx(n, member_sk=f"M{n}", billed_product="ONC", prescribed_product="ONC",
                               dispensed_product="ONC", dose_mg_per_day=250.0, fill_date="2025-04-01"))
         return {"claim_line": _frame(lines), "prescription_dispense": _frame(rx), "drug_policy": DRUGS}
-    return world(350.0), world(50.0), "provider"
+    return world(35.0), world(5.0), "provider"
 
 
 def _flows(top_share_rows: int, total: int = 25, n_presc: int = 6, pharmacy_top: str = "PH2"):
@@ -418,7 +419,7 @@ def case_phr_05_r02():
     ref = _frame([{"activity_code": "IMP1", "description": "Knee implant", "is_implant": True,
                    "service_family": "implant"},
                   {"activity_code": "27447", "description": "Knee replacement", "is_implant": False,
-                   "service_family": "surgery"},
+                   "service_family": "INPATIENT", "code_family": "SURG_ORTHO"},
                   {"activity_code": "99213", "description": "Office visit", "is_implant": False,
                    "service_family": "consultation"}])
     implant = {"line_sk": "L1", "claim_sk": "C1", "tenant_id": T, "activity_code": "IMP1", "units": 1.0,

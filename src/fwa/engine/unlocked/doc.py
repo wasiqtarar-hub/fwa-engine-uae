@@ -17,14 +17,15 @@ passage that was searched, so the reviewer reads the same text the check read.
 from __future__ import annotations
 
 import re
-from typing import Any, Callable, Iterable
+from collections import namedtuple
+from typing import Any, Callable
 
 import numpy as np
 import pandas as pd
 
 from ...cases import exposure as _exp
 from ...nlp.pipeline import DocumentPipeline, Extraction, MissingSpanError
-from ...presentation import aed, count_phrase, pct, plain_date
+from ...presentation import count_phrase, pct, plain_date
 from ..controls import _claim_frame, _f, _sig
 from ..evallib import is_missing, period_bucket
 
@@ -67,6 +68,18 @@ def _norm(value: Any) -> str:
     return re.sub(r"[\s\-/]+", "_", _s(value).lower())
 
 
+def _vs(series) -> pd.Series:
+    """Vectorised :func:`_s`: strings, stripped, with missing values as ''."""
+    s = pd.Series(series)
+    out = s.astype(object).where(s.notna(), "")
+    return out.astype(str).str.strip()
+
+
+def _vn(series) -> pd.Series:
+    """Vectorised :func:`_norm`."""
+    return _vs(series).str.lower().str.replace(r"[\s\-/]+", "_", regex=True)
+
+
 def _claims(ctx) -> pd.DataFrame:
     df = _claim_frame(ctx)
     if df is None or df.empty or "claim_sk" not in df.columns:
@@ -77,6 +90,15 @@ def _claims(ctx) -> pd.DataFrame:
 
 
 def _documents(ctx) -> pd.DataFrame:
+    """The dataset's documents, prepared once per run and shared by the DOC controls."""
+    cache = ctx.__dict__.setdefault("_doc_unlocked_cache", {})
+    key = ("documents", id(ctx.dataset))
+    if key not in cache:
+        cache[key] = _prepare_documents(ctx)
+    return cache[key]
+
+
+def _prepare_documents(ctx) -> pd.DataFrame:
     docs = _table(ctx, "document")
     if docs.empty or "text" not in docs.columns or "document_sk" not in docs.columns:
         return pd.DataFrame()
@@ -85,14 +107,17 @@ def _documents(ctx) -> pd.DataFrame:
         return docs
     docs["text"] = docs["text"].astype(str)
     docs["document_sk"] = docs["document_sk"].astype(str)
-    docs["claim_sk"] = docs["claim_sk"].map(_s) if "claim_sk" in docs.columns else ""
-    docs["doc_type_norm"] = docs["doc_type"].map(_norm) if "doc_type" in docs.columns else ""
+    docs["claim_sk"] = _vs(docs["claim_sk"]) if "claim_sk" in docs.columns else ""
+    docs["doc_type_norm"] = _vn(docs["doc_type"]) if "doc_type" in docs.columns else ""
     ocr = pd.to_numeric(docs["ocr_confidence"], errors="coerce") if "ocr_confidence" in docs.columns \
         else pd.Series(np.nan, index=docs.index)
     docs["ocr"] = ocr.fillna(1.0).clip(0.0, 1.0)
     docs["created"] = pd.to_datetime(docs["created_at"], errors="coerce") if "created_at" in docs.columns \
         else pd.NaT
-    docs["language_detected"] = docs["text"].map(DocumentPipeline.detect_language)
+    # Same rule as DocumentPipeline.detect_language (more than 20 Arabic-script
+    # characters means Arabic), counted by a vectorised regex instead of a
+    # per-character Python loop.
+    docs["language_detected"] = np.where(docs["text"].str.count(r"[؀-ۿ]") > 20, "ar", "en")
     return docs
 
 
@@ -102,7 +127,7 @@ def _lines(ctx) -> pd.DataFrame:
         return pd.DataFrame()
     lines = lines.copy()
     lines["claim_sk"] = lines["claim_sk"].astype(str)
-    lines["activity_code"] = lines["activity_code"].map(_s)
+    lines["activity_code"] = _vs(lines["activity_code"])
     for col in ("net_amount", "gross_amount"):
         lines[col] = pd.to_numeric(lines[col], errors="coerce") if col in lines.columns else np.nan
     return lines
@@ -114,7 +139,7 @@ def _code_reference(ctx) -> pd.DataFrame:
         return pd.DataFrame(columns=["activity_code", "description", "service_family",
                                      "code_family", "complexity"])
     ref = ref.copy()
-    ref["activity_code"] = ref["activity_code"].map(_s)
+    ref["activity_code"] = _vs(ref["activity_code"])
     return ref.drop_duplicates("activity_code")
 
 
@@ -127,6 +152,11 @@ def _is_clinical(doc_type_norm: str) -> bool:
     if _is_auth_narrative(doc_type_norm):
         return False
     return not any(k in doc_type_norm for k in ("invoice", "receipt", "consent", "id_card", "letter"))
+
+
+def _is_clinician_note(doc_type_norm: str) -> bool:
+    """Notes a clinician writes about the care (not laboratory or imaging result reports)."""
+    return _is_clinical(doc_type_norm) and any(k in doc_type_norm for k in ("note", "summary", "progress"))
 
 
 def _extraction(field: str, value: Any, text: str, start: int, end: int, ocr: float,
@@ -142,6 +172,7 @@ def _extraction(field: str, value: Any, text: str, start: int, end: int, ocr: fl
         return None
 
 
+_Doc = namedtuple("_Doc", "document_sk text ocr language_detected")
 _SENTENCE_BREAK = re.compile(r"[.\n؟!]")
 
 
@@ -174,7 +205,7 @@ def _negated(text: str, start: int, end: int) -> bool:
 _TEMPLATE_LINE = re.compile(
     r"^\s*(\*\*\*.*\*\*\*|[A-Z][A-Z /&()\-]{3,}(\(SYNTHETIC\))?\s*$|---.*---|"
     r"[A-Za-z][A-Za-z /()\-]{1,40}:\s*.*|[؀-ۿ][؀-ۿ /()\-]{1,40}:\s*.*|"
-    r"This file was generated.*|تم إنشاء هذا الملف.*|.*SYNTHETIC.*)$"
+    r"This file was generated.*|تم إنشاء هذا الملف.*|.*SYNTHETIC.*|المسار السريري|الأدوية والمستلزمات|الخروج)$"
 )
 
 
@@ -193,6 +224,35 @@ def _narrative_span(text: str) -> tuple[int, int] | None:
     if start is None or end is None or end <= start:
         return None
     return start, end
+
+
+_MARKER_LINE = re.compile(r"^\s*(\*\*\*.*|---.*|This file was generated.*|تم إنشاء هذا الملف.*)$")
+_JUSTIFICATION_KEY = re.compile(r"(?im)^[ \t]*(clinical justification|indication[^:\n]*|reason for referral|"
+                                r"clinical indication|necessity[^:\n]*|المبررات السريرية|دواعي[^:\n]*)[ \t]*:.*$")
+
+
+def _searched_span(text: str) -> tuple[int, int] | None:
+    """The passage a reviewer should read to see what the record says in support.
+
+    The free-text narrative when there is one; otherwise the line where the note
+    states its justification or indication; otherwise the whole body between
+    the SYNTHETIC header and footer markers.
+    """
+    span = _narrative_span(text)
+    if span is not None:
+        return span
+    m = _JUSTIFICATION_KEY.search(text)
+    if m:
+        return m.start(), m.end()
+    start = end = None
+    pos = 0
+    for line in text.splitlines(keepends=True):
+        if line.strip() and not _MARKER_LINE.match(line.strip()):
+            if start is None:
+                start = pos + line.index(line.strip()[0])
+            end = pos + len(line.rstrip())
+        pos += len(line)
+    return None if start is None or end is None or end <= start else (start, end)
 
 
 def _narrative_tokens(text: str) -> set[str]:
@@ -223,13 +283,6 @@ def _passage(field: str, text: str, span: tuple[int, int], ocr: float, language:
     return _extraction(field, "searched passage", text, start, end, ocr, language, 1.0)
 
 
-def _claim_row(claims: pd.DataFrame, claim_sk: str) -> pd.Series | None:
-    if claims.empty:
-        return None
-    hit = claims[claims["claim_sk"] == claim_sk]
-    return None if hit.empty else hit.iloc[0]
-
-
 def _service_date(row: pd.Series | None) -> Any:
     if row is None:
         return None
@@ -237,6 +290,28 @@ def _service_date(row: pd.Series | None) -> Any:
         if col in row.index and not is_missing(row[col]):
             return row[col]
     return None
+
+
+def _prior_claims(ctx) -> dict[str, list[str]]:
+    """claim_sk -> every earlier version it replaces (from ``claim_version``)."""
+    cv = _table(ctx, "claim_version")
+    if cv.empty or not {"claim_sk", "prior_claim_sk"} <= set(cv.columns):
+        return {}
+    direct = {}
+    for c, p in zip(_vs(cv["claim_sk"]), _vs(cv["prior_claim_sk"])):
+        if c and p and c != p:
+            direct.setdefault(c, []).append(p)
+    out: dict[str, list[str]] = {}
+    for claim in direct:
+        seen, stack = [], list(direct[claim])
+        while stack:
+            p = stack.pop()
+            if p in seen or p == claim:
+                continue
+            seen.append(p)
+            stack.extend(direct.get(p, []))
+        out[claim] = seen
+    return out
 
 
 def _describe(code: str, ref_index: dict[str, dict[str, Any]]) -> str:
@@ -273,9 +348,9 @@ def doc_01_r01_required_document_absent(ctx, control) -> list:
     ref_index = ref.set_index("activity_code").to_dict("index") if not ref.empty else {}
 
     pol = policy.copy()
-    pol["doc_type_norm"] = pol["doc_type"].map(_norm)
-    pol["activity_code"] = pol["activity_code"].map(_s) if "activity_code" in pol.columns else ""
-    pol["service_family"] = pol["service_family"].map(_norm) if "service_family" in pol.columns else ""
+    pol["doc_type_norm"] = _vn(pol["doc_type"])
+    pol["activity_code"] = _vs(pol["activity_code"]) if "activity_code" in pol.columns else ""
+    pol["service_family"] = _vn(pol["service_family"]) if "service_family" in pol.columns else ""
     pol = pol[pol["doc_type_norm"] != ""]
     if pol.empty:
         return []
@@ -285,14 +360,15 @@ def doc_01_r01_required_document_absent(ctx, control) -> list:
     # code; it is not separately billed, so it carries no document requirement
     # of its own (its package's requirement applies instead).
     work = work[(work["gross_amount"].fillna(work["net_amount"]).fillna(0) > 0)]
-    work["service_family"] = work["activity_code"].map(
-        lambda c: _norm(ref_index.get(c, {}).get("service_family")))
+    fam_of = {c: _norm(v.get("service_family")) for c, v in ref_index.items()}
+    work["service_family"] = work["activity_code"].map(fam_of).fillna("")
     # On an admission billed as a case rate every line is billed under the case
     # rate's benefit family, so the family-level requirement is the admission's
     # (a discharge summary), not one per component line.
-    work["code_family"] = work["activity_code"].map(lambda c: _norm(ref_index.get(c, {}).get("code_family")))
+    cfam_of = {c: _norm(v.get("code_family")) for c, v in ref_index.items()}
+    work["code_family"] = work["activity_code"].map(cfam_of).fillna("")
     case_family = work[work["code_family"] == "case_rate"].groupby("claim_sk")["service_family"].first()
-    in_case = work["claim_sk"].isin(case_family.index)
+    in_case = work["claim_sk"].isin(set(case_family.index))
     work.loc[in_case, "service_family"] = work.loc[in_case, "claim_sk"].map(case_family)
     by_code = pol[pol["activity_code"] != ""][["activity_code", "doc_type_norm"]]
     by_family = pol[(pol["activity_code"] == "") & (pol["service_family"] != "")][
@@ -307,6 +383,17 @@ def doc_01_r01_required_document_absent(ctx, control) -> list:
     present = set()
     if not docs.empty:
         present = set(zip(docs["claim_sk"], docs["doc_type_norm"]))
+    # A resubmission or correction is a new version of the same claim: the
+    # documents already sent with the earlier version count for it.
+    lineage = _prior_claims(ctx)
+    if lineage and present:
+        by_claim: dict[str, set[str]] = {}
+        for c, t in present:
+            by_claim.setdefault(c, set()).add(t)
+        for claim, priors in lineage.items():
+            for prior in priors:
+                for t in by_claim.get(prior, ()):
+                    present.add((claim, t))
 
     # Latency: the file's own "as of" point, not the wall clock.
     date_col = next((c for c in ("submission_date", "claim_date", "service_date") if c in claims.columns), None)
@@ -321,7 +408,7 @@ def doc_01_r01_required_document_absent(ctx, control) -> list:
         return []
     submitted = claims.set_index("claim_sk")["_submitted"]
 
-    need = need[need["claim_sk"].isin(submitted.index)]
+    need = need[need["claim_sk"].isin(set(submitted.index))]
     need["_missing"] = [
         (c, t) not in present for c, t in zip(need["claim_sk"], need["doc_type_norm"])
     ]
@@ -329,8 +416,12 @@ def doc_01_r01_required_document_absent(ctx, control) -> list:
     if need.empty:
         return []
 
-    docs_by_claim = {} if docs.empty else docs.groupby("claim_sk")["doc_type_norm"].apply(
-        lambda s: sorted(set(s))).to_dict()
+    flagged = set(need["claim_sk"])
+    on_file: dict[str, set[str]] = {}
+    for c, t in present:
+        if c in flagged:
+            on_file.setdefault(c, set()).add(t)
+    docs_by_claim = {c: sorted(t) for c, t in on_file.items()}
     indexed = claims.set_index("claim_sk")
     out = []
     for claim_sk, sub in need.groupby("claim_sk", sort=True):
@@ -432,7 +523,7 @@ def doc_01_r03_medical_necessity_absent(ctx, control) -> list:
     ref_index = ref.set_index("activity_code").to_dict("index") if not ref.empty else {}
 
     pol = policy.copy()
-    pol["activity_code"] = pol["activity_code"].map(_s)
+    pol["activity_code"] = _vs(pol["activity_code"])
     pol["_terms"] = pol["required_terms"].map(_split_terms)
     pol = pol[(pol["activity_code"] != "") & pol["_terms"].map(bool)]
     if pol.empty:
@@ -442,23 +533,30 @@ def doc_01_r03_medical_necessity_absent(ctx, control) -> list:
     if hits.empty:
         return []
 
-    clinical = docs[docs["doc_type_norm"].map(_is_clinical) & (docs["ocr"] >= min_conf)]
-    docs_by_claim = {k: g for k, g in clinical.groupby("claim_sk")}
-    indexed = claims.set_index("claim_sk")
+    clinical = docs[docs["doc_type_norm"].map(_is_clinical) & (docs["ocr"] >= min_conf)
+                    & docs["claim_sk"].isin(set(hits["claim_sk"]))]
+    docs_by_claim: dict[str, list[_Doc]] = {}
+    for rec in zip(clinical["claim_sk"].tolist(), clinical["document_sk"].tolist(), clinical["text"].tolist(),
+                   clinical["ocr"].tolist(), clinical["language_detected"].tolist()):
+        docs_by_claim.setdefault(rec[0], []).append(_Doc(*rec[1:]))
+    hits = hits[hits["claim_sk"].isin(set(docs_by_claim))]
+    codes_by_claim = hits.groupby("claim_sk")["activity_code"].apply(lambda v: sorted(set(v))).to_dict()
+    billed_by = hits.groupby(["claim_sk", "activity_code"])["net_amount"].sum().to_dict()
+    claim_info = claims.set_index("claim_sk")
+    known_claims = set(claim_info.index)
     out = []
-    for claim_sk, sub in hits.groupby("claim_sk", sort=True):
-        if claim_sk not in docs_by_claim or claim_sk not in indexed.index:
+    for claim_sk in sorted(codes_by_claim):
+        if claim_sk not in known_claims:
             continue  # no readable clinical record: absence would prove nothing
         claim_docs = docs_by_claim[claim_sk]
-        row = indexed.loc[claim_sk]
         missing: list[dict[str, Any]] = []
         found: list[dict[str, Any]] = []
         negated: list[dict[str, Any]] = []
-        for code in sorted(set(sub["activity_code"])):
+        for code in codes_by_claim[claim_sk]:
             for alts in terms_by_code[code]:
                 located = None
                 neg_hit = None
-                for d in claim_docs.itertuples(index=False):
+                for d in claim_docs:
                     lowered = d.text.lower()
                     for alt in alts:
                         for m in re.finditer(re.escape(alt), lowered):
@@ -493,16 +591,17 @@ def doc_01_r03_medical_necessity_absent(ctx, control) -> list:
             continue
         # The span a reviewer reads: the narrative that was searched (or the
         # negated sentence, which is the strongest thing the record says).
-        best = claim_docs.sort_values("ocr", ascending=False).iloc[0]
-        span = _narrative_span(best["text"])
+        best = max(claim_docs, key=lambda d: d.ocr)
+        span = _searched_span(best.text)
         searched = None if span is None else _passage(
-            "searched_passage", best["text"], span, best["ocr"], best["language_detected"], max_chars)
+            "searched_passage", best.text, span, best.ocr, best.language_detected, max_chars)
         if searched is None and not negated:
             continue  # no locatable passage: the finding is discarded, not shown with a caveat
+        row = claim_info.loc[claim_sk]
         codes = sorted({m["activity_code"] for m in missing})
-        billed = float(sub[sub["activity_code"].isin(codes)]["net_amount"].fillna(0).sum())
-        span_ev = negated[0] if negated else {"document_sk": best["document_sk"], **_span_evidence(searched)}
-        confidence = float(span_ev.get("extraction_confidence", best["ocr"]))
+        billed = float(sum(_f(billed_by.get((claim_sk, c))) for c in codes))
+        span_ev = negated[0] if negated else {"document_sk": best.document_sk, **_span_evidence(searched)}
+        confidence = float(span_ev.get("extraction_confidence", best.ocr))
         missing_words = "; ".join(m["element"].replace(" / ", " or ") for m in missing[:4])
         out.append(_sig(
             ctx, control, subject_type="claim", subject_id=claim_sk,
@@ -511,7 +610,7 @@ def doc_01_r03_medical_necessity_absent(ctx, control) -> list:
             event_time=_service_date(row),
             period=period_bucket(_service_date(row)),
             confidence=round(min(confidence, 0.75), 3),
-            data_quality_penalty=round(1.0 - float(best["ocr"]), 3),
+            data_quality_penalty=round(1.0 - float(best.ocr), 3),
             evidence={
                 "claim_sk": claim_sk,
                 "provider_sk": _s(row.get("provider_sk")),
@@ -521,7 +620,7 @@ def doc_01_r03_medical_necessity_absent(ctx, control) -> list:
                 "missing_elements": missing,
                 "elements_found": found,
                 "elements_found_only_in_negated_sentences": negated,
-                "documents_searched": sorted(claim_docs["document_sk"].tolist()),
+                "documents_searched": sorted(d.document_sk for d in claim_docs),
                 **span_ev,
                 "absence_is_not_proof": (
                     "A fact that cannot be found is a reason for a qualified reviewer to read the "
@@ -583,10 +682,16 @@ def doc_01_r04_authorization_narrative_drift(ctx, control) -> list:
     narratives = docs[docs["doc_type_norm"].map(_is_auth_narrative)]
     if narratives.empty:
         return []
-    lines = lines[lines["authorization_id"].map(_s) != ""].copy()
+    # On a case-rate admission every line is billed under the case rate's family.
+    code_family = {c: _norm(v.get("code_family")) for c, v in ref_index.items()}
+    case_lines = lines[lines["activity_code"].map(code_family) == "case_rate"]
+    case_family = dict(zip(case_lines["claim_sk"], case_lines["activity_code"]))
+    # Zero-priced package components are not separately billed services.
+    priced = lines["gross_amount"].fillna(lines["net_amount"]).fillna(0) > 0
+    lines = lines[(_vs(lines["authorization_id"]) != "") & priced].copy()
     if lines.empty:
         return []
-    lines["authorization_id"] = lines["authorization_id"].map(_s)
+    lines["authorization_id"] = _vs(lines["authorization_id"])
 
     # Which narrative belongs to which approval: by reference, else by claim.
     auth_keys: dict[str, str] = {}
@@ -612,7 +717,7 @@ def doc_01_r04_authorization_narrative_drift(ctx, control) -> list:
 
     approved: dict[str, list[str]] = {}
     if not auth_lines.empty and {"authorization_sk", "activity_code"} <= set(auth_lines.columns):
-        approved = auth_lines.groupby(auth_lines["authorization_sk"].map(_s))["activity_code"].apply(
+        approved = auth_lines.groupby(_vs(auth_lines["authorization_sk"]))["activity_code"].apply(
             lambda s: sorted({_s(v) for v in s if _s(v)})).to_dict()
 
     def family(code: str) -> str:
@@ -651,10 +756,12 @@ def doc_01_r04_authorization_narrative_drift(ctx, control) -> list:
             continue  # nothing the narrative names can be anchored: no finding
         requested_families = {family(c) for c in mentions}
         drift = []
+        admission = case_family.get(claim_sk)
         for code in billed_codes:
-            if code in mentions:
+            if code in mentions or (admission and admission in mentions):
                 continue
-            if family(code) in requested_families:
+            billed_family = family(admission) if admission else family(code)
+            if billed_family in requested_families:
                 continue  # a sibling code in the same family is not a material difference
             drift.append(code)
         if not drift:
@@ -730,6 +837,9 @@ _SEX_PATTERNS = [
     re.compile(r"\b\d{1,3}[- ]year[- ]old\s+(male|female|man|woman)\b", re.I),
     re.compile(r"الجنس\s*:\s*(ذكر|أنثى|انثى)"),
 ]
+#: Cheap pre-filter: a note that matches none of these cannot conflict.
+_DEMOGRAPHIC_CUE = (r"(?i)\bage\s*:|year[- ]old|\bsex\s*:|\bgender\s*:|العمر|الجنس|يبلغ من العمر|pregnan|gravid|ovar|uter"
+                    r"|prostat|testic|scrot|حامل|الحمل|البروستاتا")
 _SEX_MAP = {"male": "M", "m": "M", "man": "M", "ذكر": "M",
             "female": "F", "f": "F", "woman": "F", "أنثى": "F", "انثى": "F"}
 #: Findings that cannot apply to a patient of the other sex.
@@ -753,27 +863,33 @@ def doc_02_r02_contradictory_copied_facts(ctx, control) -> list:
         return []
     min_conf = float(ctx.cfg("nlp_min_extraction_confidence"))
     tolerance = int(ctx.cfg("doc02r02_age_tolerance_years"))
-    mem = members.copy()
-    mem["member_sk"] = mem["member_sk"].astype(str)
-    mem = mem.drop_duplicates("member_sk").set_index("member_sk")
-    indexed = claims.set_index("claim_sk")
+    mem = members.drop_duplicates("member_sk")
+    sex_of = dict(zip(mem["member_sk"].astype(str), mem["sex"].map(_member_sex))) if "sex" in mem.columns else {}
+    dob_of = {}
+    if "date_of_birth" in mem.columns:
+        dob_of = dict(zip(mem["member_sk"].astype(str), pd.to_datetime(mem["date_of_birth"], errors="coerce")))
+    claim_member = dict(zip(claims["claim_sk"], _vs(claims["member_sk"]))) if "member_sk" in claims.columns else {}
+    claim_provider = dict(zip(claims["claim_sk"], _vs(claims["provider_sk"]))) if "provider_sk" in claims.columns else {}
+    date_col = next((c for c in ("service_date", "admission_date", "claim_date") if c in claims.columns), None)
+    claim_date = dict(zip(claims["claim_sk"], pd.to_datetime(claims[date_col], errors="coerce"))) if date_col else {}
 
+    # Only notes that state a demographic or a sex-specific finding can conflict.
+    candidates = docs[docs["doc_type_norm"].map(_is_clinical)]
+    candidates = candidates[candidates["text"].str.contains(_DEMOGRAPHIC_CUE, regex=True)]
     out = []
-    for d in docs[docs["doc_type_norm"].map(_is_clinical)].sort_values("document_sk").itertuples(index=False):
-        claim_row = indexed.loc[d.claim_sk] if d.claim_sk in indexed.index else None
-        member_sk = _s(getattr(d, "member_sk", "")) or (
-            _s(claim_row.get("member_sk")) if claim_row is not None else "")
-        if not member_sk or member_sk not in mem.index:
+    for d in candidates.sort_values("document_sk").itertuples(index=False):
+        member_sk = _s(getattr(d, "member_sk", "")) or claim_member.get(d.claim_sk, "")
+        if not member_sk or member_sk not in sex_of:
             continue
-        m = mem.loc[member_sk]
-        true_sex = _member_sex(m.get("sex"))
-        dob = pd.to_datetime(m.get("date_of_birth"), errors="coerce")
-        ref_date = pd.to_datetime(_service_date(claim_row), errors="coerce")
+        true_sex = sex_of.get(member_sk, "")
+        dob = dob_of.get(member_sk, pd.NaT)
+        ref_date = claim_date.get(d.claim_sk, pd.NaT)
         if pd.isna(ref_date):
             ref_date = d.created
         true_age = None
         if not pd.isna(dob) and not pd.isna(ref_date):
             true_age = int(ref_date.year - dob.year - ((ref_date.month, ref_date.day) < (dob.month, dob.day)))
+        service_date = None if pd.isna(ref_date) else ref_date
 
         conflicts: list[dict[str, Any]] = []
         text = d.text
@@ -830,7 +946,6 @@ def doc_02_r02_contradictory_copied_facts(ctx, control) -> list:
                              f"(the patient is {sex_word.get(c['patient_record_value'])})")
             else:
                 parts.append(f"'{c['document_value']}' for a {sex_word.get(c['patient_record_value'])} patient")
-        service_date = _service_date(claim_row)
         out.append(_sig(
             ctx, control, subject_type="claim", subject_id=d.claim_sk or d.document_sk,
             fact_key=f"docdemo:{d.document_sk}",
@@ -844,8 +959,7 @@ def doc_02_r02_contradictory_copied_facts(ctx, control) -> list:
                 "document_sk": d.document_sk,
                 "document_type": d.doc_type_norm,
                 "member_sk": member_sk,
-                "provider_sk": _s(getattr(d, "provider_sk", "")) or (
-                    _s(claim_row.get("provider_sk")) if claim_row is not None else ""),
+                "provider_sk": _s(getattr(d, "provider_sk", "")) or claim_provider.get(d.claim_sk, ""),
                 "conflicts": conflicts,
                 "conflicting_field": first["conflicting_field"],
                 "extracted_value": first["document_value"],
@@ -916,7 +1030,7 @@ def doc_02_r03_post_denial_alteration(ctx, control) -> list:
     claims = _claims(ctx)
     if docs.empty or remit.empty or "prior_document_sk" not in docs.columns or "decision" not in remit.columns:
         return []
-    versions = docs[docs["prior_document_sk"].map(_s) != ""]
+    versions = docs[_vs(docs["prior_document_sk"]) != ""]
     if versions.empty:
         return []
     min_conf = float(ctx.cfg("nlp_min_extraction_confidence"))
@@ -1068,7 +1182,7 @@ def doc_02_r04_template_complexity_mismatch(ctx, control) -> list:
     min_peer = int(ctx.cfg("min_peer_group_n"))
     max_chars = int(ctx.cfg("doc01r03_span_display_max_chars"))
 
-    high_codes = set(ref.loc[ref["complexity"].map(_norm).isin({"high", "very_high", "complex"}),
+    high_codes = set(ref.loc[_vn(ref["complexity"]).isin({"high", "very_high", "complex"}),
                              "activity_code"])
     if not high_codes:
         return []
@@ -1076,7 +1190,7 @@ def doc_02_r04_template_complexity_mismatch(ctx, control) -> list:
     if high_lines.empty:
         return []
     high_claims = set(high_lines["claim_sk"])
-    notes = docs[docs["doc_type_norm"].map(_is_clinical) & docs["claim_sk"].isin(high_claims)].copy()
+    notes = docs[docs["doc_type_norm"].map(_is_clinician_note) & docs["claim_sk"].isin(high_claims)].copy()
     if notes.empty:
         return []
     pinfo = claims.set_index("claim_sk")["provider_sk"].astype(str).to_dict()
@@ -1087,8 +1201,8 @@ def doc_02_r04_template_complexity_mismatch(ctx, control) -> list:
     specialty = {}
     prov = _table(ctx, "provider")
     if not prov.empty and "specialty" in prov.columns:
-        specialty = dict(zip(prov["provider_sk"].astype(str), prov["specialty"].map(_norm)))
-    notes["specialty"] = notes["provider_sk"].map(lambda p: specialty.get(p, ""))
+        specialty = dict(zip(prov["provider_sk"].astype(str), _vn(prov["specialty"])))
+    notes["specialty"] = notes["provider_sk"].map(specialty).fillna("")
     notes["specific_terms"] = notes["text"].map(lambda t: len(_narrative_tokens(t)))
     notes = notes[notes["specific_terms"] > 0].copy() if (notes["specific_terms"] > 0).any() else notes
 
@@ -1096,12 +1210,15 @@ def doc_02_r04_template_complexity_mismatch(ctx, control) -> list:
     overall = notes.groupby(base_key)["specific_terms"].agg(["median", "size"])
     by_spec = notes.groupby(base_key + ["specialty"])["specific_terms"].agg(["median", "size"])
 
+    o_med, o_n = overall["median"].to_dict(), overall["size"].to_dict()
+    s_med, s_n = by_spec["median"].to_dict(), by_spec["size"].to_dict()
+
     def peer(row) -> tuple[float, str, int]:
         k = (row.doc_type_norm, row.language_detected, row.specialty)
-        if row.specialty and k in by_spec.index and by_spec.loc[k, "size"] >= min_peer:
-            return float(by_spec.loc[k, "median"]), "specialty", int(by_spec.loc[k, "size"])
+        if row.specialty and s_n.get(k, 0) >= min_peer:
+            return float(s_med[k]), "specialty", int(s_n[k])
         k2 = (row.doc_type_norm, row.language_detected)
-        return float(overall.loc[k2, "median"]), "all providers", int(overall.loc[k2, "size"])
+        return float(o_med[k2]), "all providers", int(o_n[k2])
 
     peers = [peer(r) for r in notes.itertuples(index=False)]
     notes["peer_median"] = [p[0] for p in peers]
