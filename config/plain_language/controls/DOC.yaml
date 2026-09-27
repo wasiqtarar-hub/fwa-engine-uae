@@ -1,0 +1,89 @@
+# Plain-language text for the DOC (clinical documentation) controls. Presentation only: nothing here changes what a control does.
+
+DOC-01-R01:
+  title: "Required document missing after deadline"
+  finding: "This claim is missing a note, report, consent or result that policy requires, after the deadline for sending it."
+  what: "Checks whether each document that policy requires for the service has arrived within the allowed time."
+  why: "Without the required document the claim cannot be checked against the care delivered."
+  next_steps:
+    - "Request the missing document from the provider."
+    - "Check the document type and allow for normal delays."
+    - "Hold the claim until the document arrives."
+  needs: "the clinical documents attached to each claim and a policy stating which documents are required and by when"
+
+DOC-01-R02:
+  title: "Document facts contradict the claim"
+  finding: "This claim's supporting document describes a different diagnosis or stay length from the one billed, which is unusual."
+  what: "Reads each document, picks out the diagnosis and stay length, and flags a disagreement with the claim only when the fact was read confidently and the exact passage can be shown."
+  why: "When the record says something different from the bill, the bill may not reflect the care given."
+  next_steps:
+    - "Open the highlighted passage and compare it with the claim."
+    - "Remember the documents here are generated test documents, not real records."
+    - "Send for human review before any decision."
+  needs: "readable clinical documents in Arabic or English, and each claim's diagnosis, length of stay and admission date"
+
+DOC-01-R03:
+  title: "No record of why the service was needed"
+  finding: "This claim's documents do not show the reason or severity needed to justify the service, which warrants a closer look."
+  what: "Searches the clinical documents for the reason and severity details that policy requires for the service."
+  why: "Services must be medically necessary, but a missing detail is not proof that the service was unnecessary."
+  next_steps:
+    - "Have a qualified clinical reviewer read the full record."
+    - "Ask the provider for any additional notes that show the reason for care."
+    - "Do not deny on absence alone."
+  needs: "the clinical documents attached to each claim and a policy listing the details needed to show medical necessity"
+
+DOC-01-R04:
+  title: "Authorisation request differs from what was billed"
+  finding: "This claim appears to bill something noticeably different from what the authorisation request described."
+  what: "Compares the story in the authorisation request with the billed service to find material differences in what or who was involved."
+  why: "Getting approval for one thing and billing another undermines the authorisation process."
+  next_steps:
+    - "Read the authorisation request alongside the claim."
+    - "List the specific facts that conflict."
+    - "Hold the claim until the difference is explained."
+  needs: "authorisations and their lines, the link from each claim line to its authorisation, and the clinical documents"
+
+DOC-02-R01:
+  title: "Notes nearly identical across different patients"
+  finding: "This document is unusually similar to a document for a different patient, even after standard wording is removed."
+  what: "Removes standard template wording and measures how similar the remaining patient-specific text is between documents for different patients."
+  why: "Copied notes across patients can mean the record does not reflect real, individual care."
+  next_steps:
+    - "Compare the two documents side by side."
+    - "Check whether a specialty template explains the similarity."
+    - "Include in an audit sample if the notes appear copied."
+  needs: "readable clinical documents, and the patient and provider for each claim"
+
+DOC-02-R02:
+  title: "Copied note with wrong patient details"
+  finding: "This document contains patient details, dates or body side that do not fit this patient, which is unusual."
+  what: "Checks notes for wrong age, sex, dates, body side or findings that could not apply to this patient."
+  why: "Wrong details are a common sign that a note was copied from another patient."
+  next_steps:
+    - "Compare the note's details with the patient's registration record."
+    - "Check how confidently the details were read from the document."
+    - "Treat as a high-priority review."
+  needs: "the clinical documents attached to each claim and the patient's date of birth and sex"
+
+DOC-02-R03:
+  title: "Document changed after the claim was denied"
+  finding: "This document appears to have been changed after the claim was denied, in ways that affect payment and without a proper addendum."
+  what: "Compares versions of a document before and after a denial to find payment-relevant changes that lack a signed addendum."
+  why: "Altering records after a denial to get paid is a serious integrity concern."
+  next_steps:
+    - "Compare the document versions line by line."
+    - "Check whether a valid signed addendum was provided."
+    - "Link the case to any review of resubmitted claims."
+  needs: "clinical documents with version history, payment decisions and denial reasons, and links between original and resubmitted claims"
+
+DOC-02-R04:
+  title: "Generic notes for complex services"
+  finding: "This provider supports complex services with unusually generic notes compared with similar providers."
+  what: "Compares how generic the notes are for high-complexity services with notes from similar providers."
+  why: "Complex, costly care should be backed by detailed notes; generic notes are supporting evidence only."
+  next_steps:
+    - "Read a sample of notes for the complex services billed."
+    - "Check whether a standard electronic record template is in use."
+    - "Use this alongside other findings rather than on its own."
+  needs: "the clinical documents attached to each claim and the billed procedure codes, units and amounts"

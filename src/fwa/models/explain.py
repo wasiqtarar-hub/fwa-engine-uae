@@ -26,12 +26,41 @@ explanation-quality check (Table 6.1), which is checked in
 
 from __future__ import annotations
 
-from typing import Any, Iterable
+import concurrent.futures as _futures
+import logging
+from typing import Any, Callable, Iterable
 
 import numpy as np
 import pandas as pd
 
-__all__ = ["ShapExplainer", "FEATURE_UNITS", "humanise_feature"]
+__all__ = ["ShapExplainer", "FEATURE_UNITS", "humanise_feature", "ExplanationTimeout"]
+
+_log = logging.getLogger(__name__)
+
+
+class ExplanationTimeout(RuntimeError):
+    """A SHAP call exceeded its wall-clock budget."""
+
+
+def _bounded(fn: Callable[[], Any], seconds: float | None) -> Any:
+    """Run ``fn`` with a wall-clock budget; raise :class:`ExplanationTimeout` past it.
+
+    SHAP cannot be interrupted from outside, so a timed-out call is abandoned
+    (its worker thread finishes in the background and its result is discarded)
+    rather than killed. What matters for the UI is that the page does not wait
+    on it. ``None`` or a non-positive budget runs ``fn`` inline.
+    """
+    if not seconds or seconds <= 0:
+        return fn()
+    pool = _futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="shap")
+    future = pool.submit(fn)
+    try:
+        return future.result(timeout=seconds)
+    except _futures.TimeoutError as exc:
+        future.cancel()
+        raise ExplanationTimeout(f"SHAP call exceeded its {seconds:g}s budget") from exc
+    finally:
+        pool.shutdown(wait=False)
 
 #: feature name -> (label, unit). Anything not listed renders in its raw name
 #: with a blank unit, which is a prompt to add it here rather than a silent gap.
@@ -105,7 +134,20 @@ def _fmt(value: float | None, unit: str) -> str:
 
 
 class ShapExplainer:
-    """Wraps SHAP and renders contributions the way §4.8 requires."""
+    """Wraps SHAP and renders contributions the way §4.8 requires.
+
+    Never raises: construction failures leave :attr:`available` False with a
+    :attr:`failure_reason`, and every per-call failure or timeout comes back as
+    an ``EXPLANATION_FAILED`` row (which the promotion gate already counts as a
+    failed explanation-quality check) with the reason in :attr:`last_failure`.
+    """
+
+    #: Wall-clock budget for one claim's explanation. KernelExplainer work is
+    #: already bounded by the kmeans background and ``nsamples``; this is the
+    #: backstop for a pathological input so a page never hangs on SHAP.
+    explain_timeout_seconds: float = 30.0
+    #: Budget for the Models page's global-importance panel.
+    importance_timeout_seconds: float = 180.0
 
     def __init__(self, model, feature_columns: list[str], background: pd.DataFrame) -> None:
         self.model = model
@@ -114,6 +156,8 @@ class ShapExplainer:
         self._explainer = None
         self.method = "unavailable"
         self.failure_reason = ""
+        #: technical reason for the most recent per-call failure ("" if none).
+        self.last_failure = ""
         # SIGN CONVENTION. The system's anomaly score is -score_samples(x), so
         # that HIGHER means MORE ANOMALOUS. A TreeExplainer built on
         # IsolationForest explains the model's own output, where higher means
@@ -122,13 +166,33 @@ class ShapExplainer:
         # "lowered" its score, which is worse than no explanation at all.
         self._sign = -1.0 if type(model).__name__ == "IsolationForest" else 1.0
         self._kernel_nsamples: int | None = None
-        self._build()
+        try:
+            self._build()
+        except Exception as exc:  # noqa: BLE001 - never let construction crash a page
+            self._explainer = None
+            self.method = "unavailable"
+            self.failure_reason = f"SHAP explainer construction failed: {type(exc).__name__}: {exc}"
+        if self.failure_reason:
+            _log.warning("SHAP unavailable for %s: %s", type(model).__name__, self.failure_reason)
 
     def _build(self) -> None:
         try:
             import shap
         except Exception as exc:  # pragma: no cover
             self.failure_reason = f"shap is not installed: {exc}"
+            return
+        if self.background is None or len(self.background) < 2:
+            # Both explainers below need a background; KernelExplainer's kmeans
+            # summary needs at least two rows to form two centroids.
+            try:
+                self._explainer = shap.TreeExplainer(self.model)
+                self.method = "TreeExplainer"
+            except Exception as exc:
+                self.failure_reason = (
+                    f"No SHAP explainer could be constructed for {type(self.model).__name__}: "
+                    f"the background has {0 if self.background is None else len(self.background)} "
+                    f"row(s), fewer than the 2 KernelExplainer needs ({exc})."
+                )
             return
         try:
             self._explainer = shap.TreeExplainer(self.model)

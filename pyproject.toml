@@ -25,6 +25,7 @@ dependencies = [
     "streamlit>=1.30",
     "plotly>=5.18",
     "argon2-cffi>=21.3",
+    "tabulate>=0.9",   # pandas.DataFrame.to_markdown, used by the validation report
 ]
 
 [project.optional-dependencies]

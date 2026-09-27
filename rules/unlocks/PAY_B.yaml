@@ -1,0 +1,140 @@
+# Dataset unlocks for PAY-07 to PAY-12 (patient share, resubmission gaming, disguised
+# services, coordination of benefits, internal adjudication, remittance leakage).
+# Each entry runs its implementation ONLY on a dataset that populates every named table.
+# Implementations: src/fwa/engine/unlocked/pay_b.py
+unlocks:
+  # --------------------------------------------------------------- PAY-07
+  - rule_id: PAY-07-R01
+    implementation: pay_07_r01_expected_share_mismatch
+    requires_tables: [claim_header, claim_line, coverage_period, benefit_rule_version, activity_code_reference]
+    requires_columns: [claim_header.patient_share, benefit_rule_version.patient_share_pct]
+    data_support: PARTIAL
+    reason: "Recalculates each claim's patient share from the member's product and the benefit terms in force for every billed service, and compares it with the share on the claim. Deductible accumulators are not in the file, so a share above the calculation is raised at reduced confidence rather than excused."
+  - rule_id: PAY-07-R02
+    implementation: pay_07_r02_share_shifted_to_payer
+    requires_tables: [claim_header]
+    requires_columns: [claim_header.patient_share, claim_header.discount, claim_header.net_amount]
+    data_support: EXECUTABLE
+    reason: "Runs the catalogue equation (billed amount less discount less patient share must equal the amount claimed from the insurer) on every claim that carries all four amounts."
+  - rule_id: PAY-07-R03
+    implementation: pay_07_r03_systematic_zero_share
+    requires_tables: [claim_header, claim_line, coverage_period, benefit_rule_version, activity_code_reference]
+    requires_columns: [claim_header.patient_share, benefit_rule_version.patient_share_pct]
+    data_support: EXECUTABLE
+    reason: "Compares each provider's rate of zero or rounded-down patient shares, on claims whose benefit terms require a share, with the rate expected for the same products across all providers; zero-share benefits and regulator programmes are left out."
+  - rule_id: PAY-07-R04
+    implementation: pay_07_r04_balance_billing
+    requires_tables: [claim_header, member_receipt]
+    requires_columns: [claim_header.patient_share, member_receipt.amount_paid_aed]
+    data_support: EXECUTABLE
+    reason: "Compares what members' receipts show they paid the provider with the approved patient share on the claim, and adds member complaints about overcharging; receipts for non-covered items with documented consent are left out."
+  # --------------------------------------------------------------- PAY-08
+  - rule_id: PAY-08-R01
+    implementation: pay_08_r01_broken_lineage
+    requires_tables: [claim_header, claim_version]
+    data_support: EXECUTABLE
+    reason: "Checks every correction, resubmission and cancellation in the claim-version history for a missing, self-referencing or non-existent original, or an original belonging to a different member, provider or payer."
+  - rule_id: PAY-08-R02
+    implementation: pay_08_r02_field_mutation
+    requires_tables: [claim_header, claim_line, claim_version, remittance]
+    requires_columns: [remittance.denial_code]
+    data_support: EXECUTABLE
+    reason: "Compares each resubmission of a refused claim with the refused version (diagnosis, codes, units, provider, setting) and pends changes that the governed correction matrix does not accept for the refusal reason."
+  - rule_id: PAY-08-R03
+    implementation: pay_08_r03_resubmission_loop
+    requires_tables: [claim_header, claim_version, remittance]
+    data_support: EXECUTABLE
+    reason: "Follows each resubmission chain back to its original service and counts the attempts, leaving out formal appeals, and the distinct sets of changes made before the service was paid."
+  - rule_id: PAY-08-R04
+    implementation: pay_08_r04_edit_learning
+    requires_tables: [claim_header, claim_line, claim_version, remittance]
+    requires_columns: [remittance.denial_code]
+    data_support: PARTIAL
+    reason: "Compares each provider's success rate on changed resubmissions after a refusal with other providers, using shrinkage, and requires the successes to concentrate on one refusal reason. Billing-vendor and policy-change adjustments are not in the file and are not applied."
+  # --------------------------------------------------------------- PAY-09
+  - rule_id: PAY-09-R01
+    implementation: pay_09_r01_document_conflict
+    requires_tables: [claim_header, claim_line, document]
+    requires_columns: [document.text]
+    data_support: PARTIAL
+    reason: "Reads the notes attached to each claim for descriptions of non-covered services (cosmetic, aesthetic and similar, in English and Arabic) while the claim bills a covered code. Term matching with a negation window stands in for clinical language processing."
+  - rule_id: PAY-09-R02
+    implementation: pay_09_r02_covered_code_substitution
+    requires_tables: [claim_header, claim_line, remittance]
+    requires_columns: [remittance.line_sk]
+    data_support: EXECUTABLE
+    reason: "For each provider, measures how often a refused service is followed within a short window by a different, paid code for the same patient (resubmissions and same-family recodes excluded), and compares it with other providers."
+  - rule_id: PAY-09-R03
+    implementation: pay_09_r03_cosmetic_disguise
+    requires_tables: [claim_header, claim_line, diagnosis, disguise_risk_policy]
+    data_support: EXECUTABLE
+    reason: "Matches every billed line against the approved disguise-risk list of code and diagnosis combinations, with the visit setting, leaving out reconstructive diagnoses and lines approved in advance."
+  - rule_id: PAY-09-R04
+    implementation: pay_09_r04_member_confirmation_mismatch
+    requires_tables: [claim_header, claim_line, member_confirmation]
+    data_support: EXECUTABLE
+    reason: "Raises claims where the member said the billed service did not happen, or where the member's receipt names a different item from every billed service; unreliable confirmation channels lower the confidence."
+  # --------------------------------------------------------------- PAY-10
+  - rule_id: PAY-10-R02
+    implementation: pay_10_r02_multi_payer_overpayment
+    requires_tables: [claim_header, remittance, other_payer_remittance]
+    requires_columns: [other_payer_remittance.payment_amount]
+    data_support: EXECUTABLE
+    reason: "Adds the other insurers' payments, our payment and the patient share for each claim and compares the total with the allowed charge (billed less discount)."
+  - rule_id: PAY-10-R03
+    implementation: pay_10_r03_accident_without_liability
+    requires_tables: [claim_header, diagnosis, third_party_liability]
+    data_support: EXECUTABLE
+    reason: "Raises claims marked as accidents, or carrying a road-traffic or work-related external-cause diagnosis, that have no liable-party record; diagnoses on the governed false-positive list are left out."
+  - rule_id: PAY-10-R04
+    implementation: pay_10_r04_paid_after_settlement
+    requires_tables: [claim_header, remittance, third_party_settlement]
+    data_support: EXECUTABLE
+    reason: "Compares what we paid on or after the date of a documented third-party settlement with what was still due once the settlement is deducted; claims already in the recovery ledger are left out."
+  # --------------------------------------------------------------- PAY-11
+  - rule_id: PAY-11-R01
+    implementation: pay_11_r01_unauthorised_override
+    requires_tables: [claim_header, adjudication_event]
+    requires_columns: [adjudication_event.actor]
+    data_support: EXECUTABLE
+    reason: "Checks every manual override of a refusal or failed payment check for a recorded reason and an authorised role; emergency escalation and delegated authority are left out."
+  - rule_id: PAY-11-R02
+    implementation: pay_11_r02_adjudicator_provider_concentration
+    requires_tables: [claim_header, adjudication_event]
+    requires_columns: [adjudication_event.actor]
+    data_support: EXECUTABLE
+    reason: "Compares each adjudicator's override rate on one provider's claims with colleagues' rate on the same provider and with the adjudicator's own rate elsewhere; a provider handled by one adjudicator alone is not compared."
+  - rule_id: PAY-11-R03
+    implementation: pay_11_r03_post_settlement_increase
+    requires_tables: [claim_header, remittance]
+    requires_columns: [remittance.settlement_date, remittance.adjustment]
+    data_support: EXECUTABLE
+    reason: "Finds upward payment adjustments dated after a claim's first settlement and raises those with no appeal or contract true-up in the adjudication or claim-version records."
+  - rule_id: PAY-11-R04
+    implementation: pay_11_r04_invariant_full_pay
+    requires_tables: [claim_header, adjudication_event]
+    requires_columns: [adjudication_event.system_edit_result, adjudication_event.amount_before]
+    data_support: EXECUTABLE
+    reason: "For each adjudicator and provider pair, compares the rate of full, uniform payment on claims a payment check had flagged with the rate on flagged claims elsewhere; automatically assessed claims are excluded."
+  # --------------------------------------------------------------- PAY-12
+  - rule_id: PAY-12-R01
+    implementation: pay_12_r01_paid_cancelled_claim
+    requires_tables: [claim_header, claim_version, remittance]
+    data_support: EXECUTABLE
+    reason: "Nets every payment against each cancelled or reversed claim and raises those still carrying a payment once the governed timing tolerance has passed."
+  - rule_id: PAY-12-R02
+    implementation: pay_12_r02_duplicate_payment
+    requires_tables: [claim_header, remittance]
+    data_support: EXECUTABLE
+    reason: "Finds claim lines paid more than once beyond their payable amount (split settlements within the amount are left out) and payment references reused across providers or settlement dates."
+  - rule_id: PAY-12-R03
+    implementation: pay_12_r03_unapplied_refund
+    requires_tables: [recovery_ledger]
+    requires_columns: [recovery_ledger.credit_amount]
+    data_support: EXECUTABLE
+    reason: "Raises provider refunds and credits in the recovery ledger that were not applied within the governed number of days, measured to the latest date in the file."
+  - rule_id: PAY-12-R04
+    implementation: pay_12_r04_offset_manipulation
+    requires_tables: [claim_header, remittance, claim_line]
+    data_support: EXECUTABLE
+    reason: "Compares each provider's credits taken against claims they do not belong to, claims carrying negative lines, and time taken to reverse cancelled claims with other providers."

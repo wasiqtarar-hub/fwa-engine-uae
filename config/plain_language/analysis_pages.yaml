@@ -1,0 +1,169 @@
+# =============================================================================
+# Plain-language wording for the three analysis pages:
+#   Pattern-finding models (Models), Compare hospitals (Provider Analytics) and
+#   Connections between providers, agents and patients (Network).
+#
+# Presentation only. Nothing here renames an internal identifier: every key on
+# the left is the exact value the engine produces (gate criterion names, drift
+# monitor names, peer-level names, edge types, entity-match fields), and the
+# words on the right are what a reader sees.
+#
+# The standard loader merges `glossary:` and `fields:` into the shared
+# vocabulary (only NEW keys are added here). The `analysis_pages:` section is
+# ignored by the loader and read directly by app/components/analysis_pages.py.
+# =============================================================================
+
+glossary:
+  exploratory_scores:
+    term: "Exploratory scores"
+    also_called: ["score every claim"]
+    short: "Scores for every claim from the same models, including hospitals the model learned from; for exploring only, never used for the promotion gate."
+    explanation: "Normally the pattern-finders only score later claims from providers they never learned from, so the test is fair and about half the claims get no score. Exploratory mode asks the same fitted models to score every claim. Some of those claims come from providers the model has already seen, so their scores flatter the model."
+    analogy: "Like letting a student mark practice questions they have already seen the answers to: useful for browsing, useless as an exam result."
+    in_this_app: "Shown only when you switch it on, always under a banner, and never fed into the promotion checklist, the lift comparison or any metric."
+  posterior_interval:
+    term: "Uncertainty range (posterior interval)"
+    also_called: ["credible interval", "Beta prior"]
+    short: "The range a provider's true rate probably lies in; wide when it rests on few claims, narrow when it rests on many."
+    explanation: "After a small provider's rate has been pulled towards the typical rate, the app also works out how sure it can be about that figure. A provider with five claims gets a wide range; one with five thousand claims gets a narrow one. Providers whose range is too wide are left out of the ranking rather than ranked on a guess."
+    analogy: "Like a weather forecast that says 'between 20 and 30 degrees' when it is unsure and '24 to 25' when it is confident."
+    in_this_app: "The starting assumption (a Beta prior) is fitted to the peer group, and the range covers 90% of the probability by default."
+  supervised_model:
+    term: "Supervised model"
+    short: "A model trained on past investigation outcomes to predict new ones; deliberately not built here yet."
+    explanation: "A supervised model learns from examples that people have already labelled as fraud or not. If those labels only come from claims that were investigated, the model learns to repeat whatever the investigators already looked for, and misses what they never looked at."
+    analogy: "Like training a sniffer dog only on the bags customs already chose to open: it learns customs' habits, not where the contraband actually is."
+    in_this_app: "Five conditions must all be met before one may be built. The Pattern-finding models page shows which are unmet; nothing is trained until they are."
+
+fields:
+  isolation_forest_score:
+    label: "How unusual (Isolation Forest)"
+    meaning: "The Isolation Forest's score for the claim; higher means more unusual, not more likely to be fraud."
+  local_outlier_factor_score:
+    label: "How unusual (Local Outlier Factor)"
+    meaning: "The Local Outlier Factor's score for the claim; higher means more unusual, not more likely to be fraud."
+
+analysis_pages:
+
+  # ---------------------------------------------------------------------------
+  # Pattern-finding models
+  # ---------------------------------------------------------------------------
+  model_plain:
+    isolation_forest: "It looks for claims that are easy to separate from the crowd."
+    local_outlier_factor: "It looks for claims that are unusual compared with their nearest neighbours."
+  model_more:
+    isolation_forest: "It repeatedly splits the claims at random. A claim that ends up on its own after only a few splits is unusual, because most claims need many splits before they are separated from their look-alikes."
+    local_outlier_factor: "It compares each claim with the claims most like it. A claim that sits in a much emptier area than its neighbours is unusual, even if it would look ordinary against the whole file."
+  model_glossary:
+    isolation_forest: isolation_forest
+    local_outlier_factor: local_outlier_factor
+
+  # The five promotion-gate criteria (src/fwa/models/gate.py), as questions.
+  gate_questions:
+    "Temporal holdout evaluation": "Was it tested fairly, on later claims from providers it had never seen?"
+    "Prospective lift over ANL-01-R01": "Does it find more real issues than the simple scorecard?"
+    "Calibration check": "When it sounds sure, is it right that often?"
+    "Drift monitoring": "Are the claims it scores now like the ones it learned from?"
+    "Explanation quality": "Can it explain each flag in real units a reviewer can check?"
+
+  drift_monitors:
+    "Population stability (max feature PSI)":
+      question: "Have the claim details changed since it learned?"
+    "Score-distribution drift (PSI)":
+      question: "Have its scores shifted since the last run?"
+    "Alert volume vs expectation":
+      question: "Is it flagging about as many claims as expected?"
+    "Review yield (confirmed ÷ reviewed)":
+      question: "Do its flags turn out to be real problems?"
+
+  supervised_prereqs:
+    "Stable outcome capture (review_outcome)": "Have reviewers recorded enough decisions to learn from?"
+    "Random-audit data to correct investigation-selection bias": "Has a random audit been done, so the model does not just copy what investigators already chose to look at?"
+    "Temporal train/validation/test splits": "Can it be tested on claims later than the ones it learned from?"
+    "Entity isolation across splits": "Can it be tested on providers it never learned from?"
+    "Calibration and specialty/payer stability": "Can we check that its confidence is honest and stable across specialties and payers?"
+
+  hyperparameters:
+    n_estimators: "How many random trees the Isolation Forest grows. More trees give steadier scores but take longer."
+    contamination: "The Isolation Forest's starting guess at the share of unusual claims. Here it does not decide how many claims are flagged: reviewer capacity does."
+    random_state: "A fixed seed so that the same file always gives the same scores."
+    n_neighbors: "How many of the most similar claims the Local Outlier Factor compares each claim with."
+    novelty: "The model is fitted once and then asked about new claims it has not seen, rather than re-fitted on them."
+
+  # ---------------------------------------------------------------------------
+  # Compare hospitals
+  # ---------------------------------------------------------------------------
+  peer_levels:
+    activity_code_family:
+      what: "The kind of service billed"
+      how: "Stood in for by the main diagnosis code, because the file has no service codes."
+    specialty:
+      what: "The provider's specialty"
+      how: "Stood in for by the chapter of the main diagnosis (heart, cancer, pregnancy…), because the file has no specialty field."
+    encounter_facility_type:
+      what: "The type of visit or facility"
+      how: "Stood in for by the policy type (individual, family, group), which is only a weak substitute."
+    payment_method_contract_family:
+      what: "The contract or payment arrangement"
+      how: "Stood in for by the claims administrator (TPA) handling the claim."
+    geography:
+      what: "Location (emirate or catchment)"
+      how: "Not in this file, so comparisons never use location and the checks that need it do not run."
+    provider_volume_band:
+      what: "The provider's size"
+      how: "Worked out from how many claims each provider has, cut into five size bands."
+  availability:
+    PROXY: "Stand-in used"
+    WEAK_PROXY: "Weak stand-in used"
+    DERIVED: "Worked out from the data"
+    NOT_POPULATED: "Not in this file"
+    POPULATED: "In the file"
+  peer_group_names:
+    L1_L2_L4_L6: "same kind of service, specialty, administrator and size"
+    L1_L2_L6: "same kind of service, specialty and size"
+    L1_L2: "same kind of service and specialty"
+    L1: "same kind of service"
+    L2: "same specialty"
+    GLOBAL: "all providers in the file"
+    BELOW_MINIMUM_DENOMINATOR: "not compared: too few claims"
+    INSUFFICIENT_PEER_EVIDENCE: "not compared: too few similar providers"
+
+  # ---------------------------------------------------------------------------
+  # Connections
+  # ---------------------------------------------------------------------------
+  node_types:
+    member: "Patient"
+    provider: "Provider"
+    agent: "Sales agent"
+    tpa: "Claims administrator"
+  edge_types:
+    member_provider:
+      label: "Patient treated by provider"
+      meaning: "One link for each patient–provider pair that appears on a claim. Seen directly on the claim."
+    agent_member:
+      label: "Agent sold the patient's policy"
+      meaning: "The sales agent who sold the patient's policy. Seen directly on the policy."
+    agent_provider:
+      label: "Agent and provider on the same claim"
+      meaning: "Inferred, not seen: the agent and the provider appear on the same claim. It is not a referral, and every flag that rests on it says so."
+    provider_tpa:
+      label: "Provider's claims handled by an administrator"
+      meaning: "The claims administrator (TPA) that handled the provider's claim. Seen directly on the claim."
+    "referral (directed A→B)":
+      label: "Referrals between providers"
+      meaning: "Not in this file: there are no referral records, so the check for two providers sending each other patients cannot run."
+    "prescriber—pharmacy":
+      label: "Prescriber and pharmacy"
+      meaning: "Not in this file: there are no prescriptions or pharmacy records."
+    "shared administrative identifier":
+      label: "Shared bank account, phone or address"
+      meaning: "Not in this file: there are no bank, phone, address or device details."
+    ownership:
+      label: "Who owns which provider"
+      meaning: "Not in this file: there are no ownership records."
+  match_fields:
+    shared_members: "{value:,.0f} patients in common"
+    agent_overlap: "{pct} of sales agents in common"
+    tpa_overlap: "{pct} of claims administrators in common"
+    diagnosis_overlap: "{pct} of diagnoses in common"
+    billing_profile_similarity: "billing pattern {pct} similar"

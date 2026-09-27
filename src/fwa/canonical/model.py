@@ -73,6 +73,8 @@ CANONICAL_TABLES: dict[str, TableSpec] = {
             "death_source": "str", "death_source_confidence": "float",
             "sponsor_id": "str", "employer_id": "str", "tenant_id": "str",
             "source_system": "str", "missingness": "json",
+            # extensions used by the UAE multi-table adapter
+            "relationship": "str", "weight_kg": "float", "height_cm": "float", "emirate": "str",
         },
     ),
     "coverage_period": _spec(
@@ -83,6 +85,7 @@ CANONICAL_TABLES: dict[str, TableSpec] = {
             "valid_from": "date", "valid_to": "date", "network": "str", "status": "str",
             "policy_inception_date": "date", "days_since_policy_start": "int",
             "tenant_id": "str", "source_system": "str",
+            "agent_id": "str", "product_tier": "str",
         },
     ),
     "benefit_rule_version": _spec(
@@ -105,6 +108,8 @@ CANONICAL_TABLES: dict[str, TableSpec] = {
             "owner_entity_id": "str", "bank_account_token": "str", "phone_token": "str",
             "address_token": "str", "emirate": "str", "volume_band": "str",
             "tenant_id": "str", "source_system": "str", "missingness": "json",
+            "credentialing_date": "date", "bed_count": "int", "operational_status": "str",
+            "ownership_changed_on": "date", "licence_no": "str",
         },
     ),
     "provider_status_period": _spec(
@@ -130,6 +135,8 @@ CANONICAL_TABLES: dict[str, TableSpec] = {
             "is_cashless": "bool", "num_insurers_same_event": "int",
             "agent_id": "str", "source_system": "str", "raw_hash": "str",
             "source_vocabulary": "json", "missingness": "json",
+            "claim_type": "str", "accident_indicator": "bool", "discount": "float",
+            "cross_payer_match_token": "str",
         },
     ),
     "claim_line": _spec(
@@ -141,6 +148,9 @@ CANONICAL_TABLES: dict[str, TableSpec] = {
             "patient_share": "float", "rendering_clinician_id": "str",
             "ordering_clinician_id": "str", "indicator": "str", "authorization_id": "str",
             "service_date": "date", "tenant_id": "str",
+            "service_start_time": "datetime", "service_end_time": "datetime",
+            "performing_entity_id": "str", "wastage_units": "float", "unit_price": "float",
+            "device_serial": "str", "product": "str", "activity_description": "str",
         },
     ),
     "diagnosis": _spec(
@@ -162,6 +172,8 @@ CANONICAL_TABLES: dict[str, TableSpec] = {
             "admission_date": "date", "discharge_date": "date",
             "length_of_stay_days": "int", "location": "str", "tenant_id": "str",
             "missingness": "json",
+            "member_sk": "str", "bed_id": "str", "duration_minutes": "float",
+            "observation_status": "str", "admission_type": "str", "discharge_type": "str",
         },
     ),
     "observation": _spec(
@@ -171,6 +183,7 @@ CANONICAL_TABLES: dict[str, TableSpec] = {
             "observation_sk": "str", "line_sk": "str", "observation_type": "str",
             "value": "str", "unit": "str", "attachment_ref": "str", "event_time": "datetime",
             "tenant_id": "str",
+            "observation_code": "str", "claim_sk": "str", "member_sk": "str",
         },
     ),
     "authorization": _spec(
@@ -218,6 +231,9 @@ CANONICAL_TABLES: dict[str, TableSpec] = {
             "prescribed_product": "str", "billed_product": "str", "dispensed_product": "str",
             "prescribed_qty": "float", "dispensed_qty": "float", "days_supply": "float",
             "fill_date": "date", "tenant_id": "str",
+            "member_sk": "str", "line_sk": "str", "authorization_id": "str",
+            "prescribed_date": "date", "billed_qty": "float", "billed_amount": "float",
+            "strength_mg": "float", "form": "str", "dose_mg_per_day": "float",
         },
     ),
     "policy_event": _spec(
@@ -264,14 +280,17 @@ class CanonicalDataset:
         return ds
 
     def set(self, name: str, frame: pd.DataFrame, status: str, reason: str) -> None:
-        if name not in CANONICAL_TABLES:
-            raise KeyError(f"{name} is not one of the sixteen canonical tables.")
+        if name not in CANONICAL_TABLES and name not in _supplementary():
+            raise KeyError(
+                f"{name} is neither one of the sixteen canonical tables nor a declared "
+                f"supplementary table (fwa.canonical.supplementary)."
+            )
         self.tables[name] = frame
         self.status[name] = status
         self.reasons[name] = reason
 
     def mark_not_populated(self, name: str, reason: str) -> None:
-        spec = CANONICAL_TABLES[name]
+        spec = _spec_for(name)
         self.tables[name] = spec.empty_frame()
         self.status[name] = PopulationStatus.NOT_POPULATED
         self.reasons[name] = reason
@@ -280,10 +299,40 @@ class CanonicalDataset:
         return self.tables[name]
 
     def get(self, name: str) -> pd.DataFrame:
-        return self.tables.get(name, CANONICAL_TABLES[name].empty_frame())
+        if name in self.tables:
+            return self.tables[name]
+        return _spec_for(name).empty_frame()
 
     def is_populated(self, name: str) -> bool:
-        return self.status.get(name) in (PopulationStatus.POPULATED, PopulationStatus.PARTIAL)
+        """True when the table holds rows the source actually supplied.
+
+        A supplementary table that no adapter touched has no status at all and
+        is therefore not populated — the same answer as an explicit
+        ``NOT_POPULATED``, which is what keeps every control that needs one
+        classified out on a claim-header file.
+        """
+        if self.status.get(name) not in (PopulationStatus.POPULATED, PopulationStatus.PARTIAL):
+            return False
+        frame = self.tables.get(name)
+        return frame is not None and not frame.empty
+
+    def supplementary_report(self) -> pd.DataFrame:
+        """One row per supplementary (operational or reference) table.
+
+        Kept apart from :meth:`population_report`, whose seventeen rows are
+        manuscript Table 3.5 and do not grow.
+        """
+        rows = []
+        for name, spec in _supplementary().items():
+            frame = self.tables.get(name)
+            rows.append({
+                "table": name,
+                "status": self.status.get(name, PopulationStatus.NOT_POPULATED),
+                "rows": 0 if frame is None else len(frame),
+                "reason": self.reasons.get(name, "Not supplied by this source."),
+                "required_content": spec.required_content,
+            })
+        return pd.DataFrame(rows)
 
     def population_report(self) -> pd.DataFrame:
         """One row per canonical table: status, rows, reason, required content."""
@@ -324,3 +373,18 @@ class CanonicalDataset:
             & claims["provider_sk"].astype(str).isin(providers)
         )
         return float(linked.mean())
+
+
+def _supplementary() -> dict[str, TableSpec]:
+    from .supplementary import SUPPLEMENTARY_TABLES  # local: supplementary imports TableSpec
+
+    return SUPPLEMENTARY_TABLES
+
+
+def _spec_for(name: str) -> TableSpec:
+    if name in CANONICAL_TABLES:
+        return CANONICAL_TABLES[name]
+    supplementary = _supplementary()
+    if name in supplementary:
+        return supplementary[name]
+    raise KeyError(f"{name} is not a canonical or supplementary table.")

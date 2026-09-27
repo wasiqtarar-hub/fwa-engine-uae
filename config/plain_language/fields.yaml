@@ -1,0 +1,2283 @@
+# Plain-language labels for internal column and field names.
+#
+# Presentation only: nothing here renames anything in code. Each key is the
+# exact internal name the app looks up; `label` is the short heading shown to a
+# reader and `meaning` is one plain sentence saying what the value is.
+#
+# Readers are claims reviewers, audit managers and thesis examiners — people
+# who know health insurance well but are not data scientists.
+
+fields:
+
+  # ===========================================================================
+  # Identifiers and references
+  # ===========================================================================
+  claim_sk:
+    label: "Claim reference"
+    meaning: "The reference that identifies this claim throughout the system."
+  claim_id:
+    label: "Claim reference (as supplied)"
+    meaning: "The claim number exactly as it appears in the source file."
+  source_claim_id:
+    label: "Original claim number"
+    meaning: "The claim number used by the system that sent the claim."
+  claim_ids:
+    label: "Claims involved"
+    meaning: "The references of every claim this finding rests on."
+  claim_sks:
+    label: "Claims involved"
+    meaning: "The references of every claim this finding rests on."
+  member_sk:
+    label: "Patient reference"
+    meaning: "The reference that identifies the insured patient (the member)."
+  member_sks:
+    label: "Patients involved"
+    meaning: "The references of every patient this finding involves."
+  patient_id:
+    label: "Patient reference (as supplied)"
+    meaning: "The patient number exactly as it appears in the source file."
+  source_member_id:
+    label: "Original patient number"
+    meaning: "The patient number used by the system that sent the data."
+  provider_sk:
+    label: "Provider reference"
+    meaning: "The reference that identifies the hospital, clinic or other provider."
+  hospital_id:
+    label: "Hospital reference (as supplied)"
+    meaning: "The hospital number exactly as it appears in the source file."
+  source_provider_id:
+    label: "Original provider number"
+    meaning: "The provider number used by the system that sent the data."
+  prior_provider_sk:
+    label: "Earlier provider"
+    meaning: "The provider that treated the patient on the earlier, related claim."
+  top_provider_sk:
+    label: "Most-used provider"
+    meaning: "The provider that received the largest share of this agent's claims."
+  agent_id:
+    label: "Agent reference"
+    meaning: "The insurance agent or intermediary linked to the claim."
+  encounter_sk:
+    label: "Hospital visit reference"
+    meaning: "The reference for the hospital visit or stay that the claim covers."
+  line_sk:
+    label: "Claim line reference"
+    meaning: "The reference for one billed service line within a claim."
+  episode_id:
+    label: "Treatment episode reference"
+    meaning: "Groups claims that belong to the same course of treatment for the same patient."
+  coverage_id:
+    label: "Cover reference"
+    meaning: "The reference for the patient's period of insurance cover."
+  authorization_sk:
+    label: "Prior approval reference"
+    meaning: "The reference for a prior-approval (authorisation) request."
+  authorization_line_sk:
+    label: "Prior approval line reference"
+    meaning: "The reference for one approved service within a prior approval."
+  authorization_id:
+    label: "Prior approval number"
+    meaning: "The prior-approval number quoted on this service line."
+  observation_sk:
+    label: "Result reference"
+    meaning: "The reference for a test result, report or other clinical observation."
+  remittance_sk:
+    label: "Payment advice reference"
+    meaning: "The reference for the insurer's payment decision on a claim."
+  rx_sk:
+    label: "Prescription reference"
+    meaning: "The reference for a prescription and its dispensing record."
+  policy_event_sk:
+    label: "Policy change reference"
+    meaning: "The reference for an enrolment, addition, removal or correction on a policy."
+  review_id:
+    label: "Review reference"
+    meaning: "The reference for a reviewer's recorded decision."
+  case_id:
+    label: "Case reference"
+    meaning: "The reference for a review case, which groups related findings."
+  signal_id:
+    label: "Finding reference"
+    meaning: "The reference for one individual finding raised by a check."
+  signal_ids:
+    label: "Findings reviewed"
+    meaning: "The references of the findings this review decision covers."
+  related_signal_ids:
+    label: "Related findings"
+    meaning: "Other findings that rest on the same facts as this one."
+  prior_claim_sk:
+    label: "Earlier claim"
+    meaning: "The earlier claim this claim is linked to or compared with."
+  matched_claim_sk:
+    label: "Matching claim"
+    meaning: "The other claim that this claim appears to repeat."
+  duplicate_of_claim_sk:
+    label: "Appears to repeat claim"
+    meaning: "The earlier claim that this claim appears to duplicate."
+  explained_claim_sk:
+    label: "Claim explained"
+    meaning: "The claim whose score is broken down in this explanation."
+  tenant_id:
+    label: "Organisation reference"
+    meaning: "Which insurer or organisation the data belongs to; each organisation's data is kept separate."
+  payer_id:
+    label: "Payer reference"
+    meaning: "The insurer or administrator responsible for paying the claim."
+  tpa:
+    label: "Claims administrator"
+    meaning: "The third-party administrator that handled the claim on the insurer's behalf."
+  sponsor_id:
+    label: "Sponsor reference"
+    meaning: "The person or organisation that sponsors the patient's cover."
+  employer_id:
+    label: "Employer reference"
+    meaning: "The patient's employer, where cover is provided through work."
+  facility_id:
+    label: "Facility reference"
+    meaning: "The hospital or clinic where the care took place."
+  regulator_id:
+    label: "Regulator licence reference"
+    meaning: "The provider's identifier issued by the health regulator."
+  licence_no:
+    label: "Licence number"
+    meaning: "The provider's licence number."
+  owner_entity_id:
+    label: "Owner reference"
+    meaning: "The organisation that owns the provider, used to spot linked providers."
+  performing_entity_id:
+    label: "Performing provider"
+    meaning: "The provider or unit that actually carried out the service."
+  rendering_clinician_id:
+    label: "Treating clinician"
+    meaning: "The clinician who carried out the service."
+  ordering_clinician_id:
+    label: "Ordering clinician"
+    meaning: "The clinician who ordered the service."
+  prescriber_id:
+    label: "Prescriber"
+    meaning: "The clinician who wrote the prescription."
+  pharmacy_id:
+    label: "Pharmacy"
+    meaning: "The pharmacy that dispensed the medicine."
+  request_id:
+    label: "Approval request number"
+    meaning: "The number of the prior-approval request sent by the provider."
+  response_id:
+    label: "Approval response number"
+    meaning: "The number of the insurer's reply to the prior-approval request."
+  payment_reference:
+    label: "Payment reference"
+    meaning: "The reference of the payment made on the claim."
+  protected_id_token:
+    label: "Protected identity code"
+    meaning: "A scrambled code that links records for the same person without revealing who they are."
+  bank_account_token:
+    label: "Protected bank account code"
+    meaning: "A scrambled code for the provider's bank account, used only to spot providers that share one."
+  phone_token:
+    label: "Protected phone number code"
+    meaning: "A scrambled code for the provider's phone number, used only to spot providers that share one."
+  address_token:
+    label: "Protected address code"
+    meaning: "A scrambled code for the provider's address, used only to spot providers that share one."
+  cross_payer_match_token:
+    label: "Cross-insurer matching code"
+    meaning: "A scrambled code that lets the same claim be recognised when it is sent to more than one insurer."
+  device_serial:
+    label: "Device serial number"
+    meaning: "The serial number of a medical device supplied to the patient."
+  bed_id:
+    label: "Bed reference"
+    meaning: "The bed the patient occupied during the stay."
+  attachment_ref:
+    label: "Attachment reference"
+    meaning: "The reference of a document or image attached to the result."
+  version_id:
+    label: "Version"
+    meaning: "Which version of this record or rule is being used."
+  cluster_id:
+    label: "Group reference"
+    meaning: "The reference of a group of providers that behave alike."
+  community_id:
+    label: "Network group reference"
+    meaning: "The reference of a closely connected group of patients, providers and agents."
+  segment_id:
+    label: "Period segment"
+    meaning: "Which stretch of time, between known changes, the comparison was made within."
+  entity:
+    label: "Subject"
+    meaning: "The provider, patient or agent the figures describe."
+  entity_a:
+    label: "First provider in pair"
+    meaning: "The first of two providers that may be the same organisation."
+  entity_b:
+    label: "Second provider in pair"
+    meaning: "The second of two providers that may be the same organisation."
+  entity_type:
+    label: "Kind of subject"
+    meaning: "Whether the pair are providers, patients or agents."
+  subject_id:
+    label: "Subject"
+    meaning: "The claim, patient, provider or agent the finding is about."
+  subject_type:
+    label: "Kind of subject"
+    meaning: "Whether the finding is about a claim, a patient, a provider, an agent or a group."
+  subject:
+    label: "Subject"
+    meaning: "What the event or finding is about."
+  agent:
+    label: "Agent"
+    meaning: "The insurance agent or intermediary."
+  member:
+    label: "Patient"
+    meaning: "The insured patient."
+  provider:
+    label: "Provider"
+    meaning: "The hospital, clinic or other provider."
+  case:
+    label: "Case"
+    meaning: "The review case this row belongs to."
+  pair:
+    label: "Pair of providers"
+    meaning: "Two providers whose behaviour is similar enough that they may be the same organisation."
+  nodes:
+    label: "Members of the group"
+    meaning: "The patients, providers and agents that make up the group."
+  members:
+    label: "Members"
+    meaning: "The providers (or other subjects) that belong to this group."
+
+  # ===========================================================================
+  # Patient (member) details
+  # ===========================================================================
+  date_of_birth:
+    label: "Date of birth"
+    meaning: "The patient's date of birth."
+  sex:
+    label: "Sex"
+    meaning: "The patient's recorded sex."
+  death_date:
+    label: "Date of death"
+    meaning: "The date the patient died, if recorded."
+  death_source:
+    label: "Source of death record"
+    meaning: "Where the date of death came from."
+  death_source_confidence:
+    label: "Confidence in death record"
+    meaning: "How reliable the source of the death record is thought to be, from 0 to 1."
+  height_cm:
+    label: "Height (cm)"
+    meaning: "The patient's recorded height."
+  weight_kg:
+    label: "Weight (kg)"
+    meaning: "The patient's recorded weight."
+
+  # ===========================================================================
+  # Cover and policy
+  # ===========================================================================
+  product:
+    label: "Insurance product"
+    meaning: "The insurance plan or product the patient is covered under."
+  product_tier:
+    label: "Product tier"
+    meaning: "The level of the insurance plan, such as basic or enhanced."
+  policy_type:
+    label: "Policy type"
+    meaning: "The kind of insurance policy, such as individual, family or group."
+  valid_from:
+    label: "Valid from"
+    meaning: "The date from which this record, rule or setting applies."
+  valid_to:
+    label: "Valid to"
+    meaning: "The date after which this record, rule or setting no longer applies."
+  network:
+    label: "Provider network"
+    meaning: "The network of providers the patient's plan allows."
+  status:
+    label: "Status"
+    meaning: "The current state of this item."
+  policy_inception_date:
+    label: "Policy start date"
+    meaning: "The date the patient's policy began."
+  days_since_policy_start:
+    label: "Policy age at treatment (days)"
+    meaning: "How many days the policy had been in force when treatment took place."
+  early_tenure_days:
+    label: "New-policy period (days)"
+    meaning: "The number of days after a policy starts during which a claim counts as early."
+  previous_fraud_on_policy:
+    label: "Earlier fraud noted on policy"
+    meaning: "Whether an earlier fraud finding is recorded against this policy; it is a history note, not the answer for this claim."
+  event_type:
+    label: "Event"
+    meaning: "What kind of event was recorded."
+  actor:
+    label: "Done by"
+    meaning: "The person or process that carried out the action."
+  actor_role:
+    label: "Role of the person acting"
+    meaning: "The job role of the person who carried out the action."
+  event_time:
+    label: "When it happened"
+    meaning: "The date and time the event took place."
+  effective_date:
+    label: "Takes effect from"
+    meaning: "The date the change takes effect."
+
+  # ===========================================================================
+  # Benefit rules
+  # ===========================================================================
+  service_family:
+    label: "Service category"
+    meaning: "The broad group of services a benefit rule applies to."
+  covered:
+    label: "Covered"
+    meaning: "Whether the service is covered by the plan."
+  benefit_limit:
+    label: "Benefit limit"
+    meaning: "The most the plan will pay for this kind of service."
+  patient_share_pct:
+    label: "Patient's share (%)"
+    meaning: "The percentage of the cost the patient must pay themselves."
+  authorization_required:
+    label: "Prior approval needed"
+    meaning: "Whether the insurer must approve the service before it is provided."
+  exceptions:
+    label: "Exceptions"
+    meaning: "Situations where the benefit rule does not apply in the usual way."
+  recorded_at:
+    label: "Recorded on"
+    meaning: "When this record was written into the system."
+  source:
+    label: "Source"
+    meaning: "Where this information or setting came from."
+
+  # ===========================================================================
+  # Provider
+  # ===========================================================================
+  provider_type:
+    label: "Provider type"
+    meaning: "The kind of provider, such as hospital, clinic or pharmacy."
+  specialty:
+    label: "Specialty"
+    meaning: "The provider's main medical specialty."
+  facility_type:
+    label: "Facility type"
+    meaning: "The kind of facility, such as general hospital or day-surgery centre."
+  emirate:
+    label: "Emirate"
+    meaning: "The emirate where the provider is located."
+  volume_band:
+    label: "Size band"
+    meaning: "How busy the provider is, grouped by the number of claims it submits."
+  credentialing_date:
+    label: "Date approved to join network"
+    meaning: "When the provider was checked and approved to treat the insurer's patients."
+  bed_count:
+    label: "Number of beds"
+    meaning: "How many beds the provider has."
+  operational_status:
+    label: "Operating status"
+    meaning: "Whether the provider is open, suspended or closed."
+  ownership_changed_on:
+    label: "Ownership changed on"
+    meaning: "The date the provider last changed owner."
+  status_type:
+    label: "Kind of status"
+    meaning: "What the status is about, such as licence, network membership or an exclusion list."
+  status_value:
+    label: "Status value"
+    meaning: "The provider's status of that kind, for example active or excluded."
+  match_type:
+    label: "How it was matched"
+    meaning: "Whether the records were matched exactly or approximately."
+  claim_count:
+    label: "Number of claims"
+    meaning: "How many claims are counted here."
+
+  # ===========================================================================
+  # Claim header
+  # ===========================================================================
+  submission_date:
+    label: "Date submitted"
+    meaning: "The date the claim was sent to the insurer."
+  settlement_date:
+    label: "Date paid"
+    meaning: "The date the claim was settled."
+  gross_amount:
+    label: "Amount billed (source currency)"
+    meaning: "The total amount the provider charged, in the currency of the source file."
+  net_amount:
+    label: "Net amount (source currency)"
+    meaning: "The amount due after discounts and the patient's share, in the currency of the source file."
+  patient_share:
+    label: "Patient's share"
+    meaning: "The part of the cost the patient paid themselves."
+  approved_amount:
+    label: "Amount approved (source currency)"
+    meaning: "What the insurer agreed to pay, in the currency of the source file."
+  source_currency:
+    label: "Source currency"
+    meaning: "The currency the amounts were originally recorded in."
+  gross_amount_aed:
+    label: "Amount billed (AED)"
+    meaning: "The total amount the provider charged, converted to dirhams at the rate on the date of treatment."
+  approved_amount_aed:
+    label: "Amount approved (AED)"
+    meaning: "What the insurer agreed to pay, converted to dirhams."
+  fx_rate_used:
+    label: "Exchange rate used"
+    meaning: "The rate used to convert the amount into dirhams."
+  fx_rate_source:
+    label: "Where the exchange rate came from"
+    meaning: "The source of the exchange rate and the date it was taken for."
+  is_cashless:
+    label: "Billed directly to insurer"
+    meaning: "Whether the hospital billed the insurer directly (cashless) instead of the patient paying and claiming back."
+  num_insurers_same_event:
+    label: "Insurers billed for the same stay"
+    meaning: "How many insurers were billed for the same hospital stay."
+  source_system:
+    label: "Source system"
+    meaning: "The system or data feed the record came from."
+  raw_hash:
+    label: "Original-row fingerprint"
+    meaning: "A tamper-evident fingerprint of the original row, taken before any processing."
+  source_vocabulary:
+    label: "Original row as received"
+    meaning: "The original values from the source file, kept so every figure can be traced back."
+  missingness:
+    label: "Missing information"
+    meaning: "Notes on which details the source did not supply."
+  claim_type:
+    label: "Claim type"
+    meaning: "The kind of claim, such as inpatient, outpatient or pharmacy."
+  accident_indicator:
+    label: "Accident-related"
+    meaning: "Whether the treatment followed an accident, which may make another party liable."
+  discount:
+    label: "Discount"
+    meaning: "Any discount applied to the amount billed."
+  service_date:
+    label: "Date of treatment"
+    meaning: "The date the treatment or admission took place."
+  discharge_date:
+    label: "Discharge date"
+    meaning: "The date the patient left hospital."
+  claim_date:
+    label: "Claim date"
+    meaning: "The date the claim was made."
+  length_of_stay_days:
+    label: "Length of stay (days)"
+    meaning: "How many days the patient stayed in hospital."
+  diagnosis_primary:
+    label: "Main diagnosis code"
+    meaning: "The code for the main condition being treated."
+  diagnosis_chapter:
+    label: "Diagnosis group"
+    meaning: "The broad body system or disease group the main diagnosis belongs to."
+  diagnosis_description:
+    label: "Main diagnosis"
+    meaning: "The main condition being treated, in words."
+  pharmacy_bill_ratio:
+    label: "Share of the bill spent on medicines"
+    meaning: "The part of the total bill that was for medicines, from 0 to 1."
+  icd_code_matches_procedure:
+    label: "Diagnosis fits the procedure"
+    meaning: "Whether the diagnosis code is consistent with the procedure billed."
+  provider_blacklist_flag:
+    label: "Provider on exclusion list"
+    meaning: "Whether the provider is on a list of providers the insurer should not pay."
+  discharge_readmit_gap_days:
+    label: "Days until readmission"
+    meaning: "How many days passed between this discharge and the patient's next admission."
+
+  # ===========================================================================
+  # Source file columns (claim extract)
+  # ===========================================================================
+  date_of_admission:
+    label: "Admission date (as supplied)"
+    meaning: "The admission date exactly as it appears in the source file."
+  date_of_discharge:
+    label: "Discharge date (as supplied)"
+    meaning: "The discharge date exactly as it appears in the source file."
+  date_of_claim:
+    label: "Claim date (as supplied)"
+    meaning: "The claim date exactly as it appears in the source file."
+  claim_amount_requested_inr:
+    label: "Amount claimed by provider"
+    meaning: "What the provider asked the insurer to pay on this claim, in the source currency."
+  claim_amount_approved_inr:
+    label: "Amount approved by insurer"
+    meaning: "What the insurer agreed to pay on this claim, in the source currency."
+  fraud_label:
+    label: "Answer key: fraud or not"
+    meaning: "A held-out evaluation label saying whether the claim is known to be fraudulent; it is used only to measure results and never for detection."
+  fraud_type:
+    label: "Answer key: kind of fraud"
+    meaning: "A held-out evaluation label naming the kind of fraud; it is used only to measure results and never for detection."
+  fraud_confidence:
+    label: "Answer key: confidence"
+    meaning: "A held-out evaluation label saying how sure the source is about the fraud answer; it is used only to measure results and never for detection."
+  ground_truth_source:
+    label: "Answer key: where it came from"
+    meaning: "A held-out evaluation label saying how the fraud answer was established; it is used only to measure results and never for detection."
+
+  # ===========================================================================
+  # Claim lines
+  # ===========================================================================
+  activity_type:
+    label: "Service type"
+    meaning: "The kind of service billed, such as procedure, test, medicine or consultation."
+  activity_code:
+    label: "Service code"
+    meaning: "The code for the specific service billed."
+  activity_description:
+    label: "Service description"
+    meaning: "The service billed, in words."
+  units:
+    label: "Quantity"
+    meaning: "How many units of the service were billed."
+  indicator:
+    label: "Billing modifier"
+    meaning: "A marker on the line that changes how it is paid, such as a repeat or a bilateral procedure."
+  service_start_time:
+    label: "Service start time"
+    meaning: "When the service began."
+  service_end_time:
+    label: "Service end time"
+    meaning: "When the service ended."
+  wastage_units:
+    label: "Units wasted"
+    meaning: "How many units of a medicine or supply were billed as discarded."
+  unit_price:
+    label: "Price per unit"
+    meaning: "The price charged for one unit of the service."
+
+  # ===========================================================================
+  # Diagnosis
+  # ===========================================================================
+  code:
+    label: "Diagnosis code"
+    meaning: "The code for the condition."
+  code_system:
+    label: "Coding system"
+    meaning: "The coding system the diagnosis code comes from."
+  code_version:
+    label: "Coding system version"
+    meaning: "Which edition of the coding system was used."
+  diagnosis_type:
+    label: "Diagnosis role"
+    meaning: "Whether this is the main diagnosis or a secondary one."
+  sequence:
+    label: "Order"
+    meaning: "The position of this item in its list."
+  present_on_admission:
+    label: "Present on admission"
+    meaning: "Whether the condition was already present when the patient was admitted."
+  description:
+    label: "Description"
+    meaning: "A description in words."
+  chapter:
+    label: "Diagnosis group"
+    meaning: "The broad body system or disease group the diagnosis belongs to."
+
+  # ===========================================================================
+  # Encounter (hospital visit)
+  # ===========================================================================
+  encounter_type:
+    label: "Visit type"
+    meaning: "Whether the visit was an inpatient stay, outpatient visit, emergency or day case."
+  start_time:
+    label: "Visit start"
+    meaning: "When the visit or stay began."
+  end_time:
+    label: "Visit end"
+    meaning: "When the visit or stay ended."
+  admission_date:
+    label: "Admission date"
+    meaning: "The date the patient was admitted."
+  location:
+    label: "Location"
+    meaning: "Where the care was given."
+  duration_minutes:
+    label: "Duration (minutes)"
+    meaning: "How long the visit or service lasted."
+  observation_status:
+    label: "Held for observation"
+    meaning: "Whether the patient was kept for observation rather than formally admitted."
+  admission_type:
+    label: "Admission type"
+    meaning: "How the patient was admitted, such as planned or emergency."
+  discharge_type:
+    label: "Discharge type"
+    meaning: "How the stay ended, such as home, transfer or death."
+
+  # ===========================================================================
+  # Observation (results and reports)
+  # ===========================================================================
+  observation_type:
+    label: "Result type"
+    meaning: "The kind of result or report."
+  observation_code:
+    label: "Result code"
+    meaning: "The code for the test or observation."
+  value:
+    label: "Value"
+    meaning: "The value recorded or measured."
+  unit:
+    label: "Unit"
+    meaning: "The unit the value is measured in."
+
+  # ===========================================================================
+  # Prior approval (authorisation)
+  # ===========================================================================
+  approved_units:
+    label: "Units approved"
+    meaning: "How many units of the service the insurer approved in advance."
+  approved_value:
+    label: "Value approved"
+    meaning: "The amount the insurer approved in advance for the service."
+  conditions:
+    label: "Conditions of approval"
+    meaning: "Any conditions attached to the prior approval."
+  denial_code:
+    label: "Refusal reason code"
+    meaning: "The code giving the reason a service or claim was refused."
+
+  # ===========================================================================
+  # Claim versions
+  # ===========================================================================
+  version_no:
+    label: "Version number"
+    meaning: "Which submission of the claim this is: 1 for the original, higher numbers for later corrections."
+  relationship:
+    label: "Relationship to earlier version"
+    meaning: "Whether this is the original, a resubmission or a correction."
+  changed_fields:
+    label: "What changed"
+    meaning: "Which details were changed from the earlier version of the claim."
+  resubmission_type:
+    label: "Resubmission type"
+    meaning: "Why the claim was sent again, such as a correction or an appeal of a refusal."
+
+  # ===========================================================================
+  # Remittance (payment decisions)
+  # ===========================================================================
+  decision:
+    label: "Payment decision"
+    meaning: "Whether the insurer paid, part-paid or refused the claim or line."
+  adjustment:
+    label: "Adjustment"
+    meaning: "The amount by which the insurer changed the payment."
+  payment_amount:
+    label: "Amount paid"
+    meaning: "The amount the insurer actually paid."
+
+  # ===========================================================================
+  # Prescriptions and dispensing
+  # ===========================================================================
+  prescribed_product:
+    label: "Medicine prescribed"
+    meaning: "The medicine the clinician prescribed."
+  billed_product:
+    label: "Medicine billed"
+    meaning: "The medicine the pharmacy charged for."
+  dispensed_product:
+    label: "Medicine dispensed"
+    meaning: "The medicine actually handed to the patient."
+  prescribed_qty:
+    label: "Quantity prescribed"
+    meaning: "How much of the medicine was prescribed."
+  dispensed_qty:
+    label: "Quantity dispensed"
+    meaning: "How much of the medicine was handed to the patient."
+  billed_qty:
+    label: "Quantity billed"
+    meaning: "How much of the medicine was charged for."
+  billed_amount:
+    label: "Amount billed"
+    meaning: "The amount charged for the medicine."
+  days_supply:
+    label: "Days of supply"
+    meaning: "How many days the dispensed medicine should last."
+  fill_date:
+    label: "Date dispensed"
+    meaning: "The date the pharmacy handed over the medicine."
+  prescribed_date:
+    label: "Date prescribed"
+    meaning: "The date the prescription was written."
+  form:
+    label: "Medicine form"
+    meaning: "The form of the medicine, such as tablet, injection or syrup."
+  strength_mg:
+    label: "Strength (mg)"
+    meaning: "The strength of each dose of the medicine."
+  dose_mg_per_day:
+    label: "Daily dose (mg)"
+    meaning: "How much of the medicine the patient takes each day."
+
+  # ===========================================================================
+  # Review outcomes
+  # ===========================================================================
+  reviewer:
+    label: "Reviewer"
+    meaning: "The person who reviewed the case."
+  reviewer_role:
+    label: "Reviewer's role"
+    meaning: "The job role of the person who reviewed the case."
+  disposition:
+    label: "Recommended action"
+    meaning: "What should happen next, such as hold for review, audit after payment or monitor only."
+  validated_category:
+    label: "Confirmed category"
+    meaning: "The kind of problem the reviewer confirmed, if any."
+  confirmed_amount_aed:
+    label: "Amount confirmed (AED)"
+    meaning: "The overpayment the reviewer confirmed after looking at the case."
+  rationale:
+    label: "Reason given"
+    meaning: "The explanation recorded for this decision or setting."
+  decided_at:
+    label: "Decided on"
+    meaning: "When the reviewer recorded the decision."
+  appeal_raised:
+    label: "Appeal raised"
+    meaning: "Whether the provider or patient appealed the decision."
+  appeal_result:
+    label: "Appeal result"
+    meaning: "The outcome of the appeal."
+  appeal_decided_at:
+    label: "Appeal decided on"
+    meaning: "When the appeal was decided."
+  turnaround_hours:
+    label: "Time to decide (hours)"
+    meaning: "How long the review took from opening to decision."
+
+  # ===========================================================================
+  # Cases (the review queue)
+  # ===========================================================================
+  case_type:
+    label: "What links the findings"
+    meaning: "The shared factor that grouped these findings into one case, such as the same claim or the same provider."
+  dimension_label:
+    label: "Grouped by"
+    meaning: "The shared factor that grouped these findings into one case, in words."
+  scenario_family:
+    label: "Kind of risk"
+    meaning: "The broad family of fraud, waste or abuse patterns the case relates to."
+  period_bucket:
+    label: "Period"
+    meaning: "The month (or other period) the underlying events fall in."
+  signal_count:
+    label: "Number of findings"
+    meaning: "How many individual findings are counted here."
+  exposure_aed:
+    label: "Amount at risk (AED)"
+    meaning: "The amount that may have been overpaid, counting each claim once."
+  exposure_established:
+    label: "Amount at risk established"
+    meaning: "Whether the amount at risk could be worked out from the evidence, or is still to be established by a reviewer."
+  priority:
+    label: "Priority"
+    meaning: "How urgently this should be looked at; it orders the queue and never decides the outcome."
+  priority_band:
+    label: "Priority band"
+    meaning: "The priority grouped into bands, from highest to lowest."
+  priority_band_label:
+    label: "Priority band"
+    meaning: "The priority band in words."
+  domains:
+    label: "Kinds of evidence"
+    meaning: "Which kinds of checks contributed, such as rules, statistics, network analysis or document reading."
+  shadow_only:
+    label: "Trial checks only"
+    meaning: "Whether every finding in the case comes from checks still on trial, which do not yet affect claims."
+  opened_at:
+    label: "Opened on"
+    meaning: "When the case was opened."
+  exposure:
+    label: "Amount at risk"
+    meaning: "The amount that may have been overpaid, counting each claim once."
+  cases:
+    label: "Cases"
+    meaning: "The number of review cases."
+  Band:
+    label: "Priority band"
+    meaning: "The priority grouped into bands, from highest to lowest."
+  Case:
+    label: "Case"
+    meaning: "The review case reference."
+  Dimension:
+    label: "Grouped by"
+    meaning: "The shared factor that grouped these findings into one case."
+  Disposition:
+    label: "Recommended action"
+    meaning: "What should happen next with the case."
+  Exposure:
+    label: "Amount at risk"
+    meaning: "The amount that may have been overpaid, counting each claim once."
+  Family:
+    label: "Kind of risk"
+    meaning: "The broad family of fraud, waste or abuse patterns the case relates to."
+  Period:
+    label: "Period"
+    meaning: "The month (or other period) the underlying events fall in."
+  Priority:
+    label: "Priority"
+    meaning: "How urgently this should be looked at; it orders the queue and never decides the outcome."
+  Signals:
+    label: "Number of findings"
+    meaning: "How many individual findings the case contains."
+  Subject:
+    label: "Subject"
+    meaning: "The claim, patient, provider or agent the case is about."
+  Subject type:
+    label: "Kind of subject"
+    meaning: "Whether the case is about a claim, a patient, a provider, an agent or a group."
+
+  # ===========================================================================
+  # Findings (signals)
+  # ===========================================================================
+  rule_id:
+    label: "Check reference"
+    meaning: "The reference of the check (control) that produced this result."
+  rule_version:
+    label: "Check version"
+    meaning: "Which version of the check was used."
+  scenario_id:
+    label: "Scenario reference"
+    meaning: "The reference of the fraud, waste or abuse scenario the check looks for."
+  scenario:
+    label: "Scenario"
+    meaning: "The fraud, waste or abuse scenario the check looks for."
+  detection_time:
+    label: "When it was found"
+    meaning: "When the system raised this finding."
+  score:
+    label: "Score"
+    meaning: "How strongly this stands out, on the scale the check or model uses; higher means more unusual."
+  confidence:
+    label: "Confidence"
+    meaning: "How far the finding can be relied on, from 0 to 1, reduced when the data are poor or the comparison group is small."
+  evidence_strength:
+    label: "Strength of evidence"
+    meaning: "How strong the evidence behind this finding is, from 0 to 1."
+  reason_code:
+    label: "Reason code"
+    meaning: "A short code naming why the check fired."
+  domain:
+    label: "Kind of evidence"
+    meaning: "Which kind of check produced the finding, such as a rule, a statistical comparison or a model."
+  stage:
+    label: "When it runs"
+    meaning: "The point in the claim's life at which the check runs, such as before payment or in a later audit."
+  rule_status:
+    label: "Check status"
+    meaning: "Whether the check is live, on trial or retired."
+  exposure_basis:
+    label: "How the amount at risk was worked out"
+    meaning: "The calculation behind the amount at risk, in words."
+  evidence:
+    label: "Evidence"
+    meaning: "The facts and figures the result rests on."
+  fact_key:
+    label: "Underlying fact"
+    meaning: "Identifies the underlying fact, so two findings based on the same fact are not counted twice."
+  reference_versions:
+    label: "Reference data versions"
+    meaning: "Which versions of the reference lists and settings were used, so the result can be reproduced."
+  peer_level_used:
+    label: "Comparison group used"
+    meaning: "Which group of similar providers or claims the result was compared with."
+  data_quality_penalty:
+    label: "Data-quality deduction"
+    meaning: "How much the priority was reduced because the underlying data were incomplete or doubtful, from 0 to 1."
+  known_exception_strength:
+    label: "Known-exception deduction"
+    meaning: "How much the priority was reduced because a known, acceptable explanation may apply, from 0 to 1."
+  suppressed_by_exclusion:
+    label: "Set aside because"
+    meaning: "The exclusion rule that set this finding aside, if any."
+  is_synthetic:
+    label: "Test data"
+    meaning: "Whether this comes from deliberately planted test data rather than real claims."
+  notes:
+    label: "Notes"
+    meaning: "Further notes."
+  note:
+    label: "Note"
+    meaning: "A further note."
+
+  # ===========================================================================
+  # Check catalogue and coverage
+  # ===========================================================================
+  family:
+    label: "Check family"
+    meaning: "The group of related checks this one belongs to."
+  name:
+    label: "Name"
+    meaning: "The name of the check or item."
+  type:
+    label: "Check type"
+    meaning: "The kind of check, such as a fixed rule, a statistical comparison or a model."
+  type_label:
+    label: "Check type"
+    meaning: "The kind of check, such as a fixed rule, a statistical comparison or a model."
+  can_deny:
+    label: "Can recommend refusal"
+    meaning: "Whether this check is allowed to recommend refusing payment."
+  data_support:
+    label: "Can it run on this data"
+    meaning: "Whether the file has the information this check needs: fully, only through a stand-in, or not at all."
+  data_support_reason:
+    label: "Why it can or cannot run"
+    meaning: "An explanation of what information the check needs and whether this file has it."
+  required_canonical_fields:
+    label: "Information the check needs"
+    meaning: "The details the check needs in order to run."
+  implementation:
+    label: "Where it is built"
+    meaning: "The part of the system that carries out the check."
+  owner:
+    label: "Owner"
+    meaning: "The team responsible for this check or setting."
+  exclusions:
+    label: "Situations excluded"
+    meaning: "Circumstances in which the check deliberately does not fire."
+  catalogue_trigger:
+    label: "What triggers it"
+    meaning: "The condition that makes the check fire, as written in the catalogue."
+  catalogue_disposition:
+    label: "Catalogue's recommended action"
+    meaning: "The action the catalogue recommends when the check fires."
+  catalogue_data_support:
+    label: "Catalogue's data classification"
+    meaning: "Whether the catalogue expects this check to be able to run, before looking at this particular file."
+  support_basis:
+    label: "Why it could run"
+    meaning: "Whether the check ran as the catalogue says, or because this file carries extra information that unlocks it."
+  support_reason:
+    label: "Reason for the data classification"
+    meaning: "An explanation of why the check could or could not run on this file."
+  missing_for_unlock:
+    label: "What would let it run"
+    meaning: "The information this file would need for the check to be able to run."
+  governance_note:
+    label: "Governance note"
+    meaning: "A note from the people responsible for overseeing this check."
+  rule_fingerprint:
+    label: "Check fingerprint"
+    meaning: "A code that changes whenever the check's definition changes, so any edit can be spotted."
+  fingerprint:
+    label: "Fingerprint"
+    meaning: "A code that changes whenever the underlying definition changes, so any edit can be spotted."
+  run_outcome:
+    label: "Result on this run"
+    meaning: "What happened when the check ran on this file."
+  signals_this_run:
+    label: "Findings on this run"
+    meaning: "How many findings the check raised on this file."
+  positive_fixture:
+    label: "Test case"
+    meaning: "A made-up example the check is expected to catch, used to test it."
+  outcome:
+    label: "Result"
+    meaning: "What happened when the check ran."
+  expected_alert_volume:
+    label: "Expected number of alerts"
+    meaning: "How many alerts the owner expects this check or setting to produce; a commitment, not a measurement."
+  ceiling_breached:
+    label: "Alert limit exceeded"
+    meaning: "Whether the check raised more alerts than the permitted limit for one run."
+  elapsed_ms:
+    label: "Time taken (milliseconds)"
+    meaning: "How long the check took to run."
+  error:
+    label: "Error"
+    meaning: "Any error that stopped the check from completing."
+  total_controls:
+    label: "Checks in the catalogue"
+    meaning: "How many checks the catalogue contains in total."
+  total_scenarios:
+    label: "Scenarios in the catalogue"
+    meaning: "How many fraud, waste and abuse scenarios the catalogue covers."
+  controls_executed:
+    label: "Checks that ran"
+    meaning: "How many checks actually ran on this file."
+  controls_that_ran:
+    label: "Checks that ran"
+    meaning: "How many checks actually ran on this file."
+  controls_that_may_deny:
+    label: "Checks that may recommend refusal"
+    meaning: "How many checks are allowed to recommend refusing payment."
+  controls:
+    label: "Checks"
+    meaning: "The number of checks."
+  column:
+    label: "Column"
+    meaning: "The name of a column in the data."
+
+  # ===========================================================================
+  # Amount at risk (exposure)
+  # ===========================================================================
+  exposure_display:
+    label: "Amount at risk (shown)"
+    meaning: "The amount at risk as displayed, with its caveat where it is not yet established."
+  exposure_extrapolated:
+    label: "Amount at risk is an estimate"
+    meaning: "Whether the amount at risk was projected from a sample rather than counted claim by claim."
+  exposure_interval_low_aed:
+    label: "Amount at risk, low end (AED)"
+    meaning: "The lower end of the likely range for the amount at risk."
+  exposure_interval_high_aed:
+    label: "Amount at risk, high end (AED)"
+    meaning: "The upper end of the likely range for the amount at risk."
+  aggregate_exposure_aed:
+    label: "Total amount at risk (AED)"
+    meaning: "The combined amount at risk across everything in the group."
+  established:
+    label: "Established"
+    meaning: "Whether the amount at risk could be worked out from the evidence."
+  basis:
+    label: "How it was worked out"
+    meaning: "The calculation behind the amount, in words."
+  each_claim_counted_once:
+    label: "Each claim counted once"
+    meaning: "Confirms that no claim was added more than once to the total."
+
+  # ===========================================================================
+  # Evidence recorded by checks: amounts
+  # ===========================================================================
+  amount_difference_aed:
+    label: "Difference in amount (AED)"
+    meaning: "How much the two amounts differ by."
+  difference_aed:
+    label: "Difference (AED)"
+    meaning: "How much the two amounts differ by."
+  amount_spread_aed:
+    label: "Spread of amounts (AED)"
+    meaning: "The gap between the largest and smallest amounts in the group."
+  amount_tolerance:
+    label: "Allowed difference in amount"
+    meaning: "How close two amounts must be to count as the same."
+  amount_per_los_day:
+    label: "Amount per day of stay (AED)"
+    meaning: "The amount billed divided by the number of days in hospital."
+  billed_amount_aed:
+    label: "Amount billed (AED)"
+    meaning: "The amount the provider charged, in dirhams."
+  combined_gross_aed:
+    label: "Combined amount billed (AED)"
+    meaning: "The amounts billed on the linked claims added together."
+  earlier_gross_amount_aed:
+    label: "Earlier claim amount (AED)"
+    meaning: "The amount billed on the earlier, linked claim."
+  episode_total_gross_aed:
+    label: "Total billed for the episode (AED)"
+    meaning: "The amounts billed across the whole course of treatment added together."
+  excess_amount_aed:
+    label: "Amount above the expected (AED)"
+    meaning: "How much the amount billed exceeds what would be expected."
+  expected_amount_aed:
+    label: "Expected amount (AED)"
+    meaning: "What would be expected to be billed, based on similar claims."
+  expected_pharmacy_aed:
+    label: "Expected medicines amount (AED)"
+    meaning: "What would be expected to be spent on medicines, based on similar claims."
+  implied_pharmacy_aed:
+    label: "Implied medicines amount (AED)"
+    meaning: "The share of the bill spent on medicines multiplied by the amount billed."
+  gross_amount_source_currency:
+    label: "Amount billed (source currency)"
+    meaning: "The amount the provider charged, in the currency of the source file."
+  mean_gross_aed:
+    label: "Average amount billed (AED)"
+    meaning: "The average amount billed per claim."
+  total_gross_aed:
+    label: "Total amount billed (AED)"
+    meaning: "All the amounts billed added together."
+  dyad_total_aed:
+    label: "Total billed by this pair (AED)"
+    meaning: "The total amount billed on claims linking this patient and provider."
+  dyad_value_median_aed:
+    label: "Typical claim for this pair (AED)"
+    meaning: "The typical claim amount on claims linking this patient and provider."
+  effective_limit:
+    label: "Limit applied"
+    meaning: "The limit the claim was checked against."
+
+  # ===========================================================================
+  # Evidence recorded by checks: dates, counts and windows
+  # ===========================================================================
+  admission_dates:
+    label: "Admission dates"
+    meaning: "The admission dates of the claims involved."
+  discharge_dates:
+    label: "Discharge dates"
+    meaning: "The discharge dates of the claims involved."
+  active_days:
+    label: "Days with activity"
+    meaning: "The number of days on which the provider had at least one claim."
+  claims_in_window:
+    label: "Claims in the period"
+    meaning: "How many claims fell within the period examined."
+  claims_on_peak_day:
+    label: "Claims on the busiest day"
+    meaning: "How many claims the provider had on its busiest single day."
+  claims_per_active_day:
+    label: "Claims per working day"
+    meaning: "The average number of claims on each day the provider was active."
+  claims_per_member:
+    label: "Claims per patient"
+    meaning: "The average number of claims for each different patient."
+  days_apart:
+    label: "Days apart"
+    meaning: "How many days separate the two events."
+  days_between:
+    label: "Days between"
+    meaning: "How many days separate the two events."
+  gap_days:
+    label: "Gap (days)"
+    meaning: "The number of days between the two events."
+  overlap_days:
+    label: "Days overlapping"
+    meaning: "How many days two stays overlap."
+  overlapping_claims:
+    label: "Overlapping claims"
+    meaning: "The claims whose stays overlap in time."
+  peak_day:
+    label: "Busiest day"
+    meaning: "The date with the most claims."
+  peak_concurrent_occupancy:
+    label: "Most patients at once"
+    meaning: "The largest number of patients the provider had in its care at the same time."
+  assumed_capacity:
+    label: "Assumed capacity"
+    meaning: "The number of patients the provider is assumed to be able to handle at once."
+  capacity_source:
+    label: "Where the capacity figure came from"
+    meaning: "The source of the capacity figure, or a note that it is an assumption."
+  capacity_basis:
+    label: "How the capacity was set"
+    meaning: "How the number of cases a team can review was worked out."
+  capacity_threshold:
+    label: "Review-capacity cut-off"
+    meaning: "The score above which items are flagged, set so the number flagged matches what reviewers can handle."
+  capacity_k:
+    label: "Items the team can review"
+    meaning: "How many items the review team can look at in the period."
+  distinct_members:
+    label: "Different patients"
+    meaning: "How many different patients are involved."
+  distinct_providers:
+    label: "Different providers"
+    meaning: "How many different providers are involved."
+  expected_distinct_providers:
+    label: "Expected different providers"
+    meaning: "How many different providers would be expected for a patient like this."
+  providers:
+    label: "Providers"
+    meaning: "The providers involved, or how many there are."
+  providers_in_window:
+    label: "Providers in the period"
+    meaning: "How many different providers the patient used in the period examined."
+  diagnoses:
+    label: "Diagnoses"
+    meaning: "The diagnoses involved."
+  diagnoses_in_window:
+    label: "Diagnoses in the period"
+    meaning: "The diagnoses recorded in the period examined."
+  diagnosis_code:
+    label: "Diagnosis code"
+    meaning: "The code for the condition being treated."
+  repeat_count:
+    label: "Times repeated"
+    meaning: "How many times the same pattern was seen."
+  mismatch_count:
+    label: "Number of mismatches"
+    meaning: "How many times the diagnosis did not fit the procedure."
+  min_insurers:
+    label: "Minimum insurers"
+    meaning: "The number of insurers on the same stay at which the check fires."
+  readmit_window_days:
+    label: "Readmission period (days)"
+    meaning: "A return to hospital within this many days of discharge counts as a readmission."
+  window_days:
+    label: "Period examined (days)"
+    meaning: "The length of the period looked at."
+  window_start:
+    label: "Period start"
+    meaning: "The first day of the period looked at."
+  window_end:
+    label: "Period end"
+    meaning: "The last day of the period looked at."
+  window:
+    label: "Period"
+    meaning: "The period of time the figures cover."
+  snapshot_window:
+    label: "Snapshot period"
+    meaning: "The period of time the network snapshot covers."
+  shared_date:
+    label: "Shared date"
+    meaning: "The date that the linked claims have in common."
+  synchronised_claims:
+    label: "Claims on the same dates"
+    meaning: "Claims in the group that happened on the same dates, which may suggest coordination."
+  change_date:
+    label: "Date of change"
+    meaning: "When the provider's pattern changed."
+  change_period:
+    label: "Period of change"
+    meaning: "The month (or other period) in which the change happened."
+  periods_of_history:
+    label: "Periods of history"
+    meaning: "How many months (or other periods) of history the comparison rests on."
+  period:
+    label: "Period"
+    meaning: "The period of time covered."
+  training_period:
+    label: "Learning period"
+    meaning: "The earlier stretch of time the model learned from."
+  scoring_period:
+    label: "Scoring period"
+    meaning: "The later stretch of time the model was applied to."
+
+  # ===========================================================================
+  # Evidence recorded by checks: comparison with similar providers
+  # ===========================================================================
+  peer_n:
+    label: "Number compared with"
+    meaning: "How many similar claims or providers the result was compared with."
+  peer_median:
+    label: "Typical value among similar providers"
+    meaning: "The middle value among similar providers or claims."
+  peer_median_aed:
+    label: "Typical amount among similar providers (AED)"
+    meaning: "The middle amount among similar providers or claims."
+  peer_median_gross_aed:
+    label: "Typical amount billed by similar providers (AED)"
+    meaning: "The middle amount billed among similar providers or claims."
+  peer_median_los:
+    label: "Typical length of stay among similar providers (days)"
+    meaning: "The middle length of stay among similar providers or claims."
+  peer_median_ratio:
+    label: "Typical ratio among similar providers"
+    meaning: "The middle value of the ratio among similar providers."
+  peer_median_top_share:
+    label: "Typical top-provider share among similar agents"
+    meaning: "The share of claims similar agents usually send to their most-used provider."
+  peer_mean:
+    label: "Average among similar providers"
+    meaning: "The average value among similar providers."
+  peer_mad:
+    label: "Typical spread among similar providers"
+    meaning: "How much values usually vary among similar providers, measured in a way not thrown off by a few extreme cases."
+  peer_scale:
+    label: "Spread used for comparison"
+    meaning: "The amount of variation among similar providers used to judge how unusual a value is."
+  scale_source:
+    label: "How the spread was measured"
+    meaning: "Which method was used to measure the variation among similar providers."
+  peer_multiple:
+    label: "Times the typical value"
+    meaning: "How many times larger the value is than what is typical among similar providers."
+  peer_percentile:
+    label: "Rank among similar providers (%)"
+    meaning: "The percentage of similar providers or claims with a lower value."
+  peer_percentile_cut:
+    label: "Cut-off among similar providers"
+    meaning: "The value above which a result counts as unusually high compared with similar providers."
+  peer_percentile_cut_aed:
+    label: "Cut-off amount among similar providers (AED)"
+    meaning: "The amount above which a claim counts as unusually high compared with similar claims."
+  peer_percentile_cut_per_day:
+    label: "Cut-off amount per day among similar providers (AED)"
+    meaning: "The amount per day of stay above which a claim counts as unusually high."
+  peer_percentile_low:
+    label: "Low cut-off among similar providers"
+    meaning: "The value below which a result counts as unusually low compared with similar providers."
+  peer_percentile_invariance:
+    label: "Cut-off for unusually steady approvals"
+    meaning: "The level below which the variation in approvals counts as unusually steady compared with similar providers."
+  peer_cut_low_ratio:
+    label: "Low cut-off for the ratio"
+    meaning: "The ratio below which a provider counts as unusually low compared with similar providers."
+  peer_cut_variance:
+    label: "Cut-off for variation"
+    meaning: "The level of variation below which a provider counts as unusually steady."
+  peer_population:
+    label: "Number of similar providers"
+    meaning: "How many similar providers the comparison was based on."
+  peer_entities:
+    label: "Number of similar providers"
+    meaning: "How many different providers were in the comparison group."
+  peer_key:
+    label: "What made them similar"
+    meaning: "The characteristics shared by the comparison group, such as diagnosis and plan type."
+  peer_levels:
+    label: "Grouping steps used"
+    meaning: "The characteristics used, in order, to form the comparison group."
+  peer_levels_skipped:
+    label: "Grouping steps dropped"
+    meaning: "Characteristics that were dropped because the group would otherwise have been too small."
+  peer_backoff_steps:
+    label: "Times the group was widened"
+    meaning: "How many times the comparison group had to be widened to include enough members."
+  peer_group_description:
+    label: "Comparison group"
+    meaning: "A description of the group of similar providers or claims used for comparison."
+  peer_baseline_version:
+    label: "Comparison version"
+    meaning: "A code identifying the exact comparison figures used, so the result can be reproduced."
+  baseline_version:
+    label: "Comparison version"
+    meaning: "A code identifying the exact comparison figures used, so the result can be reproduced."
+  peer_comparison:
+    label: "Comparison with similar providers"
+    meaning: "How this value compares with similar providers, in words."
+  peer_matching:
+    label: "How similar groups were chosen"
+    meaning: "How groups of a similar size were chosen for the comparison."
+  peer_residual_threshold:
+    label: "How far from typical before flagging"
+    meaning: "How far from typical a value must be before it is flagged."
+  peer_robust_residual:
+    label: "How far from typical"
+    meaning: "How far this value sits from what is typical among similar providers, measured so a few extreme values do not distort it."
+  robust_residual:
+    label: "How far from typical"
+    meaning: "How far this value sits from what is typical among similar providers, measured so a few extreme values do not distort it."
+  residual:
+    label: "How far from typical"
+    meaning: "How far this value sits from what is typical among similar providers."
+  tolerance_multiple:
+    label: "Allowed margin"
+    meaning: "How many times the usual variation a value may differ by before it is flagged."
+  threshold:
+    label: "Threshold"
+    meaning: "The level at which the check or model flags a result."
+  threshold_ratio:
+    label: "Threshold ratio"
+    meaning: "The ratio at which the check flags a result."
+  interval_threshold:
+    label: "Minimum interval"
+    meaning: "The shortest acceptable gap between repeated services."
+  absolute_floor:
+    label: "Minimum size to count"
+    meaning: "The smallest value that must be reached, however unusual the pattern, before the check fires."
+  absolute_floor_met:
+    label: "Minimum size reached"
+    meaning: "Whether the value reached the minimum size needed for the check to fire."
+  composite_score:
+    label: "Overall unusualness score"
+    meaning: "A combined score showing how far a provider sits from similar providers across several measures; higher is more unusual."
+  per_feature_contributions:
+    label: "Contribution of each measure"
+    meaning: "How much each measure added to the overall score."
+  weights:
+    label: "Weights"
+    meaning: "How much each measure counts towards the overall score."
+  weight:
+    label: "Weight"
+    meaning: "How much this item counts towards the total."
+  contribution:
+    label: "Contribution"
+    meaning: "How much this item added to the total."
+  top_features:
+    label: "Main reasons"
+    meaning: "The measures that did most to make this stand out."
+  top_residual_features:
+    label: "Main differences from similar providers"
+    meaning: "The measures on which the provider differs most from similar providers."
+  insufficient_evidence:
+    label: "Not enough to compare with"
+    meaning: "Whether there were too few similar providers to make a fair comparison."
+  excluded_from_ranking:
+    label: "Left out of the ranking"
+    meaning: "Whether the provider was left out of the ranking because there is too little data to judge it."
+  exclusion_reason:
+    label: "Why it was left out"
+    meaning: "The reason the provider was left out of the ranking."
+  scenario_alignment:
+    label: "Kind of risk it points to"
+    meaning: "Which fraud, waste or abuse pattern a high value on this measure points to."
+  metric:
+    label: "Measure"
+    meaning: "What is being measured."
+  metrics_evaluated:
+    label: "Measures checked"
+    meaning: "The measures the check was able to look at."
+  metrics_unavailable:
+    label: "Measures not available"
+    meaning: "The measures the check could not look at because the data were missing."
+
+  # ===========================================================================
+  # Evidence recorded by checks: approval rates and adjusted rates
+  # ===========================================================================
+  observed_approval_ratio:
+    label: "Share of bill approved"
+    meaning: "The share of the billed amount the insurer approved for this provider."
+  approval_ratio_variance:
+    label: "Variation in approved share"
+    meaning: "How much the approved share varies from claim to claim for this provider."
+  shrunk_approval_ratio:
+    label: "Adjusted share of bill approved"
+    meaning: "The approved share, adjusted towards the typical value when the provider has few claims."
+  observed_rate:
+    label: "Rate observed"
+    meaning: "How often the event happened for this provider, as a share of its claims."
+  shrunk_rate:
+    label: "Adjusted rate"
+    meaning: "The rate adjusted towards the typical value for similar providers, so a provider with few claims is not judged on luck."
+  overall_rate:
+    label: "Overall rate"
+    meaning: "How often the event happens across all providers."
+  agent_rate:
+    label: "Rate for this agent"
+    meaning: "How often the event happens on this agent's claims."
+  posterior_interval:
+    label: "Likely range"
+    meaning: "The range within which the true rate probably lies."
+  posterior_low:
+    label: "Likely range, low end"
+    meaning: "The lower end of the range within which the true rate probably lies."
+  posterior_high:
+    label: "Likely range, high end"
+    meaning: "The upper end of the range within which the true rate probably lies."
+  posterior_width:
+    label: "Width of likely range"
+    meaning: "How wide the likely range is; wider means less certain."
+  max_posterior_width:
+    label: "Widest range allowed"
+    meaning: "The widest likely range at which a provider is still ranked; wider ranges are too uncertain."
+  prior_strength:
+    label: "Weight given to the typical value"
+    meaning: "How many claims' worth of weight the typical value for similar providers carries when adjusting a rate."
+  prior_alpha:
+    label: "Starting count of events"
+    meaning: "The number of events assumed before looking at this provider's claims."
+  prior_beta:
+    label: "Starting count of non-events"
+    meaning: "The number of non-events assumed before looking at this provider's claims."
+  alpha:
+    label: "Starting count of events"
+    meaning: "The number of events assumed before looking at a provider's own claims."
+  beta:
+    label: "Starting count of non-events"
+    meaning: "The number of non-events assumed before looking at a provider's own claims."
+  peer_var:
+    label: "Variation among similar providers"
+    meaning: "How much the rate varies among similar providers."
+  n_entities:
+    label: "Number of providers"
+    meaning: "How many providers the figures are based on."
+  events:
+    label: "Events"
+    meaning: "How many times the event happened."
+  opportunities:
+    label: "Opportunities"
+    meaning: "How many claims could have had the event."
+  interval_mass:
+    label: "Confidence of the range"
+    meaning: "How confident the likely range is, for example 0.9 for a 90 per cent range."
+  shrinkage_explanation:
+    label: "How the rate was adjusted"
+    meaning: "A plain explanation of how and why the rate was adjusted towards the typical value."
+
+  # ===========================================================================
+  # Evidence recorded by checks: changes over time
+  # ===========================================================================
+  method:
+    label: "Method"
+    meaning: "The method used to reach the result."
+  pre_change_mean:
+    label: "Average before the change"
+    meaning: "The average value before the pattern changed."
+  post_change_mean:
+    label: "Average after the change"
+    meaning: "The average value after the pattern changed."
+  change_magnitude:
+    label: "Size of the change"
+    meaning: "How much the average value changed."
+  direction:
+    label: "Direction"
+    meaning: "Whether the value went up or down, or pushed the score up or down."
+  statistic:
+    label: "Change signal"
+    meaning: "How strongly the data point to a real change rather than chance."
+  cusum_statistic:
+    label: "Build-up of change"
+    meaning: "How far small, repeated shifts have built up over time, pointing to a sustained change."
+  declared_segments:
+    label: "Known changes"
+    meaning: "Known changes, such as a new contract, that the comparison allowed for."
+  segmentation_caveat:
+    label: "Caution about known changes"
+    meaning: "A reminder that a change may reflect a known business event rather than misconduct."
+  caveat:
+    label: "Caution"
+    meaning: "A limitation to bear in mind when reading this result."
+
+  # ===========================================================================
+  # Evidence recorded by checks: links between claims and episodes
+  # ===========================================================================
+  lineage_status:
+    label: "Link between claims"
+    meaning: "How the claims are linked, such as a readmission or a transfer."
+  linkage_confidence:
+    label: "Confidence in the link"
+    meaning: "How confident the system is that the claims belong together, from 0 to 1."
+  linkage_reason:
+    label: "Why the claims are linked"
+    meaning: "The reason the claims were treated as part of the same episode."
+  match_key:
+    label: "What matched"
+    meaning: "The details that were the same on both claims."
+  crosses_providers:
+    label: "Involves different providers"
+    meaning: "Whether the linked claims come from more than one provider."
+  matched_fields:
+    label: "Details that matched"
+    meaning: "The details the two records have in common."
+  auto_merge_allowed:
+    label: "Could be merged automatically"
+    meaning: "Whether the two records could be combined without a person checking; in this system the answer is always no."
+  coordination_record_present:
+    label: "Other insurer's record present"
+    meaning: "Whether there is a record showing the other insurers' payments were taken into account."
+  payer_order_evaluable:
+    label: "Paying order can be checked"
+    meaning: "Whether the data show which insurer should have paid first."
+  equation_checked:
+    label: "Amounts checked"
+    meaning: "Which amount calculation was checked."
+  equation_not_checked:
+    label: "Amounts not checked"
+    meaning: "Which amount calculation could not be checked, and why."
+  effective_dating_available:
+    label: "Dates of status available"
+    meaning: "Whether the data show when the provider's status started and ended."
+  exclusion_listed:
+    label: "On an exclusion list"
+    meaning: "Whether the provider appears on an exclusion list."
+  exclusion_source:
+    label: "Source of exclusion list"
+    meaning: "Where the exclusion list came from."
+  limb_fired:
+    label: "Condition met"
+    meaning: "Which part of the check's condition was met."
+  limb_unavailable:
+    label: "Condition not checkable"
+    meaning: "Which part of the check's condition could not be tested with this data."
+  limbs_available:
+    label: "Conditions that could be checked"
+    meaning: "The parts of the check's condition that this data allowed."
+  limbs_evaluated:
+    label: "Conditions checked"
+    meaning: "The parts of the check's condition that were tested."
+  limbs_unavailable:
+    label: "Conditions that could not be checked"
+    meaning: "The parts of the check's condition this data did not allow."
+  employer_limb:
+    label: "Employer condition"
+    meaning: "Whether the part of the check based on a shared employer could be tested."
+  signature:
+    label: "Repeated pattern"
+    meaning: "The combination of details that repeats across the claims."
+
+  # ===========================================================================
+  # Evidence recorded by checks: networks and agents
+  # ===========================================================================
+  agent_claim_count:
+    label: "Claims by this agent"
+    meaning: "How many claims this agent was linked to."
+  agent_count:
+    label: "Number of agents"
+    meaning: "How many different agents are involved."
+  member_count:
+    label: "Number of patients"
+    meaning: "How many different patients are involved."
+  provider_count:
+    label: "Number of providers"
+    meaning: "How many different providers are involved."
+  concentration_ratio:
+    label: "Concentration"
+    meaning: "How much of the activity goes to a single provider, from 0 to 1."
+  top_provider_share:
+    label: "Share to the most-used provider"
+    meaning: "The share of the agent's claims that went to their single most-used provider."
+  hhi:
+    label: "Concentration index"
+    meaning: "A 0 to 1 measure of how concentrated the claims are on a few providers; 1 means all on one."
+  density_peer_multiple:
+    label: "Closeness compared with similar groups"
+    meaning: "How many times more tightly connected this group is than groups of a similar size."
+  size_matched_peer_density:
+    label: "Typical closeness of similar-sized groups"
+    meaning: "How tightly connected groups of a similar size usually are."
+  internal_density:
+    label: "Closeness within the group"
+    meaning: "How tightly the patients, providers and agents in the group are connected to one another, from 0 to 1."
+  external_edges:
+    label: "Links outside the group"
+    meaning: "How many connections the group has to people and providers outside it."
+  external_flow_max:
+    label: "Most outside links allowed"
+    meaning: "The highest share of outside connections at which the group still counts as closed."
+  external_ratio:
+    label: "Share of links outside the group"
+    meaning: "The share of the group's connections that lead outside it; low values suggest a closed circle."
+  edge_type:
+    label: "Kind of link"
+    meaning: "The kind of connection, such as patient to provider or agent to provider."
+  edges:
+    label: "Number of links"
+    meaning: "How many connections of this kind exist."
+  present:
+    label: "Present"
+    meaning: "Whether any links of this kind exist in the data."
+  observed:
+    label: "Observed"
+    meaning: "The number or fact actually seen in the data."
+  size:
+    label: "Size"
+    meaning: "How many members the group has."
+  cluster_size:
+    label: "Group size"
+    meaning: "How many providers are in the group."
+  dyad_claim_count:
+    label: "Claims for this pair"
+    meaning: "How many claims link this patient and this provider."
+  early_tenure_high_value_count:
+    label: "High-value claims on new policies"
+    meaning: "How many high-value claims in the group came soon after a policy started."
+  time_bounded_note:
+    label: "Time period note"
+    meaning: "A reminder that the group was found within a specific period."
+  never_individual_denial_notice:
+    label: "Not grounds to refuse a claim"
+    meaning: "A reminder that a network pattern is never, on its own, a reason to refuse any single claim."
+
+  # ===========================================================================
+  # Evidence recorded by checks: documents
+  # ===========================================================================
+  document_pair:
+    label: "Documents compared"
+    meaning: "The two documents whose wording was compared."
+  excerpt_a:
+    label: "Extract from first document"
+    meaning: "A passage from the first document."
+  excerpt_b:
+    label: "Extract from second document"
+    meaning: "A passage from the second document."
+  similarity:
+    label: "Similarity"
+    meaning: "How alike the two documents are, from 0 (nothing in common) to 1 (identical)."
+  boilerplate_removed:
+    label: "Standard wording removed"
+    meaning: "Whether standard template wording was removed before comparing, so only the substance is compared."
+  template_baseline_caveat:
+    label: "Caution about templates"
+    meaning: "A reminder that documents written from the same template are naturally similar."
+  synthetic_document_marker:
+    label: "Made-up document"
+    meaning: "Marks that the document was generated for demonstration; the claim file itself contains no documents."
+  span_grounding_notice:
+    label: "Tied to the text"
+    meaning: "A reminder that every finding is tied to the exact passage it came from."
+  field:
+    label: "Detail"
+    meaning: "Which detail this row is about."
+  source_span_text:
+    label: "Passage from the document"
+    meaning: "The exact words in the document the finding rests on."
+  span_offsets:
+    label: "Position in the document"
+    meaning: "Where the passage starts and ends in the document, counted in characters."
+  raw_extraction_confidence:
+    label: "Reading confidence before scan quality"
+    meaning: "How sure the system was of what it read, before allowing for the quality of the scan."
+  ocr_confidence:
+    label: "Scan quality"
+    meaning: "How legible the scanned document was to the text-reading software, from 0 to 1."
+  extraction_confidence:
+    label: "Reading confidence"
+    meaning: "How sure the system is of what it read, allowing for scan quality, from 0 to 1."
+  language:
+    label: "Language"
+    meaning: "The language the document is written in."
+  document_language:
+    label: "Document language"
+    meaning: "The language the document is written in."
+  document_type:
+    label: "Document type"
+    meaning: "The kind of document, such as a discharge summary or clinical note."
+  conflicting_field:
+    label: "Detail in conflict"
+    meaning: "The claim detail that the document contradicts."
+  extracted_value:
+    label: "What the document says"
+    meaning: "The value found in the document."
+  claim_value:
+    label: "What the claim says"
+    meaning: "The value on the claim."
+  negated_sentences_in_document:
+    label: "Negative statements in the document"
+    meaning: "How many sentences in the document deny something, such as 'no fever', which were not read as positive findings."
+  documented_days:
+    label: "Stay according to the document (days)"
+    meaning: "The length of stay the clinical document supports."
+  billed_days:
+    label: "Stay billed (days)"
+    meaning: "The length of stay charged on the claim."
+
+  # ===========================================================================
+  # Evidence recorded by checks: models
+  # ===========================================================================
+  model_name:
+    label: "Model"
+    meaning: "The name of the model that produced the score."
+  model_version:
+    label: "Model version"
+    meaning: "Which version of the model was used."
+  model:
+    label: "Model"
+    meaning: "The model the row describes."
+  score_percentile:
+    label: "Score rank (%)"
+    meaning: "The percentage of claims or providers with a lower score."
+  feature_count:
+    label: "Number of measures used"
+    meaning: "How many measures the model looked at."
+  features:
+    label: "Measures used"
+    meaning: "How many measures the model looked at."
+  feature:
+    label: "Measure"
+    meaning: "The measure being described."
+  label:
+    label: "Measure"
+    meaning: "The name of the measure, in words."
+  entity_isolation:
+    label: "Providers kept apart"
+    meaning: "Whether the providers the model learned from were kept separate from those it was tested on."
+  incremental_over_composite:
+    label: "Adds to the simpler score"
+    meaning: "Whether the model finds anything beyond what the simpler, transparent score already finds."
+  promotion_gate_verdict:
+    label: "Approval check result"
+    meaning: "Whether the model has passed the checks needed before it may affect claims."
+  candidate_typology_name:
+    label: "Suggested pattern name"
+    meaning: "A suggested name for the shared pattern in this group; it is a hypothesis, not a confirmed kind of fraud."
+  coherence:
+    label: "How alike the group is"
+    meaning: "How closely the members of the group resemble each other, from 0 to 1."
+  next_step:
+    label: "Next step"
+    meaning: "What a reviewer should do next."
+  unvalidated_hypothesis_notice:
+    label: "Not yet confirmed"
+    meaning: "A reminder that this pattern is an untested idea, not a confirmed kind of fraud."
+  safety_boundary_notice:
+    label: "Limits on use"
+    meaning: "A reminder of what this result may and may not be used for."
+  shap_top_features_original_units:
+    label: "Main reasons for the score"
+    meaning: "The measures that pushed the model's score most, shown in their everyday units beside the typical value."
+  shap_value:
+    label: "Push on the score"
+    meaning: "How much this measure pushed the model's score up (positive) or down (negative)."
+  mean_abs_shap:
+    label: "Average influence on scores"
+    meaning: "How much this measure moves the model's scores on average, in either direction."
+  value_display:
+    label: "This claim's value"
+    meaning: "The value on this claim, in everyday units."
+  peer_display:
+    label: "Typical value"
+    meaning: "The typical value among similar claims, in everyday units."
+  ratio_to_peer:
+    label: "Times the typical value"
+    meaning: "How many times larger the value is than the typical value."
+  plain_language:
+    label: "In plain words"
+    meaning: "A plain-language sentence explaining the finding."
+  what_the_reviewer_must_verify:
+    label: "What the reviewer must check"
+    meaning: "The facts a reviewer needs to confirm before acting on the finding."
+  proxy_note:
+    label: "Stand-in note"
+    meaning: "Explains which stand-in measure was used because the ideal information was not available."
+  auditability_note:
+    label: "Audit note"
+    meaning: "How a reviewer can trace and reproduce this result."
+  not_a_fraud_label_notice:
+    label: "Not a fraud finding"
+    meaning: "A reminder that this result is a prompt to review, not a finding of fraud."
+  not_fraud_evidence_alone_notice:
+    label: "Not proof of fraud on its own"
+    meaning: "A reminder that this pattern alone is not evidence of fraud."
+  previous_fraud_field_note:
+    label: "Note on earlier fraud field"
+    meaning: "Explains that the earlier-fraud note is policy history, not the answer for this claim."
+
+  # ===========================================================================
+  # Provider-level measures used by the overall score
+  # ===========================================================================
+  mean_amount_per_los_day:
+    label: "Average amount per day of stay (AED)"
+    meaning: "The provider's average amount billed per day in hospital."
+  mean_pharmacy_ratio:
+    label: "Average share spent on medicines"
+    meaning: "The provider's average share of the bill spent on medicines."
+  mean_approval_ratio:
+    label: "Average share of bill approved"
+    meaning: "The provider's average share of the billed amount that the insurer approved."
+  readmission_rate:
+    label: "Readmission rate"
+    meaning: "The share of the provider's patients readmitted within 30 days."
+  coding_mismatch_rate:
+    label: "Rate of diagnosis mismatches"
+    meaning: "The share of the provider's claims where the diagnosis did not fit the procedure."
+
+  # ===========================================================================
+  # Reports: population, runs and metrics
+  # ===========================================================================
+  table:
+    label: "Table"
+    meaning: "The kind of information held, such as claims, patients or providers."
+  primary_key:
+    label: "Identifying field"
+    meaning: "The field that uniquely identifies each row of the table."
+  rows:
+    label: "Rows"
+    meaning: "How many rows or records there are."
+  columns_populated:
+    label: "Columns filled"
+    meaning: "How many columns contain at least one value."
+  columns_defined:
+    label: "Columns expected"
+    meaning: "How many columns the table is designed to hold."
+  columns:
+    label: "Columns"
+    meaning: "The number or names of the columns in the file."
+  reason:
+    label: "Reason"
+    meaning: "The reason given."
+  required_content:
+    label: "What it should hold"
+    meaning: "The information this table is meant to contain."
+  definition:
+    label: "Definition"
+    meaning: "How the measure is calculated."
+  required_data:
+    label: "Data needed"
+    meaning: "The information needed to calculate this measure properly."
+  procedure:
+    label: "Test procedure"
+    meaning: "The evaluation step being reported."
+  summary:
+    label: "Summary"
+    meaning: "A short summary of the result."
+  value_injected:
+    label: "Test cases planted"
+    meaning: "How many deliberately planted test cases there were."
+  value_detected:
+    label: "Test cases caught"
+    meaning: "How many of the planted test cases the system caught."
+  value_sample_size:
+    label: "Sample size"
+    meaning: "How many claims were in the random audit sample."
+  value_false_negative_rate:
+    label: "Share missed"
+    meaning: "The share of known problem claims the system failed to flag."
+  value_random_audit_miss_rate:
+    label: "Missed in random audit"
+    meaning: "The share of problem claims found by a random audit that the system had not flagged."
+  value_split_date:
+    label: "Learning cut-off date"
+    meaning: "The date separating the period models learned from and the period they were tested on."
+  value_provider_overlap:
+    label: "Providers in both periods"
+    meaning: "How many providers appear in both the learning and the testing data; zero is required."
+  value_ece:
+    label: "Calibration error"
+    meaning: "How far the stated probabilities differ from what actually happened; lower is better."
+  value_precision_at_one_day:
+    label: "Hit rate for one day's reviews"
+    meaning: "The share of the items a team could review in one day that turned out to be real problems."
+  value_unstable_controls:
+    label: "Unstable checks"
+    meaning: "How many checks gave noticeably different results across groups."
+  value_policy_type:
+    label: "Result by policy type"
+    meaning: "The result broken down by policy type."
+  value_provider_volume_band:
+    label: "Result by provider size"
+    meaning: "The result broken down by how busy the provider is."
+  value_tpa:
+    label: "Result by claims administrator"
+    meaning: "The result broken down by claims administrator."
+  key:
+    label: "Setting"
+    meaning: "The name of the setting."
+  approved_by:
+    label: "Approved by"
+    meaning: "Who approved this setting."
+  regulator:
+    label: "Regulator"
+    meaning: "The health regulator the setting applies to, if any."
+  payer:
+    label: "Payer"
+    meaning: "The insurer the setting applies to, if any."
+  contract:
+    label: "Contract"
+    meaning: "The provider contract the setting applies to, if any."
+  code_family:
+    label: "Code group"
+    meaning: "The group of service or diagnosis codes the setting applies to, if any."
+  review_date:
+    label: "Review due"
+    meaning: "When this setting must next be reviewed."
+  expired:
+    label: "Expired"
+    meaning: "Whether the setting is past its end date."
+  unapproved:
+    label: "Not approved"
+    meaning: "Whether the setting is in use without recorded approval."
+  claims:
+    label: "Claims"
+    meaning: "The number of claims."
+  labelled_fraud:
+    label: "Known fraud (answer key)"
+    meaning: "How many claims the held-out answer key marks as fraud; the key is never used for detection."
+  prevalence:
+    label: "Share that is fraud"
+    meaning: "The share of claims the held-out answer key marks as fraud."
+  flagged:
+    label: "Flagged"
+    meaning: "How many claims or providers the system flagged."
+  flagged_and_labelled:
+    label: "Flagged and known fraud"
+    meaning: "How many flagged claims the held-out answer key also marks as fraud."
+  precision_proxy:
+    label: "Hit rate (approximate)"
+    meaning: "The share of flagged claims that the answer key marks as fraud; approximate, because the key is imperfect."
+  recall_proxy:
+    label: "Catch rate (approximate)"
+    meaning: "The share of known fraud claims that were flagged; approximate, because the key is imperfect."
+  reliability_caveat:
+    label: "How reliable this is"
+    meaning: "A note on how far this answer-key source can be trusted."
+  labelled_claims:
+    label: "Known fraud claims (answer key)"
+    meaning: "How many claims the held-out answer key marks with this kind of fraud."
+  flagged_by_claim_control:
+    label: "Flagged by a claim check"
+    meaning: "How many of those claims a claim-level check flagged."
+  recall_claim_level:
+    label: "Catch rate at claim level"
+    meaning: "The share of those claims that a claim-level check flagged."
+  also_under_an_entity_lead:
+    label: "Also covered by a provider or patient lead"
+    meaning: "How many of those claims sit under a lead about their provider, patient or agent."
+  top_claim_level_controls:
+    label: "Checks that caught most"
+    meaning: "The claim-level checks that flagged the most of these claims."
+  requirement:
+    label: "Requirement"
+    meaning: "The requirement being traced."
+  statement:
+    label: "Requirement in full"
+    meaning: "What the requirement says."
+  scenario_families:
+    label: "Kinds of risk covered"
+    meaning: "The fraud, waste and abuse scenario families that meet the requirement."
+  implementing_modules:
+    label: "Where it is built"
+    meaning: "The parts of the system that meet the requirement."
+  module_status:
+    label: "Build status"
+    meaning: "Whether those parts of the system exist and are complete."
+  test_ids:
+    label: "Tests"
+    meaning: "The automated tests that check the requirement."
+  test_status:
+    label: "Test result"
+    meaning: "Whether those tests passed."
+  gate:
+    label: "Release check"
+    meaning: "The release check this requirement feeds into."
+  gate_status:
+    label: "Release check result"
+    meaning: "Whether that release check passed."
+  verdict:
+    label: "Verdict"
+    meaning: "The overall conclusion for this requirement."
+
+  # ===========================================================================
+  # App pages: data, models, settings, governance, users
+  # ===========================================================================
+  status on this dataset:
+    label: "Status on this file"
+    meaning: "What happened to the check on the file now loaded."
+  data support:
+    label: "Can it run on this data"
+    meaning: "Whether the file has the information the check needs."
+  what happened:
+    label: "What happened"
+    meaning: "A plain account of what happened to the model on this file."
+  gate verdict:
+    label: "Approval check result"
+    meaning: "Whether the model has passed the checks needed before it may affect claims."
+  trained on:
+    label: "Learned from"
+    meaning: "How many claims the model learned from."
+  means:
+    label: "What this means"
+    meaning: "An explanation of the status in plain words."
+  change:
+    label: "Change since last file"
+    meaning: "How the result differs from the previously loaded file."
+  previous:
+    label: "Previous file"
+    meaning: "The result on the previously loaded file."
+  signals:
+    label: "Findings"
+    meaning: "The number of findings raised."
+  dataset:
+    label: "File"
+    meaning: "The data file."
+  adapter:
+    label: "File format"
+    meaning: "The format the file was read as."
+  origin:
+    label: "Where the file came from"
+    meaning: "Whether the file was shipped with the tool, uploaded or read from a folder."
+  sha256:
+    label: "File fingerprint"
+    meaning: "A tamper-evident fingerprint of the file's contents."
+  loaded_at:
+    label: "Loaded on"
+    meaning: "When the file was loaded."
+  attribute:
+    label: "Property"
+    meaning: "The property of the file being described."
+  share:
+    label: "Share"
+    meaning: "The proportion of the total."
+  classification:
+    label: "Classification"
+    meaning: "How the item is classified."
+  seconds:
+    label: "Time taken (seconds)"
+    meaning: "How long this step took."
+  version:
+    label: "Version"
+    meaning: "Which version is being used."
+  parameter:
+    label: "Setting"
+    meaning: "The name of the model setting."
+  params:
+    label: "Model settings"
+    meaning: "The settings the model was fitted with."
+  training_rows:
+    label: "Claims learned from"
+    meaning: "How many claims the model learned from."
+  scored_rows:
+    label: "Claims scored"
+    meaning: "How many claims the model scored."
+  layer:
+    label: "Method"
+    meaning: "The detection method being compared."
+  entities_ranked:
+    label: "Providers ranked"
+    meaning: "How many providers were ranked."
+  review_yield_proxy:
+    label: "Hit rate at team capacity (approximate)"
+    meaning: "The share of the top-ranked providers a team could review that turned out to be problems, judged against the answer key."
+  lift_over_base_rate:
+    label: "Better than random by"
+    meaning: "How many times better the hit rate is than picking providers at random."
+  lift_over_composite:
+    label: "Better than the simple score by"
+    meaning: "How many times better the hit rate is than the transparent overall score."
+  criterion:
+    label: "Criterion"
+    meaning: "The requirement the model is tested against."
+  prerequisite:
+    label: "Prerequisite"
+    meaning: "A condition that must be met before a learning model may be used."
+  met:
+    label: "Met"
+    meaning: "Whether the condition is met."
+  what_would_satisfy_it:
+    label: "What would satisfy it"
+    meaning: "What would need to happen for the condition to be met."
+  monitor:
+    label: "Monitor"
+    meaning: "The measure being watched for change over time."
+  warn_threshold:
+    label: "Warning level"
+    meaning: "The level at which a warning is raised."
+  breach_threshold:
+    label: "Breach level"
+    meaning: "The level at which the model is treated as no longer reliable."
+  within_ceiling:
+    label: "Within the time limit"
+    meaning: "Whether the step finished within its time limit."
+  ceiling_ms:
+    label: "Time limit (milliseconds)"
+    meaning: "The longest the step is allowed to take."
+  observed_ms:
+    label: "Time taken (milliseconds)"
+    meaning: "How long the step actually took."
+  governed_expectation:
+    label: "Expected number of alerts"
+    meaning: "How many alerts the owner committed to expecting from this check."
+  divergence:
+    label: "Difference from expected"
+    meaning: "How many more (or fewer) alerts were raised than expected."
+  explanation:
+    label: "Explanation"
+    meaning: "How this item was worked out, in words."
+  raw_value:
+    label: "Value before scaling"
+    meaning: "The value as measured, before it was put on a common scale."
+  normalised:
+    label: "Value on a common scale"
+    meaning: "The value converted to a 0 to 1 scale so it can be combined with others."
+  formula:
+    label: "Formula"
+    meaning: "How the priority is calculated."
+  sentence:
+    label: "Sentence"
+    meaning: "A sentence from the generated summary."
+  group:
+    label: "Grouping"
+    meaning: "The characteristics used to form the comparison group at this step."
+  level:
+    label: "Level"
+    meaning: "The level of the comparison hierarchy or data being described."
+  levels:
+    label: "Grouping characteristics"
+    meaning: "The characteristics combined to form the comparison group."
+  step:
+    label: "Step"
+    meaning: "The order in which the comparison group is widened."
+  canonical name:
+    label: "Standard name"
+    meaning: "The standard name for this grouping characteristic."
+  canonical_name:
+    label: "Standard name"
+    meaning: "The standard name for this grouping characteristic."
+  mapped to:
+    label: "Taken from"
+    meaning: "The column in this file used for the characteristic."
+  dataset_mapping:
+    label: "Taken from"
+    meaning: "The column in this file used for the characteristic."
+  availability:
+    label: "Availability"
+    meaning: "Whether this file supplies the characteristic fully, through a stand-in, or not at all."
+  available:
+    label: "Available"
+    meaning: "Whether the item is available on this run."
+  stand-in used:
+    label: "Stand-in used"
+    meaning: "The substitute used because the ideal information is not in the file."
+  distinct_values:
+    label: "Different values"
+    meaning: "How many different values the characteristic takes in this file."
+  property:
+    label: "Property"
+    meaning: "The property being described."
+  explainer:
+    label: "Explanation method"
+    meaning: "The method used to explain the model's scores."
+  why not:
+    label: "Why not"
+    meaning: "Why the explanation method is not available."
+  fitted for:
+    label: "Used by check"
+    meaning: "The check this starting estimate was fitted for."
+  peer mean:
+    label: "Average among similar providers"
+    meaning: "The average rate among similar providers."
+  prior strength (α+β):
+    label: "Weight given to the typical value"
+    meaning: "How many claims' worth of weight the typical value carries when adjusting a provider's rate."
+  "α (= mean × strength)":
+    label: "Starting count of events"
+    meaning: "The number of events assumed before looking at a provider's own claims."
+  "β (= (1−mean) × strength)":
+    label: "Starting count of non-events"
+    meaning: "The number of non-events assumed before looking at a provider's own claims."
+  entities in the peer population:
+    label: "Number of similar providers"
+    meaning: "How many similar providers the estimate is based on."
+  scale estimator:
+    label: "How the spread was measured"
+    meaning: "The method used to measure variation among similar providers."
+  feature-provider pairs:
+    label: "Times used"
+    meaning: "How many measure-and-provider combinations used this method."
+  providers_scored:
+    label: "Providers scored"
+    meaning: "How many providers were scored on this measure."
+  mean_residual:
+    label: "Average distance from typical"
+    meaning: "How far from typical providers sit on this measure, on average."
+  max_residual:
+    label: "Largest distance from typical"
+    meaning: "The furthest any provider sits from typical on this measure."
+  peer level used:
+    label: "Comparison group used"
+    meaning: "Which group of similar providers the result was compared with."
+  seed:
+    label: "Random seed"
+    meaning: "A fixed starting number that makes the run repeat exactly."
+  parameters_fingerprint:
+    label: "Settings fingerprint"
+    meaning: "A code identifying the exact set of settings used on this run."
+  username:
+    label: "User name"
+    meaning: "The name the person signs in with."
+  display_name:
+    label: "Name"
+    meaning: "The person's name as shown in the app."
+  role:
+    label: "Role"
+    meaning: "The person's role, which decides what they can see and do."
+  job_title:
+    label: "Job title"
+    meaning: "The person's job title."
+  can_do:
+    label: "Can do"
+    meaning: "What this role is allowed to do."
+  sees:
+    label: "Can see"
+    meaning: "Which pages this role can see."
+  extra_permissions:
+    label: "Extra permissions"
+    meaning: "Permissions granted on top of the person's role."
+  is_active:
+    label: "Active"
+    meaning: "Whether the account can be used."
+  must_change_password:
+    label: "Must change password"
+    meaning: "Whether the person must set a new password at next sign-in."
+  failed_attempts:
+    label: "Failed sign-ins"
+    meaning: "How many sign-in attempts have failed in a row."
+  last_login:
+    label: "Last signed in"
+    meaning: "When the person last signed in."
+  created_at:
+    label: "Created on"
+    meaning: "When the account was created."
+  created_by:
+    label: "Created by"
+    meaning: "Who created the account."

@@ -1,0 +1,304 @@
+# =============================================================================
+# PLAIN-LANGUAGE GLOSSARY
+# =============================================================================
+# For claims reviewers, audit managers and thesis examiners who know health
+# insurance but not statistics or machine learning.
+#
+# Every definition describes what THIS system does, checked against the source
+# modules and config/parameters.yaml, not a textbook generality. Numbers quoted
+# here (thresholds, capacity, window sizes) are the governed values in
+# config/parameters.yaml at the time of writing; if a parameter changes there,
+# the matching sentence here should change with it.
+#
+# Fields:
+#   term         the name shown in the app
+#   also_called  other names the app or the thesis uses (optional)
+#   short        one sentence, used as a tooltip
+#   explanation  two or three plain sentences
+#   analogy      one everyday comparison
+#   in_this_app  how this app actually uses it
+# =============================================================================
+
+glossary:
+
+  # ---------------------------------------------------------------------------
+  # The ground rules
+  # ---------------------------------------------------------------------------
+
+  signal:
+    term: "Signal"
+    also_called: ["alert", "flag", "lead"]
+    short: "One check's output about one claim, provider or group: a reason to look, not a finding of fraud."
+    explanation: "A signal is raised when one control (a rule, a statistical test or a model) finds something worth a reviewer's attention. It can show that a claim is not payable, is inconsistent or is statistically unusual. It cannot show intent, and intent is what separates fraud from waste, abuse or honest error."
+    analogy: "Like a smoke alarm going off: it tells you to go and check the kitchen, not that the house is on fire."
+    in_this_app: "Every signal carries its evidence, the versions of the data it relied on, and one governed disposition. Only a human reviewer, looking at the evidence, may reach a conclusion about anyone's conduct."
+
+  disposition:
+    term: "Disposition"
+    also_called: ["recommended action"]
+    short: "The one governed action a control recommends, such as pend for review, audit after payment, or monitor only."
+    explanation: "Each control declares exactly one of eight dispositions: return, reject, reprice, pend before payment, audit after payment, refer to the special investigations unit, provider education, or monitor only. The disposition is a policy decision fixed in the rule, not something a score can change."
+    analogy: "Like the routing slip on an incoming letter: it says which desk the item goes to, not what that desk will decide."
+    in_this_app: "Only 21 of the 164 controls may reject or reprice, and all of them are objective hard edits. Statistical, network, document and model controls are blocked in code from ever rejecting or repricing, and no score, priority or AI feature can set or change a disposition."
+
+  case:
+    term: "Case"
+    short: "A bundle of related signals that describe one underlying event, so a reviewer sees one story instead of several separate alerts."
+    explanation: "Signals are grouped into cases after the checks have run. A case has a stable identity built from the tenant, the case type, the main subject, the scenario family and the time period, so re-running the same data gives the same case."
+    analogy: "Like a caseworker putting three letters about the same hospital stay into one folder rather than three."
+    in_this_app: "On the synthetic demonstration file, 9,074 signals collapse into 8,502 cases. Merging or splitting a case always writes an audit record; case identity never changes silently."
+
+  correlation_dimension:
+    term: "Correlation dimension"
+    also_called: ["case dimension"]
+    short: "One of the six ways signals are joined into a case: claim lineage, episode, provider behaviour, pharmacy or product, network, and distribution."
+    explanation: "Two signals belong in the same case only if they relate to the same thing along one of these six lines. For example, a resubmitted claim, a cloned discharge note and an upcoding flag on the same episode become one coding case for one reviewer."
+    analogy: "Like filing post by account number, by property address or by policy: each is a different but legitimate way of deciding that two letters belong together."
+    in_this_app: "The case screen shows which dimension joined the signals, so a reviewer can see why they were grouped and challenge it."
+
+  evidence_capping:
+    term: "Evidence capping"
+    short: "Several signals that rest on the same underlying fact count once, at the strength of the strongest, never added together."
+    explanation: "If three rules fire because one claim amount is high, that is one piece of evidence, not three. Signals sharing a fact contribute only the strongest of them, and separate facts are combined in a way that levels off, so many weak signals cannot add up to false certainty."
+    analogy: "Like three newspapers all quoting the same press release: it is one source, however many times you read it."
+    in_this_app: "Evidence strength in the priority score is always capped this way, and the case screen states how many signals rest on how many distinct facts."
+
+  exposure:
+    term: "Exposure"
+    also_called: ["financial exposure", "flagged value"]
+    short: "The amount of money a case could be about, worked out conservatively and differently for each kind of signal."
+    explanation: "For a duplicate claim it is the lower of the two amounts, because the larger may be the genuine one. For a network case each claim is counted once even if it touches several providers or members. For a model-only lead it is the gross amount, shown with the words 'exposure not yet established'."
+    analogy: "Like a surveyor quoting the smallest repair bill the evidence supports, not the price of rebuilding the house."
+    in_this_app: "Every exposure figure is shown with a written explanation of how it was calculated. Gross flagged value is never presented as savings: nothing has been reviewed, confirmed, prevented or recovered."
+
+  established_exposure:
+    term: "Established exposure"
+    also_called: ["exposure not yet established"]
+    short: "Exposure is 'established' only when an objective condition has been shown to fail; otherwise the amount is shown but never counted."
+    explanation: "When a hard edit shows a claim breaks a clear payment rule, the amount at stake is established. When only a model or pattern points at a claim, no rule has been shown to fail, so the gross amount is displayed for scale with the words 'exposure not yet established'."
+    analogy: "Like the difference between an invoice error you can point to and a hunch that a bill looks high."
+    in_this_app: "Established and unestablished amounts are reported as two separate totals and are never added together, so the system cannot quietly overstate its own value."
+
+  priority:
+    term: "Priority"
+    also_called: ["priority score", "priority band"]
+    short: "A 0 to 100 score that orders the review queue; it never decides what happens to a claim."
+    explanation: "Priority combines seven published parts: strength of evidence, money at stake, how many independent kinds of evidence agree, confirmed past history, how recent it is, and deductions for poor data quality or a known exception. The amount at stake is scaled down so that one very large claim cannot swamp the queue."
+    analogy: "Like triage in an emergency department: it decides who is seen first, not what the diagnosis is."
+    in_this_app: "Each case shows its band (P1 urgent to P5 watch only) and the term-by-term arithmetic, so the number can be rebuilt by hand. With six-figure amounts the score can bunch up near 100, and the app shows the raw working so this is visible."
+
+  shadow_mode:
+    term: "Shadow mode"
+    also_called: ["shadow"]
+    short: "A check or model runs and records what it would have flagged, but its output does not yet drive live decisions."
+    explanation: "Every new rule and model starts in shadow. It runs on real claims and its signals can be inspected, so its usefulness and error rate can be judged before anyone relies on it. Moving it to active needs a governed approval by someone other than its author."
+    analogy: "Like a trainee driver with an instructor holding dual controls: the trainee drives, but nothing they do is left unchecked."
+    in_this_app: "All 164 controls are in shadow, because activation needs a forward-looking shadow period of at least 30 days and an independent policy owner, and a single past-data run has neither. The two anomaly models are also in shadow unless they pass the promotion gate."
+
+  promotion_gate:
+    term: "Promotion gate"
+    also_called: ["model gate"]
+    short: "Five tests a model must all pass before it may move from shadow to active use."
+    explanation: "The model must be tested on later claims from providers it never trained on, beat the simple transparent composite by a set margin, give scores that line up with observed outcomes, show no serious drift, and explain its top reasons in real units beside peer values. A test that cannot be run counts as a failure, not a pass."
+    analogy: "Like a probation review: every box must be ticked, and 'we could not check' is not a tick."
+    in_this_app: "The required margin is at least 1.1 times the composite's hit rate, and the calibration error may be no more than 0.15. On the synthetic demonstration file the Local Outlier Factor passes all five; the Isolation Forest passes four, including a lift of 2.2 times, and fails calibration alone. Passing only makes a model eligible: a policy owner who did not propose it must still approve it."
+
+  # ---------------------------------------------------------------------------
+  # Models
+  # ---------------------------------------------------------------------------
+
+  isolation_forest:
+    term: "Isolation Forest"
+    also_called: ["pattern-finding model"]
+    short: "An automated pattern-finder that looks for claims that are easy to separate from the crowd."
+    explanation: "It builds many random decision trees and counts how few questions it takes to single out each claim. Claims that can be isolated in very few steps are unusual. It does not know what fraud looks like; it only knows what is rare."
+    analogy: "Like spotting the one guest at a wedding who is dressed for the beach: you do not need a rule about beachwear to notice they stand out."
+    in_this_app: "It uses 300 trees, is trained on earlier claims from one half of the hospitals and scores later claims from the other half. Its scores never decide a claim; they raise monitor-only leads that suggest where to look."
+
+  local_outlier_factor:
+    term: "Local Outlier Factor"
+    also_called: ["neighbourhood model"]
+    short: "A model that flags a claim which is unusual compared with the claims most similar to it, even if it looks ordinary overall."
+    explanation: "For each claim it finds its nearest look-alike claims and compares how tightly packed they are around it. A claim sitting in a much emptier spot than its neighbours is scored as unusual. This catches claims that are odd only within their own local group, which a whole-population method can miss."
+    analogy: "Like noticing a house priced far below the others on its own street, even though the price would be normal in another town."
+    in_this_app: "It compares each claim with its 35 closest look-alikes from the training claims and uses the same split as the Isolation Forest. On the synthetic demonstration file it is the model that passes all five promotion-gate tests; its output is still a monitor-only lead, never a decision."
+
+  anomaly_score:
+    term: "Anomaly score"
+    also_called: ["model score", "unusualness score"]
+    short: "A number saying how unusual a claim looks to a model; higher means more unusual, not more likely to be fraud."
+    explanation: "The score ranks claims from most to least unusual compared with what the model saw in training. It is not a probability and it is not a measure of guilt; a claim can be unusual for perfectly good clinical or commercial reasons."
+    analogy: "Like a thermometer reading: it tells you something is out of the ordinary, but not why."
+    in_this_app: "Only the top-scoring claims up to reviewer capacity are flagged. A flagged claim carries its gross amount with the words 'exposure not yet established' and the reasons behind the score, and is a reason to look, not proof."
+
+  shap:
+    term: "Reasons behind a score"
+    also_called: ["SHAP", "feature contributions", "top contributing features"]
+    short: "The few facts about a claim that pushed its anomaly score up or down the most, shown in real units beside the peer figure."
+    explanation: "A method called SHAP shares out a claim's score among the facts that went into it, such as amount per inpatient day or days from discharge to claim. The app then shows each top fact in its natural unit next to the usual value for similar claims, so the reviewer sees what the claim actually said, not an abstract number."
+    analogy: "Like a mechanic's report that says 'brake pads at 2 millimetres, normal is 8', rather than just 'the car scored badly'."
+    in_this_app: "A typical line reads: amount per inpatient day 2,649 dirhams, peer median 912 (2.9 times), raised this claim's score. The promotion gate fails any model whose reasons cannot be shown this way; for the Local Outlier Factor the method is an approximation, and the app says so."
+
+  contamination:
+    term: "Contamination setting"
+    also_called: ["contamination"]
+    short: "The Isolation Forest's starting guess at what share of claims are unusual; in this app it does not decide how many claims are flagged."
+    explanation: "The model needs an initial assumption about how common unusual claims are in order to set itself up. It is a technical starting point, not an estimate of how much fraud there is."
+    analogy: "Like a new teacher assuming about one pupil in twenty will need extra help: a starting assumption, not a verdict on the class."
+    in_this_app: "It is set to 5 per cent. The number of claims actually flagged is set by reviewer capacity instead, so changing this setting does not change the size of the review queue."
+
+  n_neighbors:
+    term: "Number of neighbours"
+    also_called: ["neighbourhood size"]
+    short: "How many of the most similar claims the Local Outlier Factor compares each claim against."
+    explanation: "A small number judges a claim against a very tight circle of look-alikes, which can be jumpy. A larger number judges it against a wider circle, which is steadier but can blur small, genuinely distinct groups."
+    analogy: "Like judging whether a rent is high by comparing it with the nearest 35 flats rather than the whole city or just the flat next door."
+    in_this_app: "It is set to 35, and reduced automatically only if there are too few training claims to find that many."
+
+  temporal_split:
+    term: "Temporal split"
+    also_called: ["temporal holdout", "train on the past, score the future"]
+    short: "The models learn from earlier claims at one set of hospitals and are then tested on later claims at a different set."
+    explanation: "Claims are sorted by date; the earliest 60 per cent of the timeline is for training and the rest for scoring. Hospitals are also divided into two fixed groups, so no hospital appears on both sides. This tests whether a model has learned a pattern that carries over to new claims, rather than memorising particular hospitals."
+    analogy: "Like setting an exam with fresh questions from a different school, instead of reusing the practice paper the pupils have already seen."
+    in_this_app: "The cost is coverage: early claims from scoring hospitals and later claims from training hospitals are scored by neither model. The app reports how many claims that leaves out rather than hiding it."
+
+  clustering:
+    term: "Clustering (HDBSCAN)"
+    also_called: ["novel-cluster discovery", "candidate typology"]
+    short: "A method that finds groups of providers who differ from their peers in the same way, as possible new fraud patterns to look into."
+    explanation: "It looks at how each provider differs from its peers, not at raw figures, and finds tight groups that share the same kind of difference. Points that fit no group are left out as noise rather than forced into one. Each group gets a descriptive working name, such as 'elevated amount per inpatient day with depressed approval ratio', never an accusation."
+    analogy: "Like an epidemiologist noticing several unrelated clinics reporting the same unusual set of symptoms: a pattern worth investigating, not yet a diagnosis."
+    in_this_app: "A group must have at least 8 members. Every group is monitor-only and is an untested idea for the quarterly pattern review; nothing happens in production until a person turns it into a proper rule, which then starts in shadow."
+
+  # ---------------------------------------------------------------------------
+  # Statistics
+  # ---------------------------------------------------------------------------
+
+  peer_group:
+    term: "Peer group"
+    also_called: ["comparison group", "peers"]
+    short: "The set of similar claims or providers that a claim or provider is compared against."
+    explanation: "A provider is only judged unusual relative to others doing similar work. The app tries the most specific comparison first, by diagnosis, service line, policy type, administrator and provider size, and records exactly which comparison group was used."
+    analogy: "Like comparing a cardiac surgeon's fees with other cardiac surgeons, not with general practitioners."
+    in_this_app: "A group must contain at least 30 before it is used. Several levels are stand-ins because the claim file has no activity codes, specialty or encounter type, and location is not used at all because the file does not contain it."
+
+  peer_back_off:
+    term: "Peer back-off"
+    also_called: ["back-off"]
+    short: "When the most specific comparison group is too small, the app steps up to a broader one and records that it did so."
+    explanation: "A comparison with only a handful of peers is unreliable. The app therefore moves to the next, broader level until the group is large enough, and if no level is large enough it reports insufficient peer evidence instead of a result."
+    analogy: "Like a valuer who cannot find enough sales on one street and widens the search to the neighbourhood, and says so in the report."
+    in_this_app: "The level actually used is stamped on every signal and shown beside every peer comparison. Insufficient peer evidence is a distinct outcome from 'not unusual', and it raises no signal."
+
+  proxy:
+    term: "Proxy"
+    also_called: ["stand-in", "precision proxy", "weak proxy"]
+    short: "A substitute measure used because the real one is not in the data, and labelled as such wherever it appears."
+    explanation: "When the ideal field is missing, the app sometimes uses the nearest available one instead, for example the diagnosis code in place of the procedure family. A proxy is weaker than the real thing, so the app names it and lowers the weight of findings that rest on it."
+    analogy: "Like using a postcode to estimate someone's income: sometimes useful, often wrong, and never to be mistaken for a payslip."
+    in_this_app: "Peer levels are marked as proxy or weak proxy, the coverage matrix says which controls rely on one, and precision figures computed against the file's labels are called 'precision proxy', never precision."
+
+  median_mad:
+    term: "Median and MAD"
+    also_called: ["robust residual", "median absolute deviation", "modified z-score"]
+    short: "The middle value of a group and the typical distance from it, used instead of averages because claim amounts are lopsided."
+    explanation: "Claim amounts have a long tail of very large bills, which drag an average upwards and hide the very outliers you want to find. The median is the middle value, and the median absolute deviation is the typical gap from it; neither is moved much by a few extreme claims. A claim's distance from its peers is measured in these typical gaps."
+    analogy: "Like describing house prices on a street by the middle house, so one mansion does not make every other house look cheap."
+    in_this_app: "Every amount-based check uses this and none uses an average and standard deviation. A robust distance above 3.5 typical gaps raises a signal on the amount checks, and where the spread cannot be measured the app says so rather than inventing a number."
+
+  shrinkage:
+    term: "Shrinkage"
+    also_called: ["empirical-Bayes shrinkage", "shrunk rate", "Beta prior", "posterior interval"]
+    short: "Pulls a rate based on few claims towards the peer average, so small providers are not ranked on luck."
+    explanation: "A provider with one problem in five claims shows a 20 per cent rate that means almost nothing, while the same 20 per cent over five thousand claims is a real outlier. The app starts from what is typical for the peer group, fitted from the data, and adjusts each provider's rate towards its own record in proportion to how much evidence it has. Every adjusted rate is shown with a 90 per cent range of plausible values."
+    analogy: "Like a new restaurant with two five-star reviews: you assume it is probably about average until more reviews come in."
+    in_this_app: "A provider is excluded from ranking, not flagged, when its plausible range is wider than 25 percentage points, and no rate is computed at all below 5 claims. The Provider Analytics page shows the five-claim and five-thousand-claim example side by side."
+
+  change_point:
+    term: "Change point (CUSUM and EWMA)"
+    also_called: ["self-history change", "CUSUM", "EWMA"]
+    short: "Detects when a provider's own monthly figures shift noticeably from their earlier level."
+    explanation: "Instead of comparing a provider with peers, this compares the provider with its own past. One method keeps a running total of how far each month sits above or below normal and alarms when the total gets too large; the other tracks a smoothed average and alarms when it drifts outside set limits. Both report the date of the change and the average before and after."
+    analogy: "Like a bank noticing that a customer who has spent about the same each month for years suddenly doubles their spending."
+    in_this_app: "At least 6 months of history are required before a change can be declared. The file has no contract, tariff or ownership records, so a change here cannot be told apart from a legitimate business change; these signals therefore go to post-payment audit and carry that warning, and a policy owner can declare known changes so they are not misread."
+
+  transparent_composite:
+    term: "Transparent composite"
+    also_called: ["robust peer composite", "baseline"]
+    short: "A simple, published score that adds up how far a provider sits from its peers on seven measures; the benchmark every model must beat."
+    explanation: "Each provider is compared with its peer group on seven measures, including average claim amount, amount per inpatient day, pharmacy share, approval ratio, claims per member, readmission rate and coding-mismatch rate. Each distance is multiplied by a published weight and the results are added. Anyone with the weights can rebuild the score with a calculator."
+    analogy: "Like a school report card with seven subjects and a weighted average, where you can see every mark that went into the total."
+    in_this_app: "A provider scoring above 1.2 is raised as a lead for post-payment audit. It always runs, so if no model is ever promoted the system still has an explainable fallback."
+
+  # ---------------------------------------------------------------------------
+  # Networks and entities
+  # ---------------------------------------------------------------------------
+
+  network_community:
+    term: "Network community (Louvain)"
+    also_called: ["community", "ring", "cluster of connected entities"]
+    short: "A group of members, providers, agents and administrators that are much more connected to each other than to anyone else."
+    explanation: "Claims are drawn as links between the people and organisations involved. A method called Louvain finds groups that are densely linked inside and thinly linked outside. A dense, closed group can be a sign of coordinated activity, but it can also just be a busy local hospital."
+    analogy: "Like noticing that the same small circle of people keep appearing at each other's weddings and nobody else's."
+    in_this_app: "Links are built in weekly windows, because a group that is dense within one week is more telling than one built up over years. A group is flagged only if it has at least 4 members, is at least 1.2 times as dense as comparable groups, has under 30 per cent of its links going outside, and includes at least two members and two providers. Agent-to-provider links are inferred, not observed, and are labelled as such."
+
+  entity_resolution:
+    term: "Entity resolution"
+    also_called: ["matching", "possible duplicate provider"]
+    short: "Suggests pairs of provider records that might be the same real organisation, for a person to confirm or reject."
+    explanation: "Normally this would compare bank accounts, phone numbers, addresses or owners. This claim file has none of those, so the app can only compare behaviour: shared members, agents, administrators, diagnoses and similar billing. That is a much weaker clue, so each pair is a question, not an identification."
+    analogy: "Like noticing two shops with different names but the same customers, suppliers and prices: worth asking about, not proof they are one business."
+    in_this_app: "Pairs with a match confidence of at least 0.6 are shown with the matching fields. Nothing is ever merged automatically, at any confidence; a confirmed merge is a human action and is written to the audit log."
+
+  # ---------------------------------------------------------------------------
+  # Monitoring and evaluation
+  # ---------------------------------------------------------------------------
+
+  psi_drift:
+    term: "Drift (PSI)"
+    also_called: ["Population Stability Index", "population stability"]
+    short: "Measures how much the claims being scored now differ from the claims the model learned from."
+    explanation: "The index compares how claims were spread across ranges of each measure in the training period with how they are spread in the scoring period. A small value means the two look alike; a large value means the claim mix has moved. It shows that the inputs changed, not that the model got worse."
+    analogy: "Like a tailor who measured a customer a year ago checking whether the customer's size has changed before reusing the pattern."
+    in_this_app: "Below 0.10 is fine, 0.10 or more is a warning, and 0.25 or more is a breach that recommends recalibration or switching the model off. Neither happens automatically: it needs a named owner. On the synthetic demonstration file the largest value is 0.18, a warning."
+
+  calibration:
+    term: "Calibration"
+    also_called: ["calibration check", "expected calibration error"]
+    short: "Checks whether a score's stated level of confidence matches how often flagged items turn out to be real."
+    explanation: "If claims scored around 0.3 were confirmed about 30 per cent of the time, the score would be well calibrated. Anomaly scores are not probabilities, so the app rescales them to a 0 to 1 range purely to run this check, and a poor result is expected rather than surprising."
+    analogy: "Like checking a weather forecaster: on the days they said 70 per cent chance of rain, did it rain about 70 per cent of the time?"
+    in_this_app: "The promotion gate allows an error of at most 0.15. On the synthetic file this check can pass only one of the two models at once, for arithmetic reasons explained in the dataset notes, and the result is reported rather than tuned away."
+
+  capacity:
+    term: "Capacity"
+    also_called: ["reviewer capacity", "precision at capacity"]
+    short: "How many alerts the review team can actually work through, which sets how many claims the models flag."
+    explanation: "Capacity is the number of reviewers multiplied by the number of alerts each can handle in a day. The models flag only the top-scoring claims up to that number, rather than everything above a fixed statistical cut-off, because an alert nobody has time to open protects no one."
+    analogy: "Like a clinic booking only as many appointments as it has doctors for, most urgent first."
+    in_this_app: "The governed setting is 4 reviewers times 25 alerts each, so 100 alerts a day. Capacity is a slider on the Review Queue and Models pages, and the flagged set and the capacity-based measures recalculate when it moves."
+
+  precision:
+    term: "Precision"
+    also_called: ["review yield", "hit rate", "confirmed divided by reviewed"]
+    short: "Of the items reviewers looked at, the share that turned out to be a real problem."
+    explanation: "Precision tells you how much reviewer time is well spent. It can only be measured once reviewers have looked at flagged items and recorded what they found."
+    analogy: "Like the share of bags pulled aside at customs that actually contained something that should not be there."
+    in_this_app: "Not measurable yet: no reviewer has recorded any decisions, so the app shows 'not measurable on this dataset' rather than a made-up figure. Where it shows a 'precision proxy', that is measured against the file's own investigation labels, is an upper bound, and is not precision."
+
+  recall:
+    term: "Recall"
+    also_called: ["detection rate", "catch rate"]
+    short: "Of all the real problems in the claims, the share the system flagged."
+    explanation: "Recall tells you how much is being missed. Measuring it needs to know about problems nobody flagged, which in practice means reviewing a random sample of claims that were not flagged."
+    analogy: "Like asking how many of the leaks in a roof the inspector actually found, not just whether the ones found were real."
+    in_this_app: "Not measurable yet: no reviewer has recorded decisions and no random audit has been done, although the design sets a random audit sample of 400 for this purpose. The 'recall proxy' figures are measured against the file's investigation labels and are not true recall."
+
+  lift:
+    term: "Lift"
+    also_called: ["lift over the composite", "lift over base rate"]
+    short: "How many times better a method's hit rate is than a comparison, such as the transparent composite or picking at random."
+    explanation: "A lift of 2 means that, reviewing the same number of items, a method finds twice as many real problems as the comparison. It is the fairest single test of whether a model adds anything over a simple approach."
+    analogy: "Like a new fishing spot where you catch twice as many fish per hour as at your usual one."
+    in_this_app: "Not measurable yet in its true form, because it needs reviewer decisions on later claims. The promotion gate calculates it against the file's investigation labels at reviewer capacity and requires at least 1.1 times the composite; that figure is an upper bound, not a forecast."

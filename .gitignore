@@ -20,3 +20,8 @@ data/uploads/
 #     python tools/make_demo_dataset.py --out data/claims_demo_synthetic.csv --calibrate
 #   data/synthetic_documents/ — regenerate with:
 #     python -m fwa.run_validation
+# scratch builds made while developing the UAE demo generator
+data/_scratch/
+
+# Per-user interface preferences (Simple/Advanced mode), written by the app.
+data/ui_prefs.json

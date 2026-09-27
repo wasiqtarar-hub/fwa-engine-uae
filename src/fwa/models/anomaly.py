@@ -35,6 +35,7 @@ precision@capacity live.
 from __future__ import annotations
 
 import hashlib
+import logging
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -44,7 +45,14 @@ from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 from sklearn.preprocessing import RobustScaler
 
-__all__ = ["AnomalyModels", "ModelScores", "SplitPlan"]
+__all__ = ["AnomalyModels", "ModelScores", "SplitPlan", "MIN_PROVIDERS", "ISOLATION_FOREST_MIN_TRAIN"]
+
+_log = logging.getLogger(__name__)
+
+#: Entity isolation needs one provider to train on and a different one to score.
+MIN_PROVIDERS = 2
+#: An isolation tree needs at least two points to make a split.
+ISOLATION_FOREST_MIN_TRAIN = 2
 
 
 def _bucket(value: str, salt: str, buckets: int = 2) -> int:
@@ -124,6 +132,13 @@ class AnomalyModels:
         self.train_matrix: pd.DataFrame | None = None
         self.score_matrix: pd.DataFrame | None = None
         self.score_frame: pd.DataFrame | None = None
+        #: model name (or ``"all"``) -> technical reason it was not trained.
+        self.skipped: dict[str, str] = {}
+        #: plain-language sentences for the UI, one per reason.
+        self.messages: list[str] = []
+        # Every claim's unscaled feature row; read ONLY by the layer's opt-in
+        # exploratory scoring, never by any governed metric or gate.
+        self._exploratory_matrix: pd.DataFrame | None = None
 
     # ------------------------------------------------------------------ split
 
@@ -156,85 +171,245 @@ class AnomalyModels:
 
     # ------------------------------------------------------------------ train
 
+    def _skip(self, model: str, technical: str, plain: str) -> None:
+        """Record why a model (or ``"all"``) was not trained: technical + plain."""
+        self.skipped[model] = technical
+        if plain and plain not in self.messages:
+            self.messages.append(plain)
+        _log.warning("Model %s skipped: %s", model, technical)
+
+    def _preflight(self, claims: pd.DataFrame) -> bool:
+        """Checks that must hold before a fair split is even possible."""
+        n_claims = int(len(claims))
+        if n_claims == 0:
+            self._skip("all", "Input claim frame is empty.",
+                       "This file has no claims, so there is nothing for the models to learn from.")
+            return False
+        n_providers = int(claims["provider_sk"].astype(str).nunique())
+        if n_providers < MIN_PROVIDERS:
+            self._skip(
+                "all",
+                f"Entity isolation needs >= {MIN_PROVIDERS} providers (one training group, one "
+                f"scoring group); found {n_providers}.",
+                f"Not enough hospitals in this file to train the model fairly. At least "
+                f"{MIN_PROVIDERS} are needed (this file has {n_providers}): the model learns from "
+                f"one group of hospitals and is checked on a different group, so it is never "
+                f"judged on a hospital it has already seen.",
+            )
+            return False
+        dates = pd.to_datetime(claims["service_date"], errors="coerce").dropna()
+        n_dates = int(dates.dt.normalize().nunique())
+        if n_dates == 0:
+            self._skip("all", "No parseable service_date values.",
+                       "None of the claims in this file has a readable date, so the model cannot "
+                       "learn from earlier claims and be checked on later ones.")
+            return False
+        if n_dates < 2:
+            day = str(dates.iloc[0])[:10]
+            self._skip(
+                "all",
+                f"Temporal split impossible: every claim has service_date {day}.",
+                f"Every claim in this file has the same date ({day}), so the model cannot learn "
+                f"from earlier claims and be checked on later ones. At least 2 different claim "
+                f"dates are needed (this file has 1).",
+            )
+            return False
+        return True
+
     def fit_score(self, claims: pd.DataFrame, features) -> dict[str, ModelScores]:
-        """Train on the earlier period, score the later one. Returns both models."""
-        plan = self.plan_split(claims)
+        """Train on the earlier period, score the later one. Returns both models.
+
+        Never raises on a small or degenerate file: every reason a model could
+        not be trained is recorded in :attr:`skipped` (technical) and
+        :attr:`messages` (a plain sentence for the UI), and an empty or partial
+        dict is returned. On a healthy file the path is exactly the governed one.
+        """
+        self.models = {}
+        self.skipped = {}
+        self.messages = []
+        if not self._preflight(claims):
+            return {}
+        try:
+            plan = self.plan_split(claims)
+        except Exception as exc:  # noqa: BLE001 - degrade, never crash
+            self._skip("all", f"plan_split failed: {type(exc).__name__}: {exc}",
+                       "The claims in this file could not be divided into a training period and a "
+                       "later checking period, so no model was trained.")
+            return {}
         work = self._ordered_claims
 
-        matrix, columns = features.model_matrix()
+        if not plan.train_providers or not plan.score_providers:
+            n = len(plan.train_providers) + len(plan.score_providers)
+            self._skip(
+                "all",
+                f"Provider hold-out produced train_providers={len(plan.train_providers)}, "
+                f"score_providers={len(plan.score_providers)}.",
+                f"Not enough hospitals in this file to train the model fairly: all {n} fell into "
+                f"the same group of the fair hold-out, so there is no separate group to check "
+                f"the model on. At least 1 hospital is needed in each group (this file has "
+                f"{len(plan.train_providers)} to learn from and {len(plan.score_providers)} to "
+                f"check).",
+            )
+            return {}
+
+        try:
+            matrix, columns = features.model_matrix()
+        except Exception as exc:  # noqa: BLE001
+            self._skip("all", f"model_matrix failed: {type(exc).__name__}: {exc}",
+                       "The measures the model needs could not be built from this file, so no "
+                       "model was trained.")
+            return {}
+        if not columns:
+            self._skip("all", "Model matrix has no numeric columns.",
+                       "This file has no numeric measures the model can use, so no model was "
+                       "trained.")
+            return {}
         # align the (claim-ordered) feature matrix to the date-ordered frame
         matrix = matrix.copy()
         matrix.index = features.df["claim_sk"].astype(str).values
         order = work["claim_sk"].astype(str).values
         matrix = matrix.reindex(order)
+        if matrix.isna().to_numpy().any():
+            # Only a degenerate input reaches this (a claim with no feature row,
+            # or a column the frame could not fill); a healthy run has no NaN
+            # here, so the fill never changes a healthy result.
+            _log.warning("Model matrix contained NaN after alignment; filled with 0.0.")
+            matrix = matrix.fillna(0.0)
         self.matrix_columns = columns
+        # Every claim's (unscaled) row, kept ONLY for ModelLayer's opt-in
+        # exploratory scoring. Nothing in the governed path reads it.
+        self._exploratory_matrix = matrix
 
         train_ids = work.loc[plan.train_index, "claim_sk"].astype(str).values
         score_ids = work.loc[plan.score_index, "claim_sk"].astype(str).values
         X_train = matrix.loc[train_ids]
         X_score = matrix.loc[score_ids]
-        if X_train.empty or X_score.empty:
+        split_date = str(plan.split_date)[:10]
+        if X_train.empty:
+            self._skip(
+                "all",
+                f"Empty training set after the split (split_date={split_date}, "
+                f"train_providers={len(plan.train_providers)}).",
+                f"No claims were left to learn from after the fair split: the hospitals set "
+                f"aside for training have no claims before {split_date}. At least 1 training "
+                f"claim is needed (this file has 0).",
+            )
+            return {}
+        if X_score.empty:
+            self._skip(
+                "all",
+                f"Empty scoring set after the split (split_date={split_date}, "
+                f"score_providers={len(plan.score_providers)}).",
+                f"No claims were left to check the model on after the fair split: the hospitals "
+                f"set aside for checking have no claims on or after {split_date}. At least 1 "
+                f"claim is needed (this file has 0).",
+            )
+            return {}
+        if bool((X_train.nunique(dropna=False) <= 1).all()):
+            self._skip(
+                "all",
+                f"All {len(columns)} training columns are constant over {len(X_train)} rows.",
+                f"Every claim the model would learn from has exactly the same values on all "
+                f"{len(columns)} measures it uses, so there is no pattern to learn. At least 2 "
+                f"training claims that differ are needed (this file has none).",
+            )
             return {}
 
-        scaler = RobustScaler().fit(X_train)   # robust, per §4.6
+        try:
+            scaler = RobustScaler().fit(X_train)   # robust, per §4.6
+            Xtr = pd.DataFrame(scaler.transform(X_train), index=X_train.index, columns=columns)
+            Xsc = pd.DataFrame(scaler.transform(X_score), index=X_score.index, columns=columns)
+        except Exception as exc:  # noqa: BLE001
+            self._skip("all", f"RobustScaler failed: {type(exc).__name__}: {exc}",
+                       "The claims in this file could not be put on a common scale for the "
+                       "model, so no model was trained.")
+            return {}
         self.scaler = scaler
-        Xtr = pd.DataFrame(scaler.transform(X_train), index=X_train.index, columns=columns)
-        Xsc = pd.DataFrame(scaler.transform(X_score), index=X_score.index, columns=columns)
         self.train_matrix, self.score_matrix = Xtr, Xsc
 
         capacity = self._capacity()
 
         # ---- Isolation Forest (Liu et al., 2008) ---------------------------
-        iso = IsolationForest(
-            n_estimators=int(self.config.get("isolation_forest_n_estimators")),
-            contamination=float(self.config.get("isolation_forest_contamination")),
-            random_state=self.seed,
-            n_jobs=-1,
-        ).fit(Xtr)
-        iso_scores = pd.Series(-iso.score_samples(Xsc), index=Xsc.index)  # higher = more anomalous
-        self.models["isolation_forest"] = ModelScores(
-            name="isolation_forest",
-            version="1.0.0",
-            scores=iso_scores,
-            threshold=self._capacity_threshold(iso_scores, capacity),
-            flagged_index=self._top_k(iso_scores, capacity),
-            feature_columns=columns,
-            params={
-                "n_estimators": int(self.config.get("isolation_forest_n_estimators")),
-                "contamination": float(self.config.get("isolation_forest_contamination")),
-                "random_state": self.seed,
-            },
-            notes="Trained on the earlier period, on providers held out from scoring. "
-                  "Threshold set by reviewer capacity, not by contamination.",
-            explainer=iso,
-            training_rows=len(Xtr),
-        )
+        if len(Xtr) < ISOLATION_FOREST_MIN_TRAIN:
+            self._skip(
+                "isolation_forest",
+                f"{len(Xtr)} training row(s) < {ISOLATION_FOREST_MIN_TRAIN}.",
+                f"Not enough claims to train the Isolation Forest model. It isolates a claim by "
+                f"splitting it away from others, so at least {ISOLATION_FOREST_MIN_TRAIN} "
+                f"training claims are needed (this file has {len(Xtr)}).",
+            )
+        else:
+            try:
+                iso = IsolationForest(
+                    n_estimators=int(self.config.get("isolation_forest_n_estimators")),
+                    contamination=float(self.config.get("isolation_forest_contamination")),
+                    random_state=self.seed,
+                    n_jobs=-1,
+                ).fit(Xtr)
+                iso_scores = pd.Series(-iso.score_samples(Xsc), index=Xsc.index)  # higher = more anomalous
+                self.models["isolation_forest"] = ModelScores(
+                    name="isolation_forest",
+                    version="1.0.0",
+                    scores=iso_scores,
+                    threshold=self._capacity_threshold(iso_scores, capacity),
+                    flagged_index=self._top_k(iso_scores, capacity),
+                    feature_columns=columns,
+                    params={
+                        "n_estimators": int(self.config.get("isolation_forest_n_estimators")),
+                        "contamination": float(self.config.get("isolation_forest_contamination")),
+                        "random_state": self.seed,
+                    },
+                    notes="Trained on the earlier period, on providers held out from scoring. "
+                          "Threshold set by reviewer capacity, not by contamination.",
+                    explainer=iso,
+                    training_rows=len(Xtr),
+                )
+            except Exception as exc:  # noqa: BLE001
+                self._skip("isolation_forest", f"fit/score failed: {type(exc).__name__}: {exc}",
+                           "The Isolation Forest model could not be trained on this file, so it "
+                           "was skipped. The technical reason is in the log.")
 
         # ---- Local Outlier Factor (Breunig et al., 2000) -------------------
-        n_neighbors = min(int(self.config.get("lof_n_neighbors")), max(len(Xtr) - 1, 2))
-        lof = LocalOutlierFactor(n_neighbors=n_neighbors, novelty=True).fit(Xtr)
-        lof_scores = pd.Series(-lof.score_samples(Xsc), index=Xsc.index)
-        self.models["local_outlier_factor"] = ModelScores(
-            name="local_outlier_factor",
-            version="1.0.0",
-            scores=lof_scores,
-            threshold=self._capacity_threshold(lof_scores, capacity),
-            flagged_index=self._top_k(lof_scores, capacity),
-            feature_columns=columns,
-            params={"n_neighbors": n_neighbors, "novelty": True},
-            notes="Retained because it surfaces anomalies that are only anomalous relative to a "
-                  "LOCAL peer cluster — a pattern Isolation Forest can miss.",
-            explainer=lof,
-            training_rows=len(Xtr),
-        )
+        configured_k = int(self.config.get("lof_n_neighbors"))
+        lof_min = configured_k + 1
+        if len(Xtr) < lof_min:
+            self._skip(
+                "local_outlier_factor",
+                f"{len(Xtr)} training row(s) < lof_n_neighbors + 1 = {lof_min}.",
+                f"Not enough claims to train the Local Outlier Factor model. It compares each "
+                f"claim with its {configured_k} nearest neighbours (lof_n_neighbors), so at "
+                f"least {lof_min} training claims are needed (this file has {len(Xtr)}).",
+            )
+        else:
+            try:
+                n_neighbors = min(configured_k, max(len(Xtr) - 1, 2))
+                lof = LocalOutlierFactor(n_neighbors=n_neighbors, novelty=True).fit(Xtr)
+                lof_scores = pd.Series(-lof.score_samples(Xsc), index=Xsc.index)
+                self.models["local_outlier_factor"] = ModelScores(
+                    name="local_outlier_factor",
+                    version="1.0.0",
+                    scores=lof_scores,
+                    threshold=self._capacity_threshold(lof_scores, capacity),
+                    flagged_index=self._top_k(lof_scores, capacity),
+                    feature_columns=columns,
+                    params={"n_neighbors": n_neighbors, "novelty": True},
+                    notes="Retained because it surfaces anomalies that are only anomalous relative to a "
+                          "LOCAL peer cluster — a pattern Isolation Forest can miss.",
+                    explainer=lof,
+                    training_rows=len(Xtr),
+                )
+            except Exception as exc:  # noqa: BLE001
+                self._skip("local_outlier_factor", f"fit/score failed: {type(exc).__name__}: {exc}",
+                           "The Local Outlier Factor model could not be trained on this file, so "
+                           "it was skipped. The technical reason is in the log.")
 
+        if not self.models:
+            return {}
         self.score_frame = work.loc[plan.score_index].copy()
-        self.score_frame["isolation_forest_score"] = iso_scores.reindex(
-            self.score_frame["claim_sk"].astype(str)
-        ).values
-        self.score_frame["local_outlier_factor_score"] = lof_scores.reindex(
-            self.score_frame["claim_sk"].astype(str)
-        ).values
+        for name, m in self.models.items():
+            self.score_frame[f"{name}_score"] = m.scores.reindex(
+                self.score_frame["claim_sk"].astype(str)
+            ).values
         return self.models
 
     # ------------------------------------------------------------- calibration

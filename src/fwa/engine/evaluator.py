@@ -41,6 +41,7 @@ from .controls import CONTROL_IMPLEMENTATIONS
 from .evallib import EvaluationOutcome
 from .registry import RuleRegistry
 from .signals import Signal, SignalStore
+from .unlocks import UnlockDecision, decide, runtime_view
 
 __all__ = ["Evaluator", "ControlRunRecord", "EvaluationReport"]
 
@@ -60,6 +61,16 @@ class ControlRunRecord:
     ceiling_breached: bool
     elapsed_ms: float
     error: str = ""
+    #: The static classification from the catalogue YAML. ``data_support``
+    #: above is the EFFECTIVE classification on this run, which differs only
+    #: when a dataset unlock (``rules/unlocks/``) was satisfied.
+    catalogue_data_support: str = ""
+    #: "catalogue", "unlocked" (was not executable, ran because the dataset
+    #: carries the tables) or "upgraded" (a proxy replaced by the full check).
+    support_basis: str = "catalogue"
+    support_reason: str = ""
+    #: What the dataset lacked for this control's unlock, if it has one.
+    missing_for_unlock: str = ""
 
     def to_row(self) -> dict[str, Any]:
         return self.__dict__.copy()
@@ -125,6 +136,8 @@ class Evaluator:
         self.registry = registry
         self.store = store if store is not None else SignalStore()
         self.audit = audit
+        #: rule_id -> the per-run executability decision, for the reports.
+        self.decisions: dict[str, UnlockDecision] = {}
 
     # ------------------------------------------------------------------- run
 
@@ -148,9 +161,13 @@ class Evaluator:
 
         stage_clock: dict[str, float] = {}
 
+        unlocks = getattr(self.registry, "unlocks", {}) or {}
         for control in controls:
             started = time.perf_counter()
-            outcome, signals, error = self._run_one(ctx, control, as_of)
+            decision = decide(control, unlocks.get(control.rule_id), ctx.dataset)
+            self.decisions[control.rule_id] = decision
+            outcome, signals, error = self._run_one(ctx, runtime_view(control, decision), as_of,
+                                                    decision)
             elapsed_ms = (time.perf_counter() - started) * 1000.0
             stage_clock[control.stage.value] = stage_clock.get(control.stage.value, 0.0) + elapsed_ms
 
@@ -192,13 +209,17 @@ class Evaluator:
                     type_label=control.type_label,
                     stage=control.stage.value,
                     status=control.status.value,
-                    data_support=control.data_support.value,
+                    data_support=decision.effective_support.value,
                     outcome=outcome.value,
                     signal_count=len(signals),
                     expected_alert_volume=expected,
                     ceiling_breached=breached,
                     elapsed_ms=round(elapsed_ms, 2),
                     error=error,
+                    catalogue_data_support=decision.catalogue_support.value,
+                    support_basis=decision.basis,
+                    support_reason=decision.reason,
+                    missing_for_unlock="; ".join(decision.missing),
                 )
             )
             if error:
@@ -218,7 +239,8 @@ class Evaluator:
     # -------------------------------------------------------------- internals
 
     def _run_one(
-        self, ctx: ControlContext, control: AtomicControl, as_of: _dt.date
+        self, ctx: ControlContext, control: AtomicControl, as_of: _dt.date,
+        decision: UnlockDecision | None = None,
     ) -> tuple[EvaluationOutcome, list[Signal], str]:
         if control.data_support is DataSupport.NOT_EXECUTABLE_ON_THIS_DATASET:
             return EvaluationOutcome.NOT_EXECUTABLE_ON_THIS_DATASET, [], ""
@@ -229,7 +251,12 @@ class Evaluator:
         if not control.is_effective(as_of):
             return EvaluationOutcome.NOT_EFFECTIVE, [], ""
 
-        impl = CONTROL_IMPLEMENTATIONS.get(control.implementation or "")
+        if decision is not None and decision.basis != "catalogue":
+            from .unlocked import UNLOCKED_IMPLEMENTATIONS
+
+            impl = UNLOCKED_IMPLEMENTATIONS.get(control.implementation or "")
+        else:
+            impl = CONTROL_IMPLEMENTATIONS.get(control.implementation or "")
         if impl is None:
             return (
                 EvaluationOutcome.NOT_EXECUTABLE_ON_THIS_DATASET,

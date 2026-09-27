@@ -1,0 +1,152 @@
+# Dataset unlocks for the CLN family (clinical and coding controls).
+# Each entry runs its implementation (src/fwa/engine/unlocked/cln.py) ONLY on a
+# dataset that populates every named table; on a claim-header file every one of
+# these controls stays NOT_EXECUTABLE_ON_THIS_DATASET, exactly as the catalogue says.
+unlocks:
+  - rule_id: CLN-01-R04
+    implementation: cln_01_r04_level_migration_changepoint
+    requires_tables: [claim_line, activity_code_reference]
+    requires_columns: [activity_code_reference.code_level, activity_code_reference.code_family]
+    data_support: PARTIAL
+    reason: "Runs on the billed service lines and the level of each code within its family, tracking each provider's monthly share of top-level services. Case-mix change is approximated by the mix of main-diagnosis chapters, and a contract or ownership change is read from the provider and contract records rather than from a full structural-change register."
+
+  - rule_id: CLN-02-R01
+    implementation: cln_02_r01_payment_changing_secondary_dx
+    requires_tables: [diagnosis, drg_grouper]
+    requires_columns: [diagnosis.sequence]
+    data_support: PARTIAL
+    reason: "Runs when the file carries every diagnosis in order and a grouper table saying which secondary diagnoses raise the payment band. The grouper is a stand-in rather than a certified DRG grouper, and 'supporting evidence' is read from the patient's other claims, the services billed and the medicines dispensed, not from the clinical record."
+
+  - rule_id: CLN-02-R02
+    implementation: cln_02_r02_comorbidity_prevalence_outlier
+    requires_tables: [diagnosis, drg_grouper]
+    data_support: PARTIAL
+    reason: "Runs when the file carries the ordered diagnoses and the grouper's complication flags. Risk adjustment uses the main-diagnosis chapter mix of all providers and excludes transfers; age and specialty adjustment are not applied."
+
+  - rule_id: CLN-02-R03
+    implementation: cln_02_r03_prior_history_inconsistency
+    requires_tables: [diagnosis, drg_grouper]
+    data_support: PARTIAL
+    reason: "Runs on the patient's diagnoses across all their claims in this file, the grouper's severity flags and any medicines dispensed. History from other insurers is not available, so only this payer's longitudinal record is read."
+
+  - rule_id: CLN-02-R04
+    implementation: cln_02_r04_poa_sequencing_conflict
+    requires_tables: [diagnosis]
+    requires_columns: [diagnosis.sequence, diagnosis.present_on_admission]
+    data_support: PARTIAL
+    reason: "Runs on the ordered diagnosis list and present-on-admission flags. The coding policy applied is a fixed set of general sequencing rules (one main diagnosis, no repeated codes, no external-cause main diagnosis, main diagnosis present on admission outside obstetric, newborn and transfer cases), not an effective-dated national coding-policy table."
+
+  - rule_id: CLN-02-R05
+    implementation: cln_02_r05_severity_mix_changepoint
+    requires_tables: [diagnosis, drg_grouper]
+    data_support: PARTIAL
+    reason: "Runs on each provider's monthly average grouper severity of inpatient stays and checks length of stay and services per stay for a matching shift. A shift in referrals is not checked, and service-line expansion is approximated by the main-diagnosis chapter mix."
+
+  - rule_id: CLN-03-R02
+    implementation: cln_03_r02_unsupported_indication
+    requires_tables: [claim_line, diagnosis, indication_policy]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries service lines, the patient's diagnoses and a curated table of the diagnoses that support each service, with the configured look-back."
+
+  - rule_id: CLN-03-R03
+    implementation: cln_03_r03_procedure_sequence_conflict
+    requires_tables: [claim_line, care_pathway_policy]
+    data_support: PARTIAL
+    reason: "Runs on service lines and a care-pathway table of services that must follow another within a window, and allows for work-ups done elsewhere when a referral into the provider is on record. The 'prerequisite result' limb is not checked separately from the prerequisite service."
+
+  - rule_id: CLN-03-R04
+    implementation: cln_03_r04_rare_code_specialty
+    requires_tables: [claim_line, provider]
+    requires_columns: [provider.specialty]
+    data_support: PARTIAL
+    reason: "Runs on service lines and each provider's specialty, measuring how often a provider bills codes that other providers of its specialty almost never bill. Combinations with the ordering or rendering clinician are not used."
+
+  - rule_id: CLN-04-R03
+    implementation: cln_04_r03_no_result_before_repeat
+    requires_tables: [claim_line, observation, repeat_interval_policy]
+    data_support: PARTIAL
+    reason: "Runs on service lines, recorded results and the repeat-interval policy's list of tests that need a result before a repeat. The 'unchanged result' limb is not implemented; only an absent (or only later recorded) earlier result is flagged."
+
+  - rule_id: CLN-04-R05
+    implementation: cln_04_r05_cascade_pattern
+    requires_tables: [referral]
+    requires_columns: [referral.referrer_provider_sk]
+    data_support: PARTIAL
+    reason: "Runs on referrals and the claims they led to, comparing each referring provider's follow-on spend per referral with other referrers. Whether the first visit was low-intensity is shown but not used as a filter, and specialty pathways are not modelled."
+
+  - rule_id: CLN-05-R04
+    implementation: cln_05_r04_admission_rate_outlier
+    requires_tables: [encounter]
+    requires_columns: [encounter.encounter_type, encounter.admission_type]
+    data_support: PARTIAL
+    reason: "Runs on encounters: emergency presentations and emergency admissions per hospital against the rate expected from its main-diagnosis mix, with observation stays not counted as admissions. Severity beyond the diagnosis chapter and referral mix are not adjusted for."
+
+  - rule_id: CLN-06-R01
+    implementation: cln_06_r01_missing_order_result_trail
+    requires_tables: [claim_line, observation, activity_code_reference]
+    data_support: PARTIAL
+    reason: "Runs on imaging and therapy lines and the results or administration records linked to them, after the latency allowance. Laboratory results are left to CLN-08-R03, and service-specific documentation requirements are not modelled."
+
+  - rule_id: CLN-06-R04
+    implementation: cln_06_r04_member_denial_attendance
+    requires_tables: [member_confirmation, attendance_record]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries member service confirmations and independent attendance records, discarding unverified channels and answers given too long after the service."
+
+  - rule_id: CLN-06-R05
+    implementation: cln_06_r05_no_longitudinal_footprint
+    requires_tables: [diagnosis, prescription_dispense, observation, drug_policy]
+    data_support: PARTIAL
+    reason: "Runs on repeatedly billed drug-treated conditions and looks for any dispensed medicine or recorded result for the patient, compared with other patients with the same condition. Follow-up visits are not counted as a footprint and out-of-network care cannot be seen."
+
+  - rule_id: CLN-07-R01
+    implementation: cln_07_r01_improbable_service_day
+    requires_tables: [claim_line, activity_code_reference]
+    requires_columns: [claim_line.rendering_clinician_id, activity_code_reference.minutes]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when service lines name the rendering clinician and the code reference gives the minimum time per service, excluding laboratory, imaging, dispensing and team services."
+
+  - rule_id: CLN-07-R03
+    implementation: cln_07_r03_scarce_equipment_concurrency
+    requires_tables: [claim_line, equipment_inventory]
+    data_support: PARTIAL
+    reason: "Runs on service lines and the provider's scarce-equipment inventory (machines, minutes per use, operating hours). Capacity is checked per day rather than by overlapping start and end times within the day."
+
+  - rule_id: CLN-08-R01
+    implementation: cln_08_r01_no_qualified_order
+    requires_tables: [claim_line, clinician_roster, activity_code_reference]
+    data_support: PARTIAL
+    reason: "Runs on laboratory lines and the clinician roster: a test with no ordering clinician, an unknown one, or one without a valid licence or ordering role is flagged, excluding screening diagnoses and standing orders. The 'qualifying encounter or indication' limb is left to CLN-03-R02."
+
+  - rule_id: CLN-08-R02
+    implementation: cln_08_r02_panel_component_inflation
+    requires_tables: [claim_line, panel_definition]
+    data_support: PARTIAL
+    reason: "Runs on laboratory lines and panel definitions: a panel billed together with its own components, or every component billed separately above the panel price, excluding reflex tests. Whether a panel exceeds what was ordered is not checked because orders are not itemised."
+
+  - rule_id: CLN-08-R03
+    implementation: cln_08_r03_absent_duplicate_result
+    requires_tables: [claim_line, observation, remittance]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries laboratory lines, their payments and their results: a paid test with no result after the latency allowance, or an identical multi-value result set reported for unrelated patients."
+
+  - rule_id: CLN-08-R04
+    implementation: cln_08_r04_reference_lab_passthrough
+    requires_tables: [claim_line, activity_code_reference]
+    requires_columns: [claim_line.performing_entity_id]
+    data_support: PARTIAL
+    reason: "Runs on laboratory lines that name a performing laboratory other than the billing provider, comparing the billed price with what that laboratory charges itself. Contract permissions for reference-laboratory arrangements are not read."
+
+  - rule_id: CLN-08-R05
+    implementation: cln_08_r05_high_complexity_test_outlier
+    requires_tables: [claim_line, activity_code_reference, provider]
+    data_support: PARTIAL
+    reason: "Runs on laboratory lines and the code reference's complexity marker, comparing each provider's shrunk rate of genetic or high-complexity tests with peers and excluding oncology, genetics and haematology centres. Patient-risk adjustment is not applied."
+
+  - rule_id: CLN-01-R01
+    implementation: cln_01_r01_top_level_share
+    requires_tables: [claim_line, activity_code_reference]
+    requires_columns: [activity_code_reference.code_level, activity_code_reference.code_family]
+    data_support: PARTIAL
+    upgrades_partial: true
+    reason: "On a file with service lines the proxy (the diagnosis-procedure mismatch flag) is replaced by the catalogue's own measure: each provider's share of graded visits billed at the top level of their code family, shrunk toward specialty peers and cut at the peer percentile. Case mix and setting are not risk-adjusted beyond the specialty peer group."

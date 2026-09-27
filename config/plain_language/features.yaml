@@ -1,0 +1,382 @@
+# Plain-language phrases for model feature names.
+#
+# Presentation only: nothing here renames anything in code. Each key is the
+# exact feature name; `phrase` is written to follow 'because of', and `unit`
+# is one of AED, AED/day, ratio, days, count, flag, log AED, score, other.
+# Units agree with FEATURE_UNITS in src/fwa/models/explain.py.
+# 'Earlier claims' always means the entity's claims dated strictly before
+# this one; the claim itself is never included.
+
+features:
+  gross_amount_aed:
+    phrase: "the amount billed on this claim"
+    unit: "AED"
+  approved_amount_aed:
+    phrase: "the amount the insurer approved on this claim"
+    unit: "AED"
+  log_gross_amount_aed:
+    phrase: "the size of the amount billed, on a compressed scale that stops very large bills dominating"
+    unit: "log AED"
+  approval_ratio:
+    phrase: "the share of the billed amount that the insurer approved"
+    unit: "ratio"
+  claim_lag_days:
+    phrase: "the number of days between discharge and the claim being made"
+    unit: "days"
+  amount_per_los_day:
+    phrase: "the amount billed for each day of the hospital stay"
+    unit: "AED/day"
+  length_of_stay_days:
+    phrase: "the length of the hospital stay"
+    unit: "days"
+  pharmacy_bill_ratio:
+    phrase: "the share of the bill spent on medicines"
+    unit: "ratio"
+  num_insurers_same_event:
+    phrase: "the number of insurers billed for the same hospital stay"
+    unit: "count"
+  days_since_policy_start:
+    phrase: "how long the policy had been in force when treatment took place"
+    unit: "days"
+  discharge_readmit_gap_days:
+    phrase: "the number of days between this discharge and the patient's next admission"
+    unit: "days"
+  is_cashless:
+    phrase: "the claim being billed directly to the insurer (cashless) rather than paid by the patient and claimed back"
+    unit: "flag"
+  icd_code_matches_procedure:
+    phrase: "whether the diagnosis code fits the procedure billed"
+    unit: "flag"
+  coding_mismatch:
+    phrase: "the diagnosis code not fitting the procedure billed"
+    unit: "flag"
+  provider_blacklist_flag:
+    phrase: "the hospital appearing on an exclusion list"
+    unit: "flag"
+  previous_fraud_on_policy:
+    phrase: "an earlier fraud finding noted against this policy (a history note, not the answer for this claim)"
+    unit: "flag"
+  is_early_tenure:
+    phrase: "treatment taking place within the first 90 days of the policy"
+    unit: "flag"
+  readmission_flag:
+    phrase: "the patient being readmitted within 30 days of discharge"
+    unit: "flag"
+  policy_tenure_band_code:
+    phrase: "how long the policy had been in force, grouped into bands (first 90 days, first year, second year, longer)"
+    unit: "other"
+  policy_tenure_band:
+    phrase: "how long the policy had been in force, grouped into bands (first 90 days, first year, second year, longer)"
+    unit: "other"
+  cob_multi_insurer:
+    phrase: "more than one insurer being billed for the same hospital stay"
+    unit: "flag"
+  los_days:
+    phrase: "the length of the hospital stay"
+    unit: "days"
+  admission_month:
+    phrase: "the month of admission"
+    unit: "other"
+  admission_dow:
+    phrase: "the day of the week of admission"
+    unit: "other"
+  los_is_single_day:
+    phrase: "the stay lasting one day or less"
+    unit: "flag"
+  los_is_extended:
+    phrase: "the stay lasting 21 days or more"
+    unit: "flag"
+  member_prior_claim_count:
+    phrase: "the number of claims this patient made before this one"
+    unit: "count"
+  member_utilisation_velocity:
+    phrase: "the number of claims this patient made in the 180 days before this one"
+    unit: "count"
+  member_prior_gross_aed:
+    phrase: "the total this patient had been billed for before this claim"
+    unit: "AED"
+  member_prior_mean_gross_aed:
+    phrase: "the average amount of this patient's earlier claims"
+    unit: "AED"
+  member_prior_distinct_providers:
+    phrase: "the number of different hospitals this patient had used before this claim"
+    unit: "count"
+  provider_prior_claim_count:
+    phrase: "the number of claims this hospital submitted before this one"
+    unit: "count"
+  provider_prior_mean_gross_aed:
+    phrase: "this hospital's average claim amount, based on its earlier claims"
+    unit: "AED"
+  provider_prior_median_gross_aed:
+    phrase: "this hospital's typical claim amount, based on its earlier claims"
+    unit: "AED"
+  provider_prior_mean_approval_ratio:
+    phrase: "the share of the bill this hospital usually had approved, based on its earlier claims"
+    unit: "ratio"
+  provider_prior_std_approval_ratio:
+    phrase: "how much the approved share varied across this hospital's earlier claims"
+    unit: "ratio"
+  provider_prior_coding_mismatch_rate:
+    phrase: "how often this hospital's earlier claims had a diagnosis that did not fit the procedure"
+    unit: "ratio"
+  provider_prior_readmission_rate:
+    phrase: "how often this hospital's earlier patients were readmitted within 30 days"
+    unit: "ratio"
+  provider_prior_mean_los:
+    phrase: "this hospital's usual length of stay, based on its earlier claims"
+    unit: "days"
+  provider_prior_mean_pharmacy_ratio:
+    phrase: "this hospital's usual share of the bill spent on medicines, based on its earlier claims"
+    unit: "ratio"
+  provider_prior_mean_amount_per_los_day:
+    phrase: "this hospital's usual amount billed per day of stay, based on its earlier claims"
+    unit: "AED/day"
+  provider_same_day_admissions:
+    phrase: "the number of patients this hospital admitted on the same day, including this one"
+    unit: "count"
+  pharmacy_amount_aed:
+    phrase: "the implied amount spent on medicines (the medicines share multiplied by the amount billed)"
+    unit: "AED"
+  pharmacy_ratio_diagnosis_peer_median:
+    phrase: "the typical share of the bill spent on medicines on earlier claims with the same diagnosis"
+    unit: "ratio"
+  pharmacy_share_residual:
+    phrase: "how far this claim's medicines share sits above or below what is typical for the same diagnosis"
+    unit: "ratio"
+  agent_prior_claim_count:
+    phrase: "the number of claims this agent handled before this one"
+    unit: "count"
+  agent_prior_mean_gross_aed:
+    phrase: "the average amount of this agent's earlier claims"
+    unit: "AED"
+  agent_window_claim_count:
+    phrase: "the number of claims this agent handled in the 180 days before this one"
+    unit: "count"
+  agent_top_provider_share_prior:
+    phrase: "the share of this agent's earlier claims that went to their single most-used hospital"
+    unit: "ratio"
+  episode_claim_count:
+    phrase: "the number of claims in this course of treatment"
+    unit: "count"
+  episode_total_gross_aed:
+    phrase: "the total billed across this course of treatment"
+    unit: "AED"
+  episode_total_los_days:
+    phrase: "the total days in hospital across this course of treatment"
+    unit: "days"
+  episode_is_multi_claim:
+    phrase: "this course of treatment being split across more than one claim"
+    unit: "flag"
+  claim_sk:
+    phrase: "which claim this is"
+    unit: "other"
+  member_sk:
+    phrase: "which patient the claim is for"
+    unit: "other"
+  provider_sk:
+    phrase: "which hospital billed the claim"
+    unit: "other"
+  tpa:
+    phrase: "which claims administrator handled the claim"
+    unit: "other"
+  agent_id:
+    phrase: "which agent the claim is linked to"
+    unit: "other"
+  policy_type:
+    phrase: "the kind of insurance policy"
+    unit: "other"
+  diagnosis_primary:
+    phrase: "the main diagnosis"
+    unit: "other"
+  diagnosis_chapter:
+    phrase: "the broad disease group of the main diagnosis"
+    unit: "other"
+  service_date:
+    phrase: "the date of treatment"
+    unit: "other"
+  claim_date:
+    phrase: "the date the claim was made"
+    unit: "other"
+  discharge_date:
+    phrase: "the discharge date"
+    unit: "other"
+  episode_id:
+    phrase: "which course of treatment the claim belongs to"
+    unit: "other"
+  tenant_id:
+    phrase: "which organisation the data belong to"
+    unit: "other"
+  amount_residual:
+    phrase: "this hospital's average claim amount compared with similar hospitals"
+    unit: "AED"
+  amount_per_los_day_residual:
+    phrase: "this hospital's amount billed per day of stay compared with similar hospitals"
+    unit: "AED/day"
+  approval_ratio_residual:
+    phrase: "the share of this hospital's bills that was approved, compared with similar hospitals"
+    unit: "ratio"
+  utilisation_velocity_residual:
+    phrase: "the number of claims per patient at this hospital compared with similar hospitals"
+    unit: "other"
+  readmission_rate_residual:
+    phrase: "this hospital's readmission rate compared with similar hospitals"
+    unit: "ratio"
+  coding_mismatch_rate_residual:
+    phrase: "how often this hospital's diagnoses do not fit the procedure, compared with similar hospitals"
+    unit: "ratio"
+  gross_amount_aed__missing:
+    phrase: "that the amount billed was missing"
+    unit: "flag"
+  approved_amount_aed__missing:
+    phrase: "that the amount approved was missing"
+    unit: "flag"
+  log_gross_amount_aed__missing:
+    phrase: "that the amount billed was missing"
+    unit: "flag"
+  approval_ratio__missing:
+    phrase: "that the share of the bill approved was missing"
+    unit: "flag"
+  claim_lag_days__missing:
+    phrase: "that the gap between discharge and claim was missing"
+    unit: "flag"
+  amount_per_los_day__missing:
+    phrase: "that the amount per day of stay was missing"
+    unit: "flag"
+  length_of_stay_days__missing:
+    phrase: "that the length of stay was missing"
+    unit: "flag"
+  pharmacy_bill_ratio__missing:
+    phrase: "that the share of the bill spent on medicines was missing"
+    unit: "flag"
+  num_insurers_same_event__missing:
+    phrase: "that the number of insurers billed was missing"
+    unit: "flag"
+  days_since_policy_start__missing:
+    phrase: "that the policy age at treatment was missing"
+    unit: "flag"
+  discharge_readmit_gap_days__missing:
+    phrase: "that the gap until readmission was missing"
+    unit: "flag"
+  is_cashless__missing:
+    phrase: "that the cashless status was missing"
+    unit: "flag"
+  icd_code_matches_procedure__missing:
+    phrase: "that the diagnosis-and-procedure match was missing"
+    unit: "flag"
+  coding_mismatch__missing:
+    phrase: "that the diagnosis-and-procedure match was missing"
+    unit: "flag"
+  provider_blacklist_flag__missing:
+    phrase: "that the exclusion-list status was missing"
+    unit: "flag"
+  previous_fraud_on_policy__missing:
+    phrase: "that the earlier-fraud note was missing"
+    unit: "flag"
+  is_early_tenure__missing:
+    phrase: "that the policy age at treatment was missing"
+    unit: "flag"
+  readmission_flag__missing:
+    phrase: "that the readmission status was missing"
+    unit: "flag"
+  policy_tenure_band_code__missing:
+    phrase: "that the policy age band was missing"
+    unit: "flag"
+  cob_multi_insurer__missing:
+    phrase: "that the number of insurers billed was missing"
+    unit: "flag"
+  los_days__missing:
+    phrase: "that the length of stay was missing"
+    unit: "flag"
+  admission_month__missing:
+    phrase: "that the admission month was missing"
+    unit: "flag"
+  admission_dow__missing:
+    phrase: "that the admission day was missing"
+    unit: "flag"
+  los_is_single_day__missing:
+    phrase: "that the length of stay was missing"
+    unit: "flag"
+  los_is_extended__missing:
+    phrase: "that the length of stay was missing"
+    unit: "flag"
+  member_prior_claim_count__missing:
+    phrase: "that the patient's earlier claim count was missing"
+    unit: "flag"
+  member_utilisation_velocity__missing:
+    phrase: "that the patient's recent claim count was missing"
+    unit: "flag"
+  member_prior_gross_aed__missing:
+    phrase: "that the patient's earlier total billed was missing"
+    unit: "flag"
+  member_prior_mean_gross_aed__missing:
+    phrase: "that the patient's earlier average claim was missing"
+    unit: "flag"
+  member_prior_distinct_providers__missing:
+    phrase: "that the patient's earlier hospital count was missing"
+    unit: "flag"
+  provider_prior_claim_count__missing:
+    phrase: "that the hospital's earlier claim count was missing"
+    unit: "flag"
+  provider_prior_mean_gross_aed__missing:
+    phrase: "that the hospital's earlier average claim was missing"
+    unit: "flag"
+  provider_prior_median_gross_aed__missing:
+    phrase: "that the hospital's earlier typical claim was missing"
+    unit: "flag"
+  provider_prior_mean_approval_ratio__missing:
+    phrase: "that the hospital's earlier approved share was missing"
+    unit: "flag"
+  provider_prior_std_approval_ratio__missing:
+    phrase: "that the hospital's earlier variation in approved share was missing"
+    unit: "flag"
+  provider_prior_coding_mismatch_rate__missing:
+    phrase: "that the hospital's earlier mismatch rate was missing"
+    unit: "flag"
+  provider_prior_readmission_rate__missing:
+    phrase: "that the hospital's earlier readmission rate was missing"
+    unit: "flag"
+  provider_prior_mean_los__missing:
+    phrase: "that the hospital's earlier usual length of stay was missing"
+    unit: "flag"
+  provider_prior_mean_pharmacy_ratio__missing:
+    phrase: "that the hospital's earlier usual medicines share was missing"
+    unit: "flag"
+  provider_prior_mean_amount_per_los_day__missing:
+    phrase: "that the hospital's earlier usual amount per day was missing"
+    unit: "flag"
+  provider_same_day_admissions__missing:
+    phrase: "that the same-day admission count was missing"
+    unit: "flag"
+  pharmacy_amount_aed__missing:
+    phrase: "that the implied medicines amount was missing"
+    unit: "flag"
+  pharmacy_ratio_diagnosis_peer_median__missing:
+    phrase: "that the typical medicines share for the diagnosis was missing"
+    unit: "flag"
+  pharmacy_share_residual__missing:
+    phrase: "that the medicines share compared with the diagnosis was missing"
+    unit: "flag"
+  agent_prior_claim_count__missing:
+    phrase: "that the agent's earlier claim count was missing"
+    unit: "flag"
+  agent_prior_mean_gross_aed__missing:
+    phrase: "that the agent's earlier average claim was missing"
+    unit: "flag"
+  agent_window_claim_count__missing:
+    phrase: "that the agent's recent claim count was missing"
+    unit: "flag"
+  agent_top_provider_share_prior__missing:
+    phrase: "that the agent's top-hospital share was missing"
+    unit: "flag"
+  episode_claim_count__missing:
+    phrase: "that the number of claims in the episode was missing"
+    unit: "flag"
+  episode_total_gross_aed__missing:
+    phrase: "that the episode total was missing"
+    unit: "flag"
+  episode_total_los_days__missing:
+    phrase: "that the episode's total days in hospital was missing"
+    unit: "flag"
+  episode_is_multi_claim__missing:
+    phrase: "that the episode claim count was missing"
+    unit: "flag"

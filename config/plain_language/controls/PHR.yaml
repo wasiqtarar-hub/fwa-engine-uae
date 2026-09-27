@@ -1,0 +1,221 @@
+# Plain-language text for the PHR (pharmacy, drugs and supplies) controls. Presentation only: nothing here changes what a control does.
+
+PHR-01-R01:
+  title: "Billed medicine differs from prescribed medicine"
+  finding: "This claim bills a different medicine from the one prescribed or authorised, and it is not an approved equivalent."
+  what: "Compares the medicine on the bill with the prescription and authorisation, allowing for approved generic or brand equivalents."
+  why: "Billing a different, often dearer, product than the one prescribed means the insurer pays for something the patient was not meant to get."
+  next_steps:
+    - "Compare the invoice with the prescription and the authorisation."
+    - "Check the substitution policy and the approved equivalents list."
+    - "Hold or reject the line if the product is not an approved equivalent."
+  needs: "pharmacy dispensing records showing the billed product, days' supply, prescriber and pharmacy"
+
+PHR-01-R02:
+  title: "Billed quantity or strength exceeds the order"
+  finding: "This claim bills more medicine, or a higher strength or different form, than was prescribed or authorised."
+  what: "Compares billed quantity, strength and dosage form with the prescription and the authorisation."
+  why: "Billing more than was ordered inflates the cost of the prescription."
+  next_steps:
+    - "Compare the billed quantity with the prescription and authorisation lines."
+    - "Check for partial fills, dose adjustments or pack-size conversions."
+    - "Reprice the line to the authorised amount or hold it for review."
+  needs: "pharmacy dispensing records, the authorisation and its lines, and the link from each claim line to its authorisation"
+
+PHR-01-R03:
+  title: "Pharmacy records disagree with the bill"
+  finding: "This claim bills a product or quantity that does not match the pharmacy's own dispensing or stock record."
+  what: "Compares the billed product and quantity with the pharmacy's dispensing and inventory records."
+  why: "A bill that does not match what the pharmacy actually dispensed may be for medicine never supplied."
+  next_steps:
+    - "Compare the invoice with the pharmacy dispensing record for the same date."
+    - "Check for timing differences and reversed claims."
+    - "Open a pharmacy review if the mismatch is confirmed."
+  needs: "pharmacy dispensing records and the pharmacy's stock records"
+
+PHR-01-R04:
+  title: "Non-medical or uncovered item supplied instead"
+  finding: "Evidence suggests this pharmacy supplied an uncovered or non-medical item in place of the billed medicine."
+  what: "Uses patient confirmations, receipts or stock records that indicate a different, uncovered item was handed over."
+  why: "Swapping covered medicine for other goods means the insurer pays for items outside the policy."
+  next_steps:
+    - "Check how reliable the patient confirmation or receipt is."
+    - "Compare the pharmacy's stock movements with the billed items."
+    - "Refer to the special investigations unit as a lead."
+  needs: "pharmacy dispensing records, patient receipts and the pharmacy's stock records"
+
+PHR-02-R01:
+  title: "Refilled while previous supply remains"
+  finding: "This patient refilled a medicine while a large amount of the previous supply should still have been left."
+  what: "Works out how many days of the last supply remained at the next fill and flags refills beyond the allowed overlap."
+  why: "Early refills can lead to stockpiling, resale or unnecessary cost."
+  next_steps:
+    - "Check for a dose change, lost medicine or travel supply."
+    - "Allow for days the patient spent in hospital."
+    - "Hold the refill until the reason is confirmed."
+  needs: "pharmacy dispensing records showing the product, days' supply, prescriber and pharmacy"
+
+PHR-02-R02:
+  title: "Medicine continued longer than policy allows"
+  finding: "This patient has received continuous fills of a medicine for longer than the policy allows without review."
+  what: "Adds up continuous fills of a medicine and compares the total with the duration limit for that diagnosis and drug."
+  why: "Treatment that runs past its limit without review may no longer be needed."
+  next_steps:
+    - "Check whether the patient has a chronic condition needing long-term treatment."
+    - "Look for a specialist approval or review on file."
+    - "Send to a clinical reviewer if no approval exists."
+  needs: "pharmacy dispensing records and the duration limits for each drug"
+
+PHR-02-R03:
+  title: "Same medicine from many prescribers"
+  finding: "This patient obtained the same or an equivalent medicine from an unusually high number of different prescribers."
+  what: "Counts the different prescribers of the same or equivalent medicine for a patient within a time window."
+  why: "Seeing several prescribers for the same drug can indicate doctor shopping or misuse."
+  next_steps:
+    - "Check whether the prescribers belong to the same care team or group."
+    - "Review the patient's full prescription history."
+    - "Open a patient or pharmacy review if the pattern is not explained."
+  needs: "pharmacy dispensing records showing the product, days' supply, prescriber and pharmacy"
+
+PHR-02-R04:
+  title: "Same medicine from several pharmacies"
+  finding: "This patient obtained overlapping supplies of the same medicine from several pharmacies, which is unusual."
+  what: "Looks for a patient receiving overlapping supplies of the same or an equivalent medicine from more than one pharmacy."
+  why: "Collecting the same drug from several pharmacies can indicate stockpiling or resale."
+  next_steps:
+    - "Check for stock shortages or partial fills that forced a second pharmacy."
+    - "Review the dates and quantities dispensed at each pharmacy."
+    - "Refer for clinical or investigative review if the pattern holds."
+  needs: "pharmacy dispensing records showing the product, days' supply, prescriber and pharmacy"
+
+PHR-03-R01:
+  title: "Dose outside the approved range"
+  finding: "This claim bills a dose outside the approved range for the patient's weight or body size."
+  what: "Checks the billed dose against the approved clinical range, using the patient's weight and height where needed."
+  why: "A dose outside the normal range may be billed but not given, or may be unsafe."
+  next_steps:
+    - "Check the patient's recorded weight and height and recalculate the dose."
+    - "Allow for loading doses, rounding and wastage."
+    - "Hold the claim for clinical review or reprice to the correct dose."
+  needs: "pharmacy dispensing records and the patient's weight and height"
+
+PHR-03-R02:
+  title: "Drug given without required diagnosis or earlier treatment"
+  finding: "This claim bills a drug without the required diagnosis or the earlier treatment that must be tried first."
+  what: "Checks that the patient has an approved reason for the drug and has already tried any required first-line treatment."
+  why: "Skipping required steps leads to expensive drugs being used when cheaper ones should come first."
+  next_steps:
+    - "Check the patient's history for the required diagnosis and earlier treatments."
+    - "Look for an authorisation override or rare-disease exception."
+    - "Hold the claim until the missing step is explained."
+  needs: "pharmacy dispensing records and the step-therapy policy for each drug"
+
+PHR-03-R03:
+  title: "Pharmacy share of the bill unusually high"
+  finding: "This claim's share of cost spent on pharmacy is unusually high compared with claims for the same diagnosis."
+  what: "Compares the share of each claim spent on medicines with the typical share for the same diagnosis and flags claims well above it."
+  why: "An unusually large pharmacy share can point to high-cost drug spikes or over-prescribing."
+  next_steps:
+    - "Review the medicines billed and whether the diagnosis justifies them."
+    - "Check whether the provider recently became a specialist centre or changed its formulary."
+    - "Refer for audit if the spend is not explained."
+  needs: "pharmacy dispensing records, drug-level volume and value, and each claim's pharmacy share, diagnosis, provider and amount"
+
+PHR-03-R04:
+  title: "More wasted medicine than similar prescribers"
+  finding: "This provider bills unusually high amounts of wasted or unused medicine compared with similar providers."
+  what: "Compares billed wastage and vial rounding with providers giving similar doses."
+  why: "Inflated wastage lets a provider bill for medicine that was never needed."
+  next_steps:
+    - "Check the single-use vial policy for the drug."
+    - "Compare billed wastage with the dose actually given in the records."
+    - "Include in a post-payment sample if wastage stays high."
+  needs: "pharmacy dispensing records and the wastage units billed on each line"
+
+PHR-04-R01:
+  title: "Prescriptions mostly go to one pharmacy"
+  finding: "This prescriber's prescriptions go to a single pharmacy far more often than for similar prescribers."
+  what: "Compares the share of each prescriber's prescriptions filled at their top pharmacy with prescribers in the same area and specialty."
+  why: "Steering patients to one pharmacy can indicate an improper arrangement between prescriber and pharmacy."
+  next_steps:
+    - "Check whether the pharmacy is on site or the only specialist pharmacy available."
+    - "Look for ownership or business links between prescriber and pharmacy."
+    - "Refer as a network lead if no reason is found."
+  needs: "pharmacy dispensing records, each provider's emirate and the location of each visit"
+
+PHR-04-R02:
+  title: "Prescriber and pharmacy linked by shared details"
+  finding: "This prescriber and pharmacy show an unusually concentrated flow of prescriptions and share referrals, owners or contact details."
+  what: "Looks for strong prescriber-to-pharmacy flows that line up with referrals, shared ownership or shared bank, phone or address details."
+  why: "A concentrated flow between linked parties can indicate kickbacks or self-referral."
+  next_steps:
+    - "Check company registration records for common owners."
+    - "Rule out known corporate relationships."
+    - "Refer to the special investigations unit for a network review."
+  needs: "pharmacy dispensing records and each provider's owner, bank account, phone and address details"
+
+PHR-04-R03:
+  title: "Steering strongest for expensive drugs"
+  finding: "This prescriber's pharmacy concentration is unusually stronger for high-cost drugs than for others."
+  what: "Compares how concentrated a prescriber's pharmacy use is for high-cost drugs with their other drugs."
+  why: "Steering that focuses on expensive drugs suggests a financial rather than clinical motive."
+  next_steps:
+    - "Check whether the high-cost drugs are only stocked by a few pharmacies."
+    - "Compare the prescriber's pattern with similar prescribers."
+    - "Prioritise for review if the pattern holds."
+  needs: "pharmacy dispensing records showing the product, days' supply, prescriber and pharmacy"
+
+PHR-04-R04:
+  title: "New prescriber-pharmacy link quickly dominant"
+  finding: "A new link between this prescriber and a pharmacy became dominant unusually quickly."
+  what: "Looks for a new prescriber-to-pharmacy relationship that rapidly takes most of the prescriber's prescriptions."
+  why: "A sudden new dominant relationship can signal a new steering arrangement."
+  next_steps:
+    - "Check whether a new site or contract launched at that time."
+    - "Look for business links between the prescriber and the pharmacy."
+    - "Monitor, and refer for investigation if the pattern continues."
+  needs: "pharmacy dispensing records showing the product, days' supply, prescriber and pharmacy, over time"
+
+PHR-05-R01:
+  title: "Equipment billed as new or bought wrongly"
+  finding: "This claim bills equipment as new, used, rented or purchased in a way that conflicts with the authorisation, inventory or contract."
+  what: "Checks the billed condition and payment method of equipment against the authorisation, serial and inventory records, and the contract."
+  why: "Billing used equipment as new, or rental as purchase, inflates the cost."
+  next_steps:
+    - "Compare the invoice with the authorisation and supplier contract."
+    - "Check serial numbers and inventory records."
+    - "Allow for refurbishment and rent-to-own policies, then reprice or hold."
+  needs: "the billed procedure codes, units and amounts, device inventory, and the authorisation and its lines"
+
+PHR-05-R02:
+  title: "Implant billed without a matching procedure"
+  finding: "This claim bills a device or implant without a matching procedure, body side or operation record."
+  what: "Checks that each billed implant or device links to a qualifying procedure, the correct side of the body and an operation note."
+  why: "An implant with no procedure behind it may not have been used."
+  next_steps:
+    - "Ask for the operation note and implant record."
+    - "Check the replacement and spare-device policy."
+    - "Hold the claim for clinical review."
+  needs: "the billed procedure codes, units and amounts, and the clinical documents attached to the claim"
+
+PHR-05-R03:
+  title: "More supplies than the procedure needs"
+  finding: "This claim bills more supplies than normal for the procedure, or replaces them sooner than their useful life."
+  what: "Compares billed supply units with the norm for the procedure or episode, and checks replacement against expected useful life."
+  why: "Excess or early-replaced supplies add cost without clinical need."
+  next_steps:
+    - "Compare billed units with the procedure's usual supply list."
+    - "Check for patient growth, damage or a change in clinical condition."
+    - "Reprice or refer for audit if the excess is not explained."
+  needs: "the billed procedure codes, units and amounts, and each device's expected useful life"
+
+PHR-05-R04:
+  title: "Same serial number billed more than once"
+  finding: "This claim bills a device serial or batch also billed for other patients, or stock beyond what was bought."
+  what: "Looks for the same serial or batch number billed for several patients, or billed stock that exceeds recorded purchases."
+  why: "A single device cannot be implanted in more than one patient, so duplicates point to billing for items not supplied."
+  next_steps:
+    - "Confirm the serial numbers against supplier invoices."
+    - "Exclude bulk consumables that carry no serial number."
+    - "Refer to the special investigations unit as a lead."
+  needs: "device serial numbers and the billed procedure codes, units and amounts"

@@ -432,3 +432,65 @@ details > summary span[data-testid="stExpanderIcon"]::after {
 details[open] > summary span[data-testid="stExpanderIcon"]::after {
     content: "\25BE";                 /* ▾ expanded */
 }
+
+/* =============================================================================
+   Plain-language components (usability work)
+   ========================================================================== */
+
+:root { --fwa-info: #1f5f9c; }
+.s-info { color: var(--fwa-info); }
+
+/* "What this page is for" — two or three lines under the page title */
+.fwa-intro {
+    color: var(--fwa-fg-muted); font-size: .95rem; line-height: 1.55;
+    margin: -.2rem 0 .9rem 0; max-width: 62rem;
+}
+
+/* one-line headline + ranked reasons */
+.fwa-explain {
+    background: var(--fwa-surface); border-radius: var(--fwa-radius);
+    border-left: 4px solid var(--fwa-accent); padding: .9rem 1.1rem; margin: .4rem 0 .8rem;
+}
+.fwa-explain .fwa-headline {
+    font-family: var(--fwa-serif); font-size: 1.1rem; line-height: 1.5; color: var(--fwa-fg);
+}
+.fwa-explain ol { margin: .6rem 0 .2rem 1.1rem; padding: 0; }
+.fwa-explain li { margin: .3rem 0; line-height: 1.55; color: var(--fwa-fg); }
+.fwa-explain .fwa-sub { color: var(--fwa-fg-muted); font-size: .8rem; }
+.fwa-strength { margin-top: .6rem; font-size: .9rem; color: var(--fwa-fg); }
+.fwa-caveat {
+    background: var(--fwa-surface-alt); border-radius: 8px; padding: .55rem .8rem;
+    font-size: .86rem; color: var(--fwa-fg); margin: .4rem 0;
+}
+
+/* Home "Start here" */
+.fwa-start { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .8rem; }
+.fwa-start .fwa-step {
+    background: var(--fwa-surface); border: 1px solid var(--fwa-line); border-radius: var(--fwa-radius);
+    padding: .8rem 1rem;
+}
+.fwa-start .fwa-step h4 { margin: 0 0 .3rem 0; }
+.fwa-start .fwa-step p { margin: 0; font-size: .88rem; color: var(--fwa-fg-muted); line-height: 1.5; }
+
+/* headline cards: a big number and a sentence */
+.fwa-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: .8rem; margin: .4rem 0 1rem; }
+.fwa-hcard {
+    background: var(--fwa-surface); border-radius: var(--fwa-radius); padding: .85rem 1rem;
+    border: 1px solid var(--fwa-line);
+}
+.fwa-hcard .fwa-big { font-size: 1.7rem; font-weight: 700; color: var(--fwa-fg); line-height: 1.15; }
+.fwa-hcard .fwa-say { font-size: .87rem; color: var(--fwa-fg-muted); margin-top: .35rem; line-height: 1.5; }
+
+/* "How to read this chart" */
+.fwa-howto { font-size: .8rem; color: var(--fwa-fg-muted); margin: -.4rem 0 .9rem 0; }
+
+/* banners */
+.fwa-banner {
+    border-radius: 8px; padding: .55rem .85rem; margin: .3rem 0 .8rem; font-size: .88rem;
+    border: 1px solid var(--fwa-warn); color: var(--fwa-fg); background: var(--fwa-surface-alt);
+}
+.fwa-banner strong { color: var(--fwa-warn); }
+
+@media (max-width: 640px) {
+    .fwa-cards, .fwa-start { grid-template-columns: 1fr; }
+}

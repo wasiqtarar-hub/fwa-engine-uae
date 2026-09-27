@@ -1,0 +1,132 @@
+# Dataset unlocks for PAY-01 to PAY-06 (implementations in src/fwa/engine/unlocked/pay_a.py).
+# Each entry runs its implementation ONLY on a dataset that populates every named table.
+# On the claim-header extract none of these tables exists, so every control below stays
+# NOT_EXECUTABLE_ON_THIS_DATASET there, exactly as its rule YAML says.
+unlocks:
+  - rule_id: PAY-01-R04
+    implementation: pay_01_r04_cross_payer_duplicate
+    requires_tables: [claim_line, remittance, other_payer_remittance, coordination_of_benefits]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries this payer's payments, the other insurers' payments matched through a privacy-protected reference, and the coordination-of-benefits records. The file carrying the other insurer's payment is taken as the authorised data sharing; the reviewer is asked to confirm it."
+
+  - rule_id: PAY-02-R01
+    implementation: pay_02_r01_same_claim_component
+    requires_tables: [claim_line, bundling_edit_table]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries claim lines and an effective-dated bundling edit table: a parent and its separately charged component on one claim, with the edit's own modifier rule deciding whether an indicator separates them."
+
+  - rule_id: PAY-02-R02
+    implementation: pay_02_r02_cross_claim_component
+    requires_tables: [claim_line, bundling_edit_table]
+    data_support: PARTIAL
+    reason: "Runs on claim lines and the bundling edit table across different claims for the same patient. Two parts are approximated: the global or episode window is a fixed number of days around the parent procedure (the file carries no per-contract global periods), and the contractual professional/facility split is recognised from professional and technical component indicators rather than from contract terms."
+
+  - rule_id: PAY-02-R03
+    implementation: pay_02_r03_package_completeness
+    requires_tables: [claim_line, package_definition]
+    data_support: PARTIAL
+    reason: "Runs on claim lines and package definitions. Charging for a component the package includes at zero price is checked exactly. The definition does not say which components are mandatory, so the required core of each package is taken as the listed components found on nearly every claim for it, and only packages with enough claims are checked for missing activities. A documented medical omission is recognised only from a claim document typed as an omission note."
+
+  - rule_id: PAY-02-R04
+    implementation: pay_02_r04_inclusive_leakage
+    requires_tables: [claim_line, remittance, package_definition]
+    data_support: PARTIAL
+    reason: "Runs on claim lines, line-level payments and the package definitions, which serve as the inclusion list for package and case-rate codes. Components the definition marks as separately payable are the carve-outs. The inclusion list carries no effective dates, and there is no DRG grouper assigning case rates, so only case rates billed as package codes are checked."
+
+  - rule_id: PAY-02-R05
+    implementation: pay_02_r05_novel_unbundling
+    requires_tables: [claim_line, provider, bundling_edit_table]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries claim lines, providers with their type and specialty, and the bundling edit table: code pairs no edit covers, billed together by one provider far more often than by its peers, with rates shrunk toward the peer rate and a minimum volume."
+
+  - rule_id: PAY-03-R01
+    implementation: pay_03_r01_invalid_code
+    requires_tables: [claim_line, code_system_version]
+    data_support: PARTIAL
+    reason: "Runs on claim lines (and diagnoses) against the code-set table of valid codes and their effective dates. The lines do not state which code-set version they were coded under, so each code is checked against its own validity dates on the service date, and 'absent' is judged only for types of service the code set covers."
+
+  - rule_id: PAY-03-R02
+    implementation: pay_03_r02_demographic_impossibility
+    requires_tables: [claim_line, member, activity_code_reference]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries claim lines, each patient's date of birth and sex, and the explicit age and sex restrictions of each activity code. An approval covering the very code is taken as the policy-approved clinical exception."
+
+  - rule_id: PAY-03-R03
+    implementation: pay_03_r03_unit_maximum
+    requires_tables: [claim_line, unit_maximum_policy]
+    data_support: PARTIAL
+    reason: "Runs on claim lines against the maximum units per day, summed per patient per day across claims, and per day of stay on inpatient claims. The policy table holds daily maxima only, so episode maxima are not checked; drug dose limits are left to the pharmacy controls."
+
+  - rule_id: PAY-03-R04
+    implementation: pay_03_r04_time_unit_inconsistency
+    requires_tables: [claim_line, activity_code_reference]
+    requires_columns: [claim_line.service_start_time, claim_line.service_end_time]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries claim lines with start and end times and the minutes each time-based code represents: billed minutes beyond the recorded window, and one clinician's timed services overlapping (anaesthesia excepted), both after the rounding tolerance."
+
+  - rule_id: PAY-04-R01
+    implementation: pay_04_r01_missing_authorization
+    requires_tables: [claim_line, authorization, authorization_line, benefit_rule_version, activity_code_reference]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries claim lines, the benefit rules that say which service families need approval under each product, and the approvals themselves. Emergencies and services with a pending or deemed request are excluded."
+
+  - rule_id: PAY-04-R02
+    implementation: pay_04_r02_invalid_timing_status
+    requires_tables: [claim_line, authorization, authorization_line]
+    requires_columns: [claim_line.authorization_id]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when claim lines carry approval references and the file carries the approvals with their status and validity dates. Another approval covering the date is taken as an extension, and an emergency shortly before the approval started as the urgent retrospective route."
+
+  - rule_id: PAY-04-R03
+    implementation: pay_04_r03_scope_mismatch
+    requires_tables: [claim_line, authorization, authorization_line]
+    requires_columns: [claim_line.authorization_id]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when claim lines carry approval references and the file carries the approved codes, provider and facility: the billed code, provider or facility differs from what was approved, with equivalent codes and recorded transfers accepted."
+
+  - rule_id: PAY-04-R04
+    implementation: pay_04_r04_quantity_exhaustion
+    requires_tables: [claim_line, authorization, authorization_line, remittance]
+    requires_columns: [claim_line.authorization_id]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when claim lines carry approval references and the file carries approved units and values and the payment records: the running total claimed against each approved line, excluding reversed or cancelled lines, compared with what was approved."
+
+  - rule_id: PAY-04-R05
+    implementation: pay_04_r05_authorization_reuse
+    requires_tables: [claim_line, authorization, member]
+    requires_columns: [claim_line.authorization_id]
+    data_support: PARTIAL
+    reason: "Runs on claim lines' approval references against the patient each approval was issued to: an approval consumed by another patient, with family sharing allowed only when policy permits. Reuse by another provider and use after exhaustion are reported by the scope and quantity controls of the same scenario rather than here."
+
+  - rule_id: PAY-05-R01
+    implementation: pay_05_r01_prohibited_indicator_pair
+    requires_tables: [claim_line, bundling_edit_table]
+    requires_columns: [claim_line.indicator]
+    data_support: PARTIAL
+    reason: "Runs on claim-line indicators against the prohibitions the file carries: indicator prohibitions in the payment-policy table where present, and bundling edits that do not allow a modifier to separate a pair. There is no complete code-by-indicator policy table, so a pair neither source prohibits is not reported."
+
+  - rule_id: PAY-05-R02
+    implementation: pay_05_r02_indicator_support_absent
+    requires_tables: [claim_line, observation, document]
+    requires_columns: [claim_line.indicator]
+    data_support: PARTIAL
+    reason: "Runs on claim-line indicators, line Observations and claim documents. Which indicators need a supporting report is a governed parameter list rather than a policy table carried in the file, and any document on the claim is accepted as support."
+
+  - rule_id: PAY-05-R03
+    implementation: pay_05_r03_indicator_rate_outlier
+    requires_tables: [claim_line, provider]
+    requires_columns: [claim_line.indicator]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries claim-line indicators and providers with their type and specialty: each provider's use rate of each indicator, shrunk toward its peers, above the peer percentile and a multiple of the peer mean, with a minimum denominator."
+
+  - rule_id: PAY-05-R04
+    implementation: pay_05_r04_post_edit_migration
+    requires_tables: [claim_line, remittance, bundling_edit_table, activity_code_reference]
+    data_support: PARTIAL
+    reason: "Runs on claim lines, line-level payment decisions and the bundling edits. The edit-launch timeline is taken from each edit's effective-from date, since the file carries no separate rule-launch log, and a provider education period after launch is ignored."
+
+  - rule_id: PAY-06-R01
+    implementation: pay_06_r01_tariff_price_variance
+    requires_tables: [claim_line, tariff, contract]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries claim lines, the effective-dated tariff by network tier and the provider contracts with their tier and discount: a unit price above the allowed price beyond the rounding tolerance is repriced. Carved-out contracts are excluded; all amounts are in AED and VAT is not itemised in this file."

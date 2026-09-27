@@ -1,0 +1,143 @@
+# =============================================================================
+# Page titles, the "what this page is for" captions, and which pages appear in
+# Simple mode. Keyed by the INTERNAL page name used by fwa.auth.PAGE_PERMISSIONS
+# (never renamed: role-based access control is defined on these names).
+#
+# Simple mode shows the pages a claims reviewer needs day to day. Advanced mode
+# adds the analytical and governance pages. Role-based access control always
+# applies on top: a page a role may not open is never shown in either mode.
+# =============================================================================
+
+pages:
+  Overview:
+    title: "Overview"
+    icon: "📊"
+    simple: true
+    purpose: >-
+      A one-screen summary of the claim file currently loaded: how many cases need review, how
+      much money is at risk, and which cases to open first. Nothing here is a finding of fraud.
+  Data:
+    title: "Data"
+    icon: "📁"
+    simple: true
+    purpose: >-
+      Choose which claim file the engine works on, or load your own. It also shows which checks
+      could run on the file and, for those that could not, what information was missing.
+  Review Queue:
+    title: "Review queue"
+    icon: "📋"
+    simple: true
+    purpose: >-
+      Your list of cases to review, most urgent first. Filter it, check how long the queue would
+      take your team, and pick a case to read why it was flagged.
+  Case Evidence:
+    title: "Case evidence"
+    icon: "🔍"
+    simple: true
+    purpose: >-
+      Everything about one case: why it was flagged in plain words, how strong the evidence is,
+      what to check next, and where to record your decision.
+  Provider Analytics:
+    title: "Compare hospitals"
+    icon: "🏥"
+    simple: false
+    purpose: >-
+      How each hospital or clinic compares with similar providers and with its own past, using
+      simple comparisons anyone can recompute by hand.
+  Network:
+    title: "Connections between providers, agents and patients"
+    icon: "🕸️"
+    simple: false
+    purpose: >-
+      Shows who is connected to whom through shared patients, referrals and sales agents, and
+      highlights tightly connected groups worth a closer look.
+  Models:
+    title: "Pattern-finding models"
+    icon: "🧪"
+    simple: false
+    purpose: >-
+      Two automated pattern-finders rank how unusual each claim is. This page explains what they
+      found, why, and whether they are ready to be trusted for real decisions (so far they are not).
+  Rule Registry:
+    title: "Checks library"
+    icon: "📐"
+    simple: false
+    purpose: >-
+      All 164 checks the engine can run: what each one looks for, why it matters, whether it could
+      run on this file, and what it found. Policy owners also draft and approve checks here.
+  Governance:
+    title: "Governance"
+    icon: "⚖️"
+    simple: false
+    purpose: >-
+      The controls that keep the engine safe: who owns each setting, the audit log, switching a
+      check off, and whether each check stayed within its expected workload.
+  Parameters & Models:
+    title: "Settings and thresholds"
+    icon: "🎚️"
+    simple: false
+    purpose: >-
+      Every number the engine uses, split into two kinds: numbers measured from your data, and
+      numbers chosen by policy with a named owner. Mixing the two up is the most expensive mistake
+      a reader can make.
+  Validation Report:
+    title: "Validation report"
+    icon: "📄"
+    simple: false
+    purpose: >-
+      A plain summary of what this run did and did not show, followed by the full technical
+      validation report and its supporting files.
+  User Management:
+    title: "Users and access"
+    icon: "👤"
+    simple: false
+    purpose: >-
+      Create users, change roles, grant individual permissions and assign cases to investigators.
+      Every change is written to the audit log.
+  Help:
+    title: "Help"
+    icon: "❓"
+    simple: true
+    purpose: >-
+      How to do common tasks, what each page is for, and a searchable glossary of the technical
+      terms the engine uses.
+
+# -----------------------------------------------------------------------------
+# The Home page "Start here" panel.
+# -----------------------------------------------------------------------------
+start_here:
+  - title: "1. Choose or load data"
+    body: "Open Data to pick one of the shipped synthetic files or load your own claim file. Every page then describes that file."
+    page: Data
+  - title: "2. Review the most urgent cases"
+    body: "Open the Review queue. Cases are sorted most urgent first; the filters narrow it down."
+    page: Review Queue
+  - title: "3. Read why they were flagged"
+    body: "Open Case evidence. Each case starts with one sentence, then the reasons in order, how strong the evidence is, and what to check next."
+    page: Case Evidence
+
+# -----------------------------------------------------------------------------
+# Standard wording that must travel with findings. These carry the safety
+# boundary: rewording is allowed, dropping the meaning is not.
+# -----------------------------------------------------------------------------
+standard_text:
+  not_proof: "This is a reason to look, not proof of fraud. Only a reviewer, looking at the evidence, can decide."
+  model_only: "No rule was broken. An automated pattern-finder ranked this as unusual, and the amount at risk has not been established."
+  not_established: "amount at risk not yet established"
+  not_savings: "Money flagged is not money saved. Nothing here has been reviewed, confirmed, prevented or recovered, so these amounts are never added up as savings."
+  shadow: "Every check is in watch-only (shadow) mode: its results are recorded and measured, but not used for real payment decisions."
+  priority_not_decision: "Priority only decides the order of the queue. It never changes what should happen to a claim."
+  synthetic: "SYNTHETIC data. This file was generated to exercise the engine. A check that passes on data built to pass it is a test of the check, not evidence that it detects fraud."
+
+# -----------------------------------------------------------------------------
+# What each role sees, in words (sign-in page and Help).
+# -----------------------------------------------------------------------------
+role_sees:
+  ADMIN: "Everything, including real names and IDs; manages users, access and the emergency switch-off for checks."
+  POLICY_OWNER: "The checks library, settings and thresholds; drafts, edits and approves checks."
+  CLAIMS_REVIEWER: "The review queue and case evidence, with patient and provider identities hidden by default; records decisions."
+  CLINICAL_REVIEWER: "Clinical cases, documents and coding evidence; records clinical decisions."
+  SIU_INVESTIGATOR: "Cases referred to investigations and the connections view; sees real identities only on cases assigned to them."
+  ANALYST: "Data loading, pattern-finding models, hospital comparisons, settings and the validation report."
+  QA: "Test evidence and the release checks."
+  AUDITOR: "Read-only access to everything, including the audit log."

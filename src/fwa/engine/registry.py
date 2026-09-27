@@ -30,6 +30,7 @@ import yaml
 
 from ..enums import ControlType, DataSupport, Disposition, RuleStatus, Stage
 from .contract import AtomicControl, ControlContractError, DispositionLegalityError
+from .unlocks import UNLOCKS_SUBDIR, DatasetUnlock, load_unlocks
 
 __all__ = ["RuleRegistry", "SeparationOfDutiesError", "RuleNotFound", "DEFAULT_RULES_DIR"]
 
@@ -55,6 +56,9 @@ class RuleRegistry:
         self._by_id: dict[str, AtomicControl] = {}
         self._history: dict[str, list[AtomicControl]] = {}
         self._load_errors: list[tuple[str, str]] = []
+        #: Per-dataset unlock declarations (``rules/unlocks/``). They never
+        #: alter a registered control; the evaluator consults them per run.
+        self._unlocks: dict[str, DatasetUnlock] = {}
         for c in controls or []:
             self.register(c)
 
@@ -76,6 +80,8 @@ class RuleRegistry:
         registry = cls()
         paths = sorted(rules_dir.rglob("*.yaml")) + sorted(rules_dir.rglob("*.yml"))
         for path in paths:
+            if UNLOCKS_SUBDIR in path.relative_to(rules_dir).parts:
+                continue                  # dataset unlocks, loaded separately below
             raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
             scenario_defaults = {
                 k: v for k, v in raw.items() if k not in ("controls", "scenario")
@@ -104,6 +110,12 @@ class RuleRegistry:
                     registry._load_errors.append((entry.get("rule_id", "?"), message))
                     continue
                 registry.register(control)
+        registry._unlocks = load_unlocks(rules_dir)
+        unknown = sorted(set(registry._unlocks) - set(registry._by_id))
+        if unknown:
+            raise ControlContractError(
+                f"Dataset unlocks name controls that are not in the catalogue: {unknown}."
+            )
         return registry
 
     # -------------------------------------------------------------- register
@@ -162,6 +174,11 @@ class RuleRegistry:
     @property
     def load_errors(self) -> list[tuple[str, str]]:
         return list(self._load_errors)
+
+    @property
+    def unlocks(self) -> dict[str, DatasetUnlock]:
+        """Dataset unlock declarations, keyed by rule id."""
+        return dict(self._unlocks)
 
     # ---- selectors ----------------------------------------------------------
 

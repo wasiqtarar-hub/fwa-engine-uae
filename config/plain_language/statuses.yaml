@@ -1,0 +1,476 @@
+# =============================================================================
+# Plain-language phrases for every status, disposition and enumeration the app
+# can display.
+#
+# PRESENTATION ONLY. The internal values (the keys below) are load-bearing for
+# the contract, the audit log, the reports and the tests, and are never renamed.
+# The app translates them at display time through fwa.presentation.
+#
+# `tone` drives colour and icon consistently on every page:
+#   ok      – green, nothing to act on or a check that passed
+#   info    – blue, informative
+#   warn    – amber, needs attention or ran with limits
+#   bad     – red, failed or blocked
+#   neutral – grey, not applicable or not yet known
+# =============================================================================
+
+statuses:
+
+  # ---- dispositions (manuscript Table 3.2) ---------------------------------
+  # Wording keeps the safety meaning: a disposition is what POLICY says should
+  # happen next. None of them is a finding of fraud.
+  RETURN:
+    label: "Send back: data can't be processed"
+    meaning: "The claim is missing information or is in the wrong format, so it goes back to the sender to fix."
+    tone: neutral
+    icon: "↩️"
+  REJECT:
+    label: "Deny: a clear rule was broken"
+    meaning: "An objective, dated condition failed (for example, no cover on that date) and policy allows the claim to be denied."
+    tone: bad
+    icon: "⛔"
+  REPRICE:
+    label: "Pay a corrected amount"
+    meaning: "The right amount can be worked out from the tariff or contract, so the claim is paid at that amount."
+    tone: warn
+    icon: "💱"
+  PREPAY_PEND:
+    label: "Hold before paying"
+    meaning: "Pause payment until a reviewer checks the claim."
+    tone: warn
+    icon: "⏸️"
+  POSTPAY_AUDIT:
+    label: "Pay, but check afterwards"
+    meaning: "The claim can be paid; an auditor should review it later and recover money if it was overpaid."
+    tone: info
+    icon: "🔎"
+  SIU_LEAD:
+    label: "Refer to the investigations team"
+    meaning: "The pattern could involve coordinated or deliberate behaviour, so the special investigations team should assess it. This is not a finding of fraud."
+    tone: bad
+    icon: "🕵️"
+  PROVIDER_EDUCATION:
+    label: "Talk to the provider about billing"
+    meaning: "The pattern looks more like a billing mistake or poor practice than misconduct; a conversation with the provider is the right next step."
+    tone: info
+    icon: "💬"
+  MONITOR_ONLY:
+    label: "Watch only"
+    meaning: "There is nothing to act on yet. The pattern is being watched."
+    tone: neutral
+    icon: "👁️"
+
+  # ---- data support: can a check run on this file? --------------------------
+  EXECUTABLE:
+    label: "Ran fully"
+    meaning: "The file had everything this check needs, so it ran exactly as designed."
+    tone: ok
+    icon: "✅"
+  PARTIAL:
+    label: "Ran in a simplified form"
+    meaning: "The file lacks some of what this check needs, so it ran on a stand-in measure. Its findings are weaker and say so."
+    tone: warn
+    icon: "◐"
+  NOT_EXECUTABLE_ON_THIS_DATASET:
+    label: "Couldn't run: data missing"
+    meaning: "The file doesn't contain the information this check needs, so it was not run rather than guessed."
+    tone: neutral
+    icon: "⊘"
+  NOT_EXECUTABLE:
+    label: "Couldn't run: data missing"
+    meaning: "The file doesn't contain the information this check needs."
+    tone: neutral
+    icon: "⊘"
+
+  # ---- what happened when a check ran (EvaluationOutcome) --------------------
+  TRIGGERED:
+    label: "Ran and found something"
+    meaning: "The check ran and raised at least one flag."
+    tone: warn
+    icon: "🚩"
+  NOT_TRIGGERED:
+    label: "Ran, found nothing"
+    meaning: "The check ran over the file and raised no flags."
+    tone: ok
+    icon: "✅"
+  NULL_INPUT:
+    label: "Stopped: an input was empty"
+    meaning: "The check started but stopped because a value it needed was empty. The reason is recorded."
+    tone: bad
+    icon: "⚠️"
+  EXCLUDED:
+    label: "Skipped: a known exception applied"
+    meaning: "A declared legitimate exception applied, so no flag was raised."
+    tone: neutral
+    icon: "↷"
+  OUT_OF_POPULATION:
+    label: "Not applicable here"
+    meaning: "The claims in this file are outside what this check covers."
+    tone: neutral
+    icon: "↷"
+  NOT_EFFECTIVE:
+    label: "Not in force on this date"
+    meaning: "The check's effective dates do not include the run date."
+    tone: neutral
+    icon: "📅"
+  KILL_SWITCHED:
+    label: "Switched off by an administrator"
+    meaning: "An administrator suspended this check. Its flags are routed to watch-only so the gap stays visible."
+    tone: warn
+    icon: "⏻"
+  INSUFFICIENT_PEER_EVIDENCE:
+    label: "Ran, but too few similar providers to compare"
+    meaning: "No comparison group was large enough to judge fairly, so nothing was flagged."
+    tone: neutral
+    icon: "👥"
+  VOLUME_CEILING_BREACHED:
+    label: "Too many flags: sent to watch-only"
+    meaning: "The check raised more flags than a team could handle, so they were kept but marked watch-only."
+    tone: warn
+    icon: "🌊"
+
+  # ---- governance: promotion gate, release gates, metrics --------------------
+  PASS:
+    label: "Passed"
+    meaning: "The condition was checked and met."
+    tone: ok
+    icon: "✅"
+  FAIL:
+    label: "Not met"
+    meaning: "The condition was checked and not met."
+    tone: bad
+    icon: "❌"
+  WARN:
+    label: "Needs attention"
+    meaning: "Within the limit but close to it."
+    tone: warn
+    icon: "⚠️"
+  BREACH:
+    label: "Over the limit"
+    meaning: "The measured value is past the level that requires action."
+    tone: bad
+    icon: "⛔"
+  OK:
+    label: "Within limits"
+    meaning: "The measured value is inside the expected range."
+    tone: ok
+    icon: "✅"
+  MEASURED:
+    label: "Measured"
+    meaning: "This figure was calculated from the data."
+    tone: ok
+    icon: "📏"
+  PROMOTED:
+    label: "Cleared for use"
+    meaning: "The model passed every condition of the promotion gate."
+    tone: ok
+    icon: "✅"
+  SHADOW:
+    label: "Watching only (shadow)"
+    meaning: "Runs and is measured, but its results are not used for real decisions yet."
+    tone: neutral
+    icon: "🌒"
+  shadow:
+    label: "Watching only (shadow)"
+    meaning: "The check runs and is measured, but its results are not used for real decisions until a policy owner approves it."
+    tone: neutral
+    icon: "🌒"
+  active:
+    label: "In use"
+    meaning: "The check has been approved and its results are used."
+    tone: ok
+    icon: "🟢"
+  retired:
+    label: "Retired"
+    meaning: "The check is no longer run."
+    tone: neutral
+    icon: "🗄️"
+  PROMOTION_BLOCKED:
+    label: "Not ready to be trusted for real decisions"
+    meaning: "The conditions for relying on this model are not met, so it stays in watch-only mode."
+    tone: bad
+    icon: "🚫"
+  PROMOTION_PERMITTED:
+    label: "May be proposed for use"
+    meaning: "The conditions for relying on this model are met; a separate person must still approve it."
+    tone: ok
+    icon: "✅"
+  NOT_ASSESSABLE:
+    label: "Can't be judged yet"
+    meaning: "There isn't enough information to decide either way, so no verdict is given."
+    tone: neutral
+    icon: "❓"
+  NOT_MEASURABLE:
+    label: "Can't be measured yet"
+    meaning: "We can't measure this yet because the information it needs does not exist in this file."
+    tone: neutral
+    icon: "❓"
+  NOT_MEASURABLE_ON_THIS_DATASET:
+    label: "Can't be measured yet"
+    meaning: "We can't measure this yet because no reviewer has recorded a decision, or the file lacks what it needs. No number is invented in its place."
+    tone: neutral
+    icon: "❓"
+  INFORMATIONAL:
+    label: "For information"
+    meaning: "Reported for context; not a pass or fail condition."
+    tone: neutral
+    icon: "ℹ️"
+  MODULE_MISSING:
+    label: "Part of the system is missing"
+    meaning: "A module this requirement depends on was not found."
+    tone: bad
+    icon: "❌"
+  TEST_MISSING:
+    label: "No test covers this"
+    meaning: "No automated test was found for this requirement."
+    tone: warn
+    icon: "⚠️"
+  AWAITING_HUMAN_CONFIRMATION:
+    label: "Waiting for a person to confirm"
+    meaning: "The system suggested this match; it only takes effect when a person confirms it."
+    tone: info
+    icon: "🙋"
+  BELOW_MINIMUM_DENOMINATOR:
+    label: "Too few claims to judge"
+    meaning: "There were too few claims to compare fairly, so nothing was concluded."
+    tone: neutral
+    icon: "👥"
+  EXPLANATION_UNAVAILABLE:
+    label: "Reasons not available"
+    meaning: "The model's reasons for this score could not be worked out."
+    tone: neutral
+    icon: "❓"
+  EXPLANATION_FAILED:
+    label: "Reasons could not be worked out"
+    meaning: "Working out the model's reasons for this score failed; the failure is recorded."
+    tone: neutral
+    icon: "❓"
+  SYNTHETIC_INJECTED:
+    label: "Synthetic test pattern"
+    meaning: "This record was deliberately planted in a synthetic file to test a check."
+    tone: info
+    icon: "🧪"
+
+  # ---- canonical table population -------------------------------------------
+  POPULATED:
+    label: "Present"
+    meaning: "This file supplies this information in full."
+    tone: ok
+    icon: "✅"
+  NOT_POPULATED:
+    label: "Not in this file"
+    meaning: "This file doesn't contain this information, and nothing was invented to fill it."
+    tone: neutral
+    icon: "⊘"
+
+  # ---- three-valued logic ---------------------------------------------------
+  "TRUE":
+    label: "Yes"
+    meaning: "Yes."
+    tone: neutral
+    icon: ""
+  "FALSE":
+    label: "No"
+    meaning: "No."
+    tone: neutral
+    icon: ""
+  UNKNOWN:
+    label: "Unknown"
+    meaning: "Not enough information to say."
+    tone: neutral
+    icon: ""
+
+# -----------------------------------------------------------------------------
+# priority bands (fwa.cases.priority._BANDS)
+# -----------------------------------------------------------------------------
+priority_bands:
+  P1: {label: "Urgent", meaning: "Look at this first.", tone: bad}
+  P2: {label: "High", meaning: "Look at this soon.", tone: warn}
+  P3: {label: "Medium", meaning: "Look at this when the urgent and high cases are done.", tone: info}
+  P4: {label: "Low", meaning: "Worth a look if there is time.", tone: neutral}
+  P5: {label: "Watch only", meaning: "Nothing to act on yet.", tone: neutral}
+
+# -----------------------------------------------------------------------------
+# control types (manuscript Table 3.3)
+# -----------------------------------------------------------------------------
+control_types:
+  H: {label: "Hard rule", meaning: "A yes/no check against a dated rule, such as cover dates or a licence."}
+  E: {label: "Expert rule", meaning: "A check that applies a maintained clinical or coding policy table."}
+  S: {label: "Comparison with similar providers", meaning: "A statistical comparison with similar providers or with the provider's own history."}
+  N: {label: "Connections", meaning: "Looks at links between providers, agents and patients."}
+  T: {label: "Documents", meaning: "Reads facts out of documents such as discharge summaries."}
+  M: {label: "Automated pattern-finder", meaning: "A trained model that ranks how unusual a claim is."}
+
+# -----------------------------------------------------------------------------
+# stages (manuscript Table 3.4)
+# -----------------------------------------------------------------------------
+stages:
+  INGEST: {label: "When the file arrives", meaning: "Runs as the claim file is received."}
+  PREPAY_SYNC: {label: "Before payment, instantly", meaning: "Runs on each claim before it is paid, in under half a second."}
+  PREPAY_ASYNC: {label: "Before payment, within minutes", meaning: "Runs before payment but may take a few minutes."}
+  POSTPAY_DAILY: {label: "After payment, daily", meaning: "Runs once a day over paid claims."}
+  NETWORK_WEEKLY: {label: "Weekly connections review", meaning: "Runs weekly over the links between providers, agents and patients."}
+  MODEL_MONTHLY: {label: "Monthly pattern review", meaning: "Runs monthly, or when the data changes noticeably."}
+
+# -----------------------------------------------------------------------------
+# evidence domains (fwa.enums.SignalDomain)
+# -----------------------------------------------------------------------------
+domains:
+  rule: {label: "Rule", meaning: "A hard or expert rule."}
+  statistical: {label: "Comparison", meaning: "A comparison with similar providers or with past behaviour."}
+  network: {label: "Connections", meaning: "Links between providers, agents and patients."}
+  document: {label: "Documents", meaning: "Facts read from documents."}
+  model: {label: "Pattern-finder", meaning: "An automated pattern-finding model."}
+
+# -----------------------------------------------------------------------------
+# case families (fwa.cases.correlate.CASE_FAMILIES)
+# -----------------------------------------------------------------------------
+case_families:
+  coding_integrity: {label: "Coding and documentation", meaning: "Whether what was billed matches the care and the records."}
+  duplication: {label: "Duplicate or split billing", meaning: "The same service billed more than once, or one service split into parts."}
+  utilisation: {label: "How much care was given", meaning: "Whether the amount, length or frequency of care is unusual."}
+  eligibility_identity: {label: "Who was covered and who treated", meaning: "Cover, identity, licence and setting checks."}
+  payment_integrity: {label: "Payment accuracy", meaning: "Prices, approvals, patient share and payment records."}
+  pharmacy_product: {label: "Medicines and supplies", meaning: "Prescriptions, dispensing, devices and supplies."}
+  network_distribution: {label: "Connections and sales channels", meaning: "Links between providers, agents and patients, and how policies were sold."}
+  multivariate_anomaly: {label: "Overall unusual pattern", meaning: "An unusual combination of measures found by comparison or by a pattern-finder."}
+
+# -----------------------------------------------------------------------------
+# correlation dimensions (fwa.cases.correlate.CORRELATION_DIMENSIONS)
+# -----------------------------------------------------------------------------
+dimensions:
+  claim_lineage: {label: "One claim and its corrections", meaning: "Flags about a single claim and any corrected or resubmitted versions of it."}
+  episode: {label: "One episode of care", meaning: "Flags about one stay or course of treatment, even if billed on several claims."}
+  provider_behaviour: {label: "One provider's pattern", meaning: "Flags about how one provider bills compared with similar providers or its own past."}
+  pharmacy_product: {label: "Medicines and supplies", meaning: "Flags about prescriptions, dispensing and supplies."}
+  network: {label: "A connected group", meaning: "Flags about a tightly connected group of providers, agents and patients."}
+  distribution: {label: "An agent or broker", meaning: "Flags about how policies were sold or enrolled."}
+
+# -----------------------------------------------------------------------------
+# subject types on signals and cases
+# -----------------------------------------------------------------------------
+subjects:
+  claim: "claim"
+  member: "patient"
+  provider: "provider"
+  agent: "agent"
+  community: "connected group"
+  pharmacy: "pharmacy"
+  episode: "episode of care"
+  cluster: "group of providers"
+  clinician: "clinician"
+  authorization: "prior approval"
+  remittance: "payment"
+  document: "document"
+  device: "device"
+  employer: "employer"
+  referral: "referral"
+  adjudicator: "claims adjudicator"
+  prescription: "prescription"
+
+# -----------------------------------------------------------------------------
+# roles (fwa.auth.Role)
+# -----------------------------------------------------------------------------
+roles:
+  ADMIN: "Administrator"
+  POLICY_OWNER: "Policy owner"
+  CLAIMS_REVIEWER: "Claims reviewer"
+  CLINICAL_REVIEWER: "Clinical reviewer"
+  SIU_INVESTIGATOR: "Investigator (special investigations)"
+  ANALYST: "Analyst"
+  QA: "Quality assurance"
+  AUDITOR: "Auditor"
+
+# -----------------------------------------------------------------------------
+# reviewer decision categories (Case Evidence form)
+# -----------------------------------------------------------------------------
+review_categories:
+  billing_error: "Billing mistake"
+  coding_error: "Coding mistake"
+  documentation_gap: "Missing or weak documentation"
+  duplicate: "Duplicate billing"
+  utilisation_concern: "More care than needed"
+  network_concern: "Suspicious connections"
+  suspected_intentional: "Possibly deliberate"
+  cleared: "No issue found"
+  upheld: "Decision upheld"
+  overturned: "Decision overturned"
+  partially_overturned: "Decision partly overturned"
+
+# -----------------------------------------------------------------------------
+# audit events (fwa.audit.log.AuditEventType)
+# -----------------------------------------------------------------------------
+audit_events:
+  LOGIN_SUCCESS: "Signed in"
+  LOGIN_FAILURE: "Failed sign-in"
+  LOGOUT: "Signed out"
+  SESSION_TIMEOUT: "Signed out after inactivity"
+  PHI_UNMASK: "Revealed a patient or provider identity"
+  ACCESS_DENIED: "Tried to open a page without permission"
+  USER_CREATED: "User created"
+  USER_DISABLED: "User disabled"
+  USER_ROLE_CHANGED: "User role changed"
+  PASSWORD_RESET: "Password reset"
+  PASSWORD_CHANGED: "Password changed"
+  DISPOSITION_RECORDED: "Reviewer decision recorded"
+  CASE_ESCALATED: "Case referred to investigations"
+  APPEAL_CAPTURED: "Appeal recorded"
+  MANUAL_OVERRIDE: "Decision manually overridden"
+  CASE_MERGED: "Cases merged"
+  CASE_SPLIT: "Case split"
+  RULE_DRAFTED: "Check drafted"
+  RULE_ACTIVATED: "Check put into use"
+  RULE_RETIRED: "Check retired"
+  RULE_ROLLED_BACK: "Check rolled back to an earlier version"
+  PARAMETER_CHANGED: "Setting changed"
+  KILL_SWITCH_ENGAGED: "Check switched off"
+  KILL_SWITCH_RELEASED: "Check switched back on"
+  ALERT_CEILING_BREACHED: "Check raised too many flags"
+  MODEL_PROMOTION_PROPOSED: "Model proposed for use"
+  MODEL_PROMOTION_APPROVED: "Model approved for use"
+  MODEL_PROMOTION_BLOCKED: "Model blocked from use"
+  AI_TEXT_GENERATED: "AI summary written"
+  AI_CLAIM_DROPPED_UNGROUNDED: "AI sentence removed (no source)"
+  AI_COPILOT_REFUSED: "AI assistant declined a question"
+  PIPELINE_RUN: "Engine run completed"
+  ENTITY_MERGE_PROPOSED: "Possible duplicate record suggested"
+  ENTITY_MERGE_CONFIRMED: "Duplicate record confirmed"
+
+# -----------------------------------------------------------------------------
+# models
+# -----------------------------------------------------------------------------
+models:
+  isolation_forest:
+    label: "Isolation Forest"
+    plain: "Finds claims that are easy to separate from the crowd."
+  local_outlier_factor:
+    label: "Local Outlier Factor"
+    plain: "Finds claims that are unusual compared with their nearest neighbours."
+  transparent_composite:
+    label: "Simple scorecard"
+    plain: "A transparent weighted comparison with similar providers that anyone can recompute by hand. Every model has to beat it."
+
+# -----------------------------------------------------------------------------
+# What the headline suggests, per disposition. Completes "We suggest …".
+# The suggestion is what POLICY says should happen next; it is never a
+# conclusion about conduct.
+# -----------------------------------------------------------------------------
+suggestions:
+  RETURN: "sending it back to the sender to correct"
+  REJECT: "denying it, once a reviewer confirms the rule that failed"
+  REPRICE: "paying it at the corrected amount, once a reviewer confirms the price"
+  PREPAY_PEND: "holding payment until a reviewer has checked it"
+  POSTPAY_AUDIT: "checking it after payment"
+  SIU_LEAD: "asking the investigations team to assess it"
+  PROVIDER_EDUCATION: "talking to the provider about how they bill"
+  MONITOR_ONLY: "watching it for now; there is nothing to act on yet"
+
+# -----------------------------------------------------------------------------
+# Evidence-strength bands for the plain explanation. Presentation only: they
+# put the capped evidence score (max per underlying fact, combined across
+# facts) into words. They do not change priority, disposition or exposure.
+# -----------------------------------------------------------------------------
+evidence_strength_bands:
+  - {min: 0.75, label: "Strong", tone: bad}
+  - {min: 0.5, label: "Moderate", tone: warn}
+  - {min: 0.0, label: "Weak", tone: neutral}
