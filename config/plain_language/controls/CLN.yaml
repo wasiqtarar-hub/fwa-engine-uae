@@ -1,0 +1,397 @@
+# Plain-language text for the CLN (clinical and coding) controls. Presentation only: nothing here changes what a control does.
+
+CLN-01-R01:
+  title: "Bills the top-level version of services more often"
+  finding: "This provider bills the most expensive version of a service more often than similar providers."
+  what: "Compares how often each provider's claims show coding that does not fit the care described (on this data, claims where the diagnosis and procedure were judged not to match) with similar providers, allowing for providers with few claims."
+  why: "Billing a higher or less-supported level than the care delivered (upcoding) raises the cost of every claim it touches."
+  next_steps:
+    - "Pull a sample of this provider's highest-level or mismatched claims and read the clinical notes."
+    - "Check whether the provider's specialty, setting or case mix explains the difference."
+    - "Confirm the provider has enough claims for the comparison to be meaningful."
+  needs: "line-level service details showing which procedure codes and levels were billed, and each provider's specialty"
+
+CLN-01-R02:
+  title: "Claim costs more than expected for the diagnosis"
+  finding: "This claim is priced unusually high for its diagnosis, length of stay and policy type."
+  what: "Estimates what a claim would normally cost given its main diagnosis, length of stay and policy type, and flags claims that sit far above that estimate."
+  why: "A claim far above the expected amount can mean a higher level of service was billed than the patient's condition needed."
+  next_steps:
+    - "Compare the billed services with the discharge summary and clinical notes."
+    - "Check for complications, age or setting that would justify the higher cost."
+    - "Add the claim to a pre-payment sample if the extra cost is not explained."
+  needs: "the billed procedure codes, the patient's date of birth, the type of visit or admission, the claim amount, length of stay, diagnosis and policy type"
+
+CLN-01-R03:
+  title: "Clinical document disagrees with the bill"
+  finding: "This claim's supporting document describes a different stay length or diagnosis from the one billed."
+  what: "Reads the discharge summary, picks out the stay length and diagnosis, and flags the claim when a confidently read fact disagrees with the bill and the exact passage can be shown."
+  why: "When the clinical record does not support what was billed, the claim may have been coded at a higher level than the care delivered."
+  next_steps:
+    - "Open the highlighted passage in the document and compare it with the claim."
+    - "Ask a coder to confirm whether the billed level is supported by the record."
+    - "Request any missing pages or addenda from the provider before deciding."
+  needs: "the clinical documents attached to the claim, readable text in Arabic or English, and the billed stay length, diagnosis and amount"
+
+CLN-01-R04:
+  title: "Sudden shift to higher billing levels"
+  finding: "This provider started billing higher levels of service suddenly, compared with its own history."
+  what: "Tracks the levels of service each provider bills over time and looks for a sudden move upward that is not explained by a change in patients or contract."
+  why: "An abrupt jump in billing levels without a change in patients can signal a deliberate change in coding behaviour."
+  next_steps:
+    - "Check whether a new contract, service line or specialist started around the date of the change."
+    - "Compare a sample of claims from before and after the change."
+    - "Refer for a post-payment sample audit if nothing explains the shift."
+  needs: "the procedure codes billed on each service line over time"
+
+CLN-02-R01:
+  title: "Secondary diagnosis that raises the payment"
+  finding: "This claim includes a secondary diagnosis that raises the payment but lacks supporting evidence."
+  what: "Re-groups the claim with the questionable secondary diagnosis removed and flags it when the payment drops and the record does not support that diagnosis."
+  why: "Adding unsupported secondary diagnoses moves a case into a higher-paying group and inflates the bill."
+  next_steps:
+    - "Check the clinical notes for evidence that the secondary condition was present and treated."
+    - "Confirm the grouping using the current grouper version and audit policy."
+    - "Send to a coding audit if the diagnosis is not supported."
+  needs: "the full list of secondary diagnoses in order, and a payment grouper that assigns each case to a payment group"
+
+CLN-02-R02:
+  title: "More complications recorded than similar providers"
+  finding: "This provider records complications and serious conditions unusually often compared with similar providers."
+  what: "Compares how often each provider records complications or serious additional conditions with similar providers, after allowing for patient risk."
+  why: "Recording more severe conditions than patients have increases payments across many claims."
+  next_steps:
+    - "Review a sample of cases with recorded complications against the clinical notes."
+    - "Check whether age, transfers, specialty or case volume explain the difference."
+    - "Open a provider review if the pattern holds."
+  needs: "the ordered list of diagnoses on each claim and a payment grouper that marks complications and severity"
+
+CLN-02-R03:
+  title: "Serious diagnosis not seen in patient history"
+  finding: "This claim records a serious diagnosis that does not fit this patient's earlier medical history."
+  what: "Looks for acute or severe diagnoses that clearly conflict with the patient's history across earlier claims and episodes."
+  why: "A severe diagnosis with no trace before or after may have been added to raise the payment."
+  next_steps:
+    - "Read the patient's earlier and later records for signs of the condition."
+    - "Remember that a genuinely new diagnosis is possible; missing history is weak evidence."
+    - "Prioritise the claim for a full medical record review."
+  needs: "the ordered diagnoses on each claim and the patient's medical history over time, ideally across insurers"
+
+CLN-02-R04:
+  title: "Diagnosis order or admission status conflicts"
+  finding: "This claim lists diagnoses in an order, or with an on-admission status, that breaks coding rules."
+  what: "Checks whether the main and secondary diagnoses, and whether each was present on admission, follow the coding policy in force at the time."
+  why: "Wrong ordering or admission status can move a case into a higher-paying group."
+  next_steps:
+    - "Check the diagnosis order against the coding guidelines in force on the service date."
+    - "Allow for transfer, maternity and newborn rules before deciding."
+    - "Hold the claim for coding review."
+  needs: "the order of diagnoses on each claim and whether each condition was present on admission"
+
+CLN-02-R05:
+  title: "Sudden rise in recorded case severity"
+  finding: "This provider's recorded case severity rose suddenly compared with its own history, without a matching change in services."
+  what: "Tracks each provider's average case severity over time and flags a rise that is not matched by changes in procedures, length of stay or referrals."
+  why: "Severity that climbs on paper while the care stays the same suggests coding drift that raises payments."
+  next_steps:
+    - "Check whether the provider opened a new service line or took on sicker patients."
+    - "Compare a sample of claims from before and after the rise."
+    - "Refer for a post-payment audit if the rise is unexplained."
+  needs: "the ordered diagnoses on each claim and a payment grouper that assigns severity"
+
+CLN-03-R01:
+  title: "Diagnosis and procedure do not fit together"
+  finding: "This claim pairs a diagnosis and a procedure that were judged not to fit together."
+  what: "Flags claims where the diagnosis and the procedure were recorded as not matching each other."
+  why: "A procedure that does not fit the diagnosis may not have been needed, or the claim may be wrongly coded."
+  next_steps:
+    - "Check the diagnosis and procedure against the clinical notes."
+    - "Ask the provider to explain the clinical reason for the procedure."
+    - "Hold the claim rather than reject it, because the source of the mismatch judgement is not documented."
+  needs: "the billed procedure codes, units and amounts, the diagnosis, and a list of prohibited diagnosis and procedure pairs"
+
+CLN-03-R02:
+  title: "Service billed without a supporting reason"
+  finding: "This claim bills a service with no accepted clinical reason recorded in the same episode or recent history."
+  what: "Looks for a diagnosis or finding that justifies the service, in the same episode or a set period before it, using an agreed list of accepted reasons."
+  why: "Services without a clinical reason may be unnecessary and should not be paid without review."
+  next_steps:
+    - "Search the patient's recent records for a reason that justifies the service."
+    - "Ask the provider for the clinical notes or referral that led to the service."
+    - "Send to a clinical reviewer if no reason is found."
+  needs: "the billed procedure codes, units and amounts, and a policy listing which reasons justify each service"
+
+CLN-03-R03:
+  title: "Services billed in an impossible order"
+  finding: "This claim bills a service whose required earlier step or result is missing, or services in an order that could not happen."
+  what: "Checks whether services that depend on an earlier procedure or result have that step on record, and whether dates are in a possible order."
+  why: "A service without its prerequisite may not have been performed as billed."
+  next_steps:
+    - "Check whether the earlier step was done by another provider or is still being processed."
+    - "Ask the provider for the result or report that should come first."
+    - "Hold the claim or refer for audit if the order cannot be explained."
+  needs: "the billed procedure codes, units and amounts, and clinical results with their dates"
+
+CLN-03-R04:
+  title: "Unusual procedure combinations for the specialty"
+  finding: "This provider bills rare diagnosis and procedure combinations more often than others in its specialty."
+  what: "Compares how often each provider bills uncommon combinations with how often providers of the same specialty do."
+  why: "Rare combinations billed often can point to miscoding or services outside the provider's normal practice."
+  next_steps:
+    - "Review a sample of the rare combinations with a clinical adviser."
+    - "Treat this as exploratory and confirm the provider has enough claims."
+    - "Consider whether a policy or coding rule needs updating."
+  needs: "the billed procedure codes, units and amounts, the treating and ordering clinicians, and each provider's specialty"
+
+CLN-04-R01:
+  title: "Same care repeated too soon"
+  finding: "This claim repeats care for the same patient and diagnosis sooner than policy allows, with no accepted reason."
+  what: "Looks for an earlier claim for the same patient and main diagnosis within the minimum repeat interval (on this data, same diagnosis stands in for the same service)."
+  why: "Repeating care too soon without a clinical reason is a common source of waste."
+  next_steps:
+    - "Compare the two visits or admissions and their clinical notes."
+    - "Check for a clinical exception, such as a worsening condition or failed treatment."
+    - "Hold the claim for clinical review if no reason is recorded."
+  needs: "the billed procedure codes, units and amounts, clinical results, repeat-interval rules, and for each claim the patient, diagnosis and admission date"
+
+CLN-04-R02:
+  title: "Patient has an unusually high number of admissions"
+  finding: "This patient has an unusually high number of claims within a short period."
+  what: "Counts each patient's earlier claims within a set time window and flags the claim when the count reaches the threshold."
+  why: "A high number of services per patient can indicate unnecessary or repeated care."
+  next_steps:
+    - "List the patient's recent claims and check whether they follow a recognised care pathway."
+    - "Consider the patient's diagnosis and age before deciding."
+    - "Hold the claim or refer for audit if the frequency is not clinically explained."
+  needs: "the billed procedure codes, units and amounts, the patient's date of birth and sex, care pathway rules, and each claim's patient and admission date"
+
+CLN-04-R03:
+  title: "Test repeated before previous result used"
+  finding: "This claim repeats a diagnostic test while the previous result is missing or unchanged."
+  what: "Looks for repeat diagnostic services where the earlier result is absent or shows no change that would justify repeating."
+  why: "Repeating tests without using earlier results adds cost without clinical benefit."
+  next_steps:
+    - "Check whether the earlier test failed, was inconclusive or is still pending."
+    - "Ask the provider why the test was repeated."
+    - "Send for review if no reason is given."
+  needs: "clinical results with their values and the date and time they were recorded"
+
+CLN-04-R04:
+  title: "More claims per patient than similar providers"
+  finding: "This provider bills more claims per patient than similar providers."
+  what: "Compares each provider's claims per distinct patient with similar providers, allowing for providers with few patients."
+  why: "Billing more services per patient than similar providers can signal unnecessary care or claim splitting."
+  next_steps:
+    - "Review a sample of patients with many claims at this provider."
+    - "Check whether case mix or the provider's referral role explains the difference."
+    - "Open a provider review if the pattern holds."
+  needs: "the billed procedure codes, units and amounts, referral details, and the provider and patient on each claim"
+
+CLN-04-R05:
+  title: "Simple visits leading to many follow-on services"
+  finding: "This provider's simple first visits unusually often lead to a large bundle of follow-on tests and services."
+  what: "Looks for low-intensity first encounters that reliably trigger an unusually large set of later tests or services."
+  why: "A pattern of routine visits feeding many downstream services can indicate unnecessary care or steering."
+  next_steps:
+    - "Map the follow-on services for a sample of patients and check they were clinically needed."
+    - "Check whether the specialty's standard care pathway explains the pattern."
+    - "Consider a post-payment or network review."
+  needs: "the billed procedure codes, units and amounts, and referral details linking visits to later services"
+
+CLN-05-R01:
+  title: "Hospital stay unusually long or short"
+  finding: "This claim's length of stay is unusually long or short for its diagnosis."
+  what: "Compares each stay's length with what is typical for the same diagnosis and flags stays far outside that range."
+  why: "Stays that are too long add cost; stays that are too short can indicate early discharge followed by readmission."
+  next_steps:
+    - "Read the discharge summary for the reason the stay was longer or shorter than usual."
+    - "Check for transfers, intensive care, or death during the stay."
+    - "Send for utilisation review if the stay is not explained."
+  needs: "a payment grouper, whether the patient was in intensive care, date of death if any, and each stay's length and diagnosis"
+
+CLN-05-R02:
+  title: "Readmitted soon after discharge"
+  finding: "This patient was readmitted soon after being discharged."
+  what: "Flags admissions that start within a set number of days after the patient's last discharge, with the payment involved."
+  why: "Early readmissions can mean premature discharge or a single episode billed twice; this is for episode review, not a finding of wrongdoing."
+  next_steps:
+    - "Check whether the two admissions are for related conditions."
+    - "Rule out planned or staged care and unrelated injuries."
+    - "Review the episode as a whole rather than each claim alone."
+  needs: "a map of which diagnoses are related, and each claim's gap between discharge and readmission, amount and diagnosis"
+
+CLN-05-R03:
+  title: "One stay possibly split into two claims"
+  finding: "This patient had two stays at the same provider so close together that they may be one continuous stay billed twice."
+  what: "Looks for two or more claims at the same provider where the next admission starts within a few days of the previous discharge."
+  why: "Splitting one stay into two claims can raise the total payment."
+  next_steps:
+    - "Compare both discharge summaries to see if the patient actually left care."
+    - "Check for transfers or a genuine worsening of the patient's condition."
+    - "Hold the claims until the payable amount can be worked out under the continuous-stay rule."
+  needs: "the continuous-stay payment rule, whether the patient was transferred, and the admission and discharge dates and amounts for the episode"
+
+CLN-05-R04:
+  title: "Admits more patients than similar providers"
+  finding: "This provider admits an unusually high share of comparable patients compared with similar providers."
+  what: "Compares how often each provider admits patients who present with similar conditions with how often similar providers do."
+  why: "Admitting patients who could be treated as outpatients greatly increases cost."
+  next_steps:
+    - "Review a sample of admissions to see whether outpatient care would have been suitable."
+    - "Check severity, referral mix and use of observation status."
+    - "Refer for a post-payment audit if the pattern holds."
+  needs: "the type of each visit (outpatient or inpatient) and whether the patient was kept under observation"
+
+CLN-06-R01:
+  title: "Billed test or therapy without an order or result"
+  finding: "This claim bills a test or therapy with no matching order, result or administration record."
+  what: "Checks that each billed diagnostic or therapy has the expected order, result or administration record behind it."
+  why: "A service with no trail of evidence may not have been delivered."
+  next_steps:
+    - "Ask the provider for the order, result or administration record."
+    - "Allow time for records that arrive late before concluding."
+    - "Hold the claim until the evidence is provided."
+  needs: "clinical results and records linked to each billed service line"
+
+CLN-06-R02:
+  title: "Claims from a facility with little real activity"
+  finding: "This provider is on an exclusion list, or bills in short, high-value bursts with little other sign of normal operation."
+  what: "Flags providers on an exclusion list, or those with few claims bunched into a few days at values above similar providers."
+  why: "Claims from a closed or barely operating facility may be for services that were never delivered."
+  next_steps:
+    - "Confirm the facility's licence status and operating dates with the regulator."
+    - "Check whether it is an emergency, 24-hour or outreach service."
+    - "Refer to the special investigations unit as a lead, not as a denial."
+  needs: "each provider's licensed operating periods and facility type, its current status, and each claim's service date and amount"
+
+CLN-06-R03:
+  title: "Identical claims for different patients"
+  finding: "This provider submitted the same diagnosis, stay length and amount for several different patients."
+  what: "Looks for the same combination of diagnosis, length of stay and amount repeating across different patients at one provider."
+  why: "Copy-and-paste claims across unrelated patients can indicate made-up encounters."
+  next_steps:
+    - "Check whether the claims are for a standard package with a fixed price."
+    - "Compare the clinical notes for the patients involved."
+    - "Open a provider audit if the claims are not a recognised package."
+  needs: "the billed procedure codes, units and amounts, clinical documents, and each claim's provider, patient, diagnosis, stay length and amount"
+
+CLN-06-R04:
+  title: "Patient says service was not received"
+  finding: "A patient confirmation or attendance record suggests this service was not received."
+  what: "Compares the claim with patient confirmations or attendance records that state the service did not happen."
+  why: "A patient's own confirmation that no service took place is strong reason to investigate."
+  next_steps:
+    - "Check how the patient was contacted and whether their identity was confirmed."
+    - "Allow for the patient forgetting or misremembering the visit."
+    - "Refer as a high-priority lead to the special investigations unit."
+  needs: "patient confirmations of services and attendance records"
+
+CLN-06-R05:
+  title: "Major service with no follow-up trail"
+  finding: "This claim bills a major service with none of the follow-up care, medicine or results usually seen afterwards."
+  what: "Checks whether a high-impact service is followed by the medicines, results or later visits that similar cases normally show."
+  why: "A major service with no later footprint may not have been delivered; this is supporting evidence only."
+  next_steps:
+    - "Look for follow-up care outside the network before drawing conclusions."
+    - "Check the patient's pharmacy and results history after the service."
+    - "Use this alongside other findings rather than on its own."
+  needs: "pharmacy dispensing records (product, days' supply, prescriber and pharmacy), clinical results, and billed service lines"
+
+CLN-07-R01:
+  title: "Clinician billed more hours than a day holds"
+  finding: "This clinician appears to have billed more service time in one day than could fit in a working day."
+  what: "Adds up the minimum time needed for each service a clinician billed on a day and compares it with the time available."
+  why: "Billing more time than exists suggests some services were not performed by that clinician."
+  next_steps:
+    - "Build a timeline of the clinician's services for the day."
+    - "Check for team or parallel services and documented working hours."
+    - "Review the provider's schedule and attendance records."
+  needs: "the treating and ordering clinicians, provider specialty, and the start and end time of each service"
+
+CLN-07-R02:
+  title: "More patients than the facility can hold"
+  finding: "This provider appears to have had more patients staying on some days than its capacity allows."
+  what: "Counts patients staying at each provider on each day from admission and discharge dates, and compares this with its capacity plus a margin."
+  why: "Occupancy above capacity suggests some stays were not real or dates are wrong."
+  next_steps:
+    - "Confirm the facility's licensed bed count with the regulator, as the current capacity figure is a placeholder."
+    - "Check the admission and discharge dates on the busiest days."
+    - "Refer as an audit lead if the numbers still do not fit."
+  needs: "licensed bed and room counts, the staff roster, and each claim's provider, admission and discharge dates"
+
+CLN-07-R03:
+  title: "Same equipment used in overlapping services"
+  finding: "This provider billed more overlapping uses of the same equipment than it could support."
+  what: "Checks whether services needing the same scarce device overlap in time beyond the available equipment."
+  why: "Equipment cannot be in two places at once, so overlapping use points to services that may not have happened."
+  next_steps:
+    - "Confirm the provider's equipment inventory and turnaround times."
+    - "Compare service times for the overlapping claims."
+    - "Hold the claims or refer for audit if the overlap is real."
+  needs: "the provider's equipment inventory and the billed procedure codes, units and amounts"
+
+CLN-07-R04:
+  title: "Sudden jump in monthly claim volume"
+  finding: "This provider's monthly claim volume jumped suddenly compared with its own history."
+  what: "Tracks each provider's monthly claim count and flags a sudden, sustained jump once enough history exists."
+  why: "Volume that jumps without new staff, hours or equipment may include services that were not delivered."
+  next_steps:
+    - "Ask whether the provider added staff, hours, equipment or a new site around that time."
+    - "Rule out a change in how claims data was received."
+    - "Sample claims from after the jump for audit."
+  needs: "staff rosters, operating hours, contract dates, and each claim's provider and service date"
+
+CLN-08-R01:
+  title: "Lab test without a proper order"
+  finding: "This claim bills a test without a valid ordering clinician or a qualifying visit or reason."
+  what: "Checks that each billed test has a valid ordering clinician and a visit or reason that justifies it."
+  why: "Tests without a proper order may be unnecessary or not requested by the patient's doctor."
+  next_steps:
+    - "Ask for the test request form or order."
+    - "Check whether a screening programme or standing order applies."
+    - "Hold the claim for clinical review if no order exists."
+  needs: "the billed procedure codes, units and amounts, the treating and ordering clinicians, and provider specialty"
+
+CLN-08-R02:
+  title: "Test panel split or larger than ordered"
+  finding: "This claim bills parts of a test panel separately, or a panel much larger than what was ordered."
+  what: "Compares billed tests with panel definitions to find components billed one by one, or panels well beyond the order."
+  why: "Unbundling a panel or adding tests raises the cost of a single request."
+  next_steps:
+    - "Compare the billed tests with the original order."
+    - "Check for automatic follow-up (reflex) testing and local panel rules."
+    - "Reprice or hold the claim if components were split."
+  needs: "the billed procedure codes, units and amounts, and definitions of which tests make up each panel"
+
+CLN-08-R03:
+  title: "Test result missing or copied"
+  finding: "This claim bills a test with no result, or with a result identical to other unrelated patients."
+  what: "Checks that paid tests have a result, and looks for identical results appearing across unrelated patients."
+  why: "A missing or copied result suggests the test may not have been run."
+  next_steps:
+    - "Ask the laboratory for the signed result report."
+    - "Allow for results still pending and standard normal templates."
+    - "Refer for audit if identical results are confirmed across patients."
+  needs: "test results with their values and the date and time they were recorded"
+
+CLN-08-R04:
+  title: "Large mark-up on tests done elsewhere"
+  finding: "This provider adds an unusually large mark-up or volume on tests that another laboratory actually performs."
+  what: "Compares the billing provider with the laboratory that performed the test, looking for unusual mark-ups or volume."
+  why: "Passing tests through with a large mark-up raises cost without adding care."
+  next_steps:
+    - "Identify the performing laboratory and compare its price with the billed amount."
+    - "Check the contract for permitted reference-laboratory arrangements."
+    - "Consider a post-payment or network review."
+  needs: "the billed procedure codes, units and amounts, and which laboratory actually performed each test"
+
+CLN-08-R05:
+  title: "Orders unusually many complex or genetic tests"
+  finding: "This provider orders or bills complex or genetic tests unusually often, or at unusually high cost, compared with similar providers."
+  what: "Compares each provider's rate, panel size and cost for high-complexity and genetic tests with similar providers, after allowing for patient risk."
+  why: "Complex and genetic tests are expensive, so overuse has a large cost impact."
+  next_steps:
+    - "Check whether the provider is a cancer, rare-disease or specialist centre."
+    - "Pull a targeted sample of records to confirm the tests were clinically needed."
+    - "Compare the test mix with similar providers."
+  needs: "the billed procedure codes, units and amounts"

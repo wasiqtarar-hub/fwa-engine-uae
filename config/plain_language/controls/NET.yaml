@@ -1,0 +1,177 @@
+# Plain-language text for the NET (networks and relationships) controls. Presentation only: nothing here changes what a control does.
+
+NET-01-R01:
+  title: "Agent sends most claims to one provider"
+  finding: "This agent's claims flow to a single provider far more than is usual."
+  what: "Measures how much of each agent's claims go to their most-used provider, for agents with enough claims (on this data it tracks agent-to-provider flow, not clinical referrals)."
+  why: "Heavy concentration on one provider can indicate steering or an improper arrangement."
+  next_steps:
+    - "Check whether the provider is part of the same group or a recognised centre of excellence."
+    - "Look for business links between the agent and the provider."
+    - "Open a network review if no reason is found."
+  needs: "referral records showing who referred to whom, provider specialty and emirate, and the location of each visit"
+
+NET-01-R02:
+  title: "Providers referring back and forth"
+  finding: "These two providers refer patients to each other unusually often, given the opportunity."
+  what: "Looks for pairs of providers where referrals in both directions are unusually strong."
+  why: "Mutual referral loops can indicate a kickback or patient-trading arrangement."
+  next_steps:
+    - "Check whether the providers work as a recognised multidisciplinary team."
+    - "Review a sample of the referred patients and the reasons for referral."
+    - "Record as supporting network evidence."
+  needs: "referral records showing who referred to whom and in which direction"
+
+NET-01-R03:
+  title: "Referred patients unusually often get costly care"
+  finding: "Patients referred along this route go on to high-cost services unusually often or at unusually high value."
+  what: "Tracks referred patients and compares how often they receive high-cost services with what would normally be expected."
+  why: "Referrals that reliably turn into expensive care can indicate steering for profit."
+  next_steps:
+    - "Check the reasons for referral and the case mix of the patients."
+    - "Review a sample of the high-cost services for clinical need."
+    - "Prioritise for audit if the pattern holds."
+  needs: "referral records and the billed procedure codes, units and amounts"
+
+NET-01-R04:
+  title: "Patients kept inside a small closed chain"
+  finding: "Patients from this referrer unusually stay within a small, tightly connected chain of laboratories, imaging centres and pharmacies."
+  what: "Follows referrals from a referrer to laboratories, imaging centres and pharmacies to see whether patients are kept inside a small group."
+  why: "A closed chain can hide self-referral or shared ownership that drives unnecessary services."
+  next_steps:
+    - "Check the ownership of the providers in the chain."
+    - "Allow for narrow networks set up by the insurer."
+    - "Refer to the special investigations unit as a lead."
+  needs: "referral records, provider types, and each provider's owner, bank account, phone and address details"
+
+NET-02-R01:
+  title: "Separate providers share contact or bank details"
+  finding: "This provider appears to share bank, phone, address, device or owner details with a legally separate provider, which is unusual."
+  what: "Looks for legally separate organisations that share the same bank account, phone, address, device or owner."
+  why: "Shared details between supposedly independent providers can reveal hidden common control."
+  next_steps:
+    - "Confirm the match is exact, not a close spelling."
+    - "Check for known groups or shared service arrangements."
+    - "Record the link for the network review."
+  needs: "each provider's owner, bank account, phone and address details"
+
+NET-02-R02:
+  title: "Tightly connected group of patients and providers"
+  finding: "This group of patients, providers and agents is unusually tightly connected, with little activity outside the group."
+  what: "Finds groups of patients, providers and agents that deal mostly with each other and compares how tightly connected they are with groups of the same size."
+  why: "A closed circle of the same patients and providers can indicate an organised ring."
+  next_steps:
+    - "List the members, providers and agents in the group and their claims."
+    - "Check whether the group is explained by a local clinic or an employer."
+    - "Refer to the special investigations unit for a network review."
+  needs: "each provider's specialty, emirate and ownership details, and each claim's patient, provider, agent, date and amount"
+
+NET-02-R03:
+  title: "Group claims with matching dates and amounts"
+  finding: "Several claims in this group share the same admission date and nearly the same amount, which is unusual."
+  what: "Within a tightly connected group, looks for claims that share an admission date and have almost identical amounts."
+  why: "Synchronised claims can indicate coordinated billing; this is supporting evidence only."
+  next_steps:
+    - "Compare the matching claims and their clinical notes."
+    - "Check whether a batch billing system explains the timing."
+    - "Use this alongside other findings for the group."
+  needs: "the billed procedure codes, units and amounts, claim resubmission history, and each claim's date, amount, provider and patient"
+
+NET-02-R04:
+  title: "Minor providers suddenly become central"
+  finding: "This provider moved from the edge of the network to the centre unusually quickly, with significant money involved."
+  what: "Tracks how central each provider is in the network over time and flags rapid moves from the edge to the centre."
+  why: "A sudden rise in importance can signal a new scheme, but mergers and new contracts must be ruled out."
+  next_steps:
+    - "Check for mergers, ownership changes or new contracts."
+    - "Review the new connections and the money flowing through them."
+    - "Monitor, and refer for investigation if the pattern continues."
+  needs: "contract dates, ownership history, and each provider's owner, bank account, phone and address details"
+
+NET-03-R01:
+  title: "Same patient and provider, repeated high value"
+  finding: "This patient and provider have an unusually high number and value of claims together."
+  what: "Looks at every patient-provider pair and flags pairs with repeated claims whose total value is unusually high."
+  why: "Repeated high-value claims between one patient and one provider can indicate collusion."
+  next_steps:
+    - "List all claims for the pair and check the clinical reason for each."
+    - "Check whether a chronic or rare-disease care pathway explains the pattern."
+    - "Add as evidence to any open case."
+  needs: "benefit rules and limits, a running record of benefit used, and each claim's patient, provider and amount"
+
+NET-03-R02:
+  title: "Provider serves a small closed group"
+  finding: "This provider's activity is unusually concentrated in a small, tightly connected group of patients or one employer."
+  what: "Checks whether most of a provider's activity comes from a small group of connected patients or a single employer."
+  why: "A provider serving a closed group can indicate recruited patients or collusion."
+  next_steps:
+    - "Check whether the provider is a local or on-site employer clinic."
+    - "Review how patients in the group came to the provider."
+    - "Refer to the special investigations unit for a network review."
+  needs: "each patient's employer and sponsor, provider emirate, and the location of each visit"
+
+NET-03-R03:
+  title: "Signs of patients being paid or rewarded"
+  finding: "This provider unusually combines zero patient payments, non-medical substitutions or repeated profitable services."
+  what: "Looks for zero patient share, non-medical items supplied in place of covered ones, and repeated profitable services occurring together."
+  why: "Together these can indicate patients are being rewarded to attend."
+  next_steps:
+    - "Check whether an approved programme waives patient payments."
+    - "Contact a sample of patients to confirm what they received."
+    - "Treat as a high-priority lead."
+  needs: "the patient's share of each claim, the billed procedure codes, units and amounts, and pharmacy dispensing records"
+
+NET-03-R04:
+  title: "Patient complaint supports a mismatch"
+  finding: "A confirmed patient complaint or confirmation supports a mismatch in the service, item or charge on this claim."
+  what: "Uses complaints and confirmations from verified patients that back up a difference between what was billed and what was received."
+  why: "Independent patient evidence strengthens other signs that the bill is wrong."
+  next_steps:
+    - "Check how reliable the patient evidence is."
+    - "Compare the patient's account with the claim."
+    - "Escalate the case if the evidence is reliable."
+  needs: "patient complaints and patient confirmations of services"
+
+NET-04-R01:
+  title: "Agent linked to many confirmed problem claims"
+  finding: "This agent or group has an unusually high rate of claims confirmed by reviewers as problems."
+  what: "Compares the rate of reviewer-confirmed problem claims for each agent or group, allowing for portfolio mix."
+  why: "A high confirmed-problem rate points to where distribution channels need closer oversight."
+  next_steps:
+    - "Use only confirmed reviewer decisions, never raw system alerts."
+    - "Check the agent's portfolio mix before comparing."
+    - "Refer for a distribution review."
+  needs: "confirmed reviewer decisions for each claim and the amounts confirmed"
+
+NET-04-R02:
+  title: "Agent's patients use very few providers"
+  finding: "This agent's patients use an unusually small set of providers for a portfolio of this size."
+  what: "Compares how many providers an agent's patients use with what is expected for agents with similar numbers of patients."
+  why: "Patients funnelled into a few providers can indicate steering by the agent."
+  next_steps:
+    - "Check whether an employer clinic or geography explains the concentration."
+    - "Look for business links between the agent and the providers."
+    - "Open a network review if no reason is found."
+  needs: "each patient's employer, provider emirate, visit location, and each claim's agent, provider and patient"
+
+NET-04-R03:
+  title: "High-cost claims soon after joining"
+  finding: "This agent has an unusually high share of high-cost claims made soon after patients joined."
+  what: "Compares each agent's share of early claims costing more than typical for the diagnosis with the rate across all agents."
+  why: "Costly claims soon after joining can indicate people enrolled because they already needed treatment; this is for review, never for denying an individual claim."
+  next_steps:
+    - "Check for maternity, ongoing chronic care or guaranteed-issue policies."
+    - "Review the agent's enrolment process for the patients involved."
+    - "Refer for review; do not deny individual claims on this basis."
+  needs: "each patient's employer, an estimate of expected illness levels, and each claim's agent, days since the policy started, amount and diagnosis"
+
+NET-04-R04:
+  title: "Agents, patients and providers share contact details"
+  finding: "This agent, employer, patient or provider shares contact, payment or device details with others in an unusual way."
+  what: "Looks for shared contact, payment or device details linking agents, employers, patients and providers."
+  why: "Shared details across parties that should be independent can reveal an organised scheme."
+  next_steps:
+    - "Rule out known corporate links and lawful shared data."
+    - "Map all parties sharing each detail."
+    - "Refer to the special investigations unit for a network review."
+  needs: "each provider's owner, bank account, phone and address details"

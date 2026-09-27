@@ -1,0 +1,57 @@
+# Plain-language text for the POL controls (enrolment, employer group and policy).
+# Presentation only: nothing here changes what a control does.
+
+POL-01-R01:
+  title: "Member not on employer or sponsor roster"
+  finding: "This patient is enrolled without a valid employer, sponsor or dependant link, or appears on cover twice under different records."
+  what: "Checks each enrolled member against the sponsor or employer roster and looks for duplicate active identities."
+  why: "People who are not entitled to cover, or who are enrolled twice, lead to claims being paid that should not be."
+  next_steps:
+    - "Compare the member with the employer's current staff and dependant list."
+    - "Check whether continuation cover, newborn cover or mandated cover applies."
+    - "Ask the employer or sponsor to confirm the relationship."
+  needs: "each member's sponsor and employer, and the employer's roster of staff and dependants"
+
+POL-01-R02:
+  title: "Member added after a costly treatment"
+  finding: "This patient was added or changed on the policy after a high-cost service, and the timing or the person making the change is unusual."
+  what: "Looks at policy changes made after an expensive service, and at who made them and when."
+  why: "Adding someone to cover after they have already needed costly care can shift a known cost onto the insurer."
+  next_steps:
+    - "Check the date and time of the policy change against the service date."
+    - "Confirm who made the change and whether they had authority to do so."
+    - "Check whether an approved backdated correction explains it."
+  needs: "a record of policy changes, including when each was made, by whom and of what kind"
+
+POL-01-R03:
+  title: "Application answers conflict with history"
+  finding: "An answer on this patient's policy application conflicts with official records of earlier cover or claims."
+  what: "Compares key declarations on the application with prior cover and claim history, where the law allows this."
+  why: "Undisclosed history can affect the terms of cover, but any conclusion must be made by a person and must respect privacy and fairness law."
+  next_steps:
+    - "Compare the application answers with the prior cover and claim records."
+    - "Check with the legal or compliance team that the information may be used."
+    - "Refer to an underwriter for human review only."
+  needs: "the declarations on each policy application and records of earlier cover and claims"
+
+POL-01-R04:
+  title: "Unusually costly claim soon after policy start"
+  finding: "This claim was made shortly after the policy started and is unusually high for its diagnosis compared with similar claims."
+  what: "Looks for claims early in the policy whose cost is well above what is typical for the same diagnosis."
+  why: "Very early high-cost claims can signal an undeclared existing condition, but on their own they are not evidence of wrongdoing."
+  next_steps:
+    - "Check whether maternity or ongoing care from a previous insurer explains the claim."
+    - "Review the application for relevant declarations."
+    - "Note the pattern for monitoring by distribution channel rather than acting on one claim."
+  needs: "how long each policy had been active at the time of the claim, the claim amount, the diagnosis, and any earlier confirmed issues on the policy"
+
+POL-01-R05:
+  title: "Cluster of enrolments from one employer or broker"
+  finding: "This employer or broker shows an unusual cluster of new members, shared contact details, or early claims."
+  what: "Looks for groups of enrolments from one employer or originator that share a bank account, phone or address, or claim soon after joining."
+  why: "Such clusters can point to organised enrolment of people to make claims, though large portfolios and enrolment campaigns can also explain them."
+  next_steps:
+    - "List the members added by this employer or broker and when."
+    - "Check for shared bank accounts, phone numbers or addresses with providers."
+    - "Check whether a recent enrolment campaign explains the volume."
+  needs: "a record of policy changes, each member's employer, and provider ownership, bank account, phone and address details"

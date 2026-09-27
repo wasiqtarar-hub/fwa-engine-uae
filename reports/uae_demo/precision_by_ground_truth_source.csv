@@ -1,0 +1,2 @@
+ground_truth_source,claims,labelled_fraud,prevalence,flagged,flagged_and_labelled,precision_proxy,recall_proxy,reliability_caveat
+synthetic_injection,24855,2627,0.1057,8636,1915,0.2217,0.729,pattern_detection labels are produced by a pattern process and share its blind spots.

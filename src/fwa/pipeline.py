@@ -166,9 +166,11 @@ def run_pipeline(
         source_adapter = adapter_cls(config, raw_store, tenant_id=tenant_id)
         dataset = source_adapter.load(str(data_path))
         claims = dataset["claim_header"]
+        # Any adapter that can supply held-out evaluation labels does so here,
+        # into a frame that never reaches a feature or a control.
         held_out = (
             source_adapter.held_out_labels(str(data_path))
-            if isinstance(source_adapter, GenericIndiaTpaAdapter) else None
+            if callable(getattr(source_adapter, "held_out_labels", None)) else None
         )
 
     with _step("lineage and episodes"):

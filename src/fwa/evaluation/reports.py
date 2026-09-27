@@ -126,8 +126,15 @@ class ReportBuilder:
         frame = pd.DataFrame(self.result.registry.coverage_rows())
         run = self.result.evaluation.to_frame()
         if not run.empty:
+            # ``data_support`` stays the catalogue's static classification (it
+            # is what the YAML declares); what this particular file allowed is
+            # reported beside it, with the basis, so an unlocked control can
+            # never be mistaken for one the claim-header extract supports.
+            extra = [c for c in ("data_support", "support_basis", "support_reason",
+                                 "missing_for_unlock") if c in run.columns]
             frame = frame.merge(
-                run[["rule_id", "outcome", "signal_count", "elapsed_ms"]],
+                run[["rule_id", "outcome", "signal_count", "elapsed_ms", *extra]].rename(
+                    columns={"data_support": "data_support_on_this_run"}),
                 on="rule_id", how="left",
             )
         frame = frame.rename(columns={"outcome": "run_outcome", "signal_count": "signals_this_run"})

@@ -1,0 +1,537 @@
+# Plain-language text for the PAY controls (payment integrity: duplicates, bundling, codes, approvals, prices, patient share, resubmissions, recoveries).
+# Presentation only: nothing here changes what a control does.
+
+PAY-01-R01:
+  title: "Exact duplicate of an earlier claim"
+  finding: "This claim matches an earlier active claim for the same patient, provider, diagnosis, dates and amount."
+  what: "Looks for an earlier claim with the same payer, patient, provider, main diagnosis, admission and discharge dates and amount that has not been replaced or cancelled."
+  why: "Paying the same service twice is a direct overpayment."
+  next_steps:
+    - "Compare this claim with the matching earlier claim."
+    - "Check whether either claim was a replacement or was cancelled."
+    - "Check whether a genuine repeat or two-sided procedure explains the match."
+  needs: "the payer, patient, provider, main diagnosis, admission and discharge dates and amount on each claim"
+
+PAY-01-R02:
+  title: "Near-duplicate of a recent claim"
+  finding: "This claim closely resembles another recent claim for the same patient and provider, with the same diagnosis and a very similar amount."
+  what: "Looks for claims from the same provider for the same patient and main diagnosis, admitted within a short window and with amounts that are almost the same."
+  why: "A resubmitted claim with small changes can get the same service paid twice."
+  next_steps:
+    - "Compare this claim with the matched claim line by line."
+    - "Check whether the two claims are part of a planned series of treatment."
+    - "Ask the provider to confirm both services took place."
+  needs: "the patient, provider, main diagnosis, admission date and amount on each claim"
+
+PAY-01-R03:
+  title: "One episode split across several claims"
+  finding: "This episode of care has two or more claims from the same provider with the same main diagnosis."
+  what: "Looks within each episode of care for several claims from one provider that share the main diagnosis."
+  why: "Splitting one episode into several claims can lead to parts of the same care being paid more than once."
+  next_steps:
+    - "Review all claims in the episode together."
+    - "Check whether a legitimate split between facility and doctor fees, a planned staged procedure or a transfer explains it."
+    - "Hold the episode until the correct total can be worked out."
+  needs: "which claims belong to each episode of care, their main diagnosis and amounts"
+
+PAY-01-R04:
+  title: "Same service paid by another insurer"
+  finding: "This service appears to have been paid by more than one insurer."
+  what: "Matches patients and services across insurers, using privacy-protected references, to find services paid more than once."
+  why: "A service paid by two insurers is an overpayment that should be recovered or coordinated."
+  next_steps:
+    - "Confirm that the data sharing used is authorised."
+    - "Confirm the payment status with the other insurer."
+    - "Open a recovery or coordination case if confirmed."
+  needs: "payment decisions and amounts, a privacy-protected cross-insurer match reference, and coordination of benefits records"
+
+PAY-02-R01:
+  title: "Included item billed separately on same claim"
+  finding: "This claim bills a component separately even though it is included in the main procedure on the same claim."
+  what: "Compares pairs of billed services on the claim with the current bundling rules."
+  why: "Billing parts of a procedure separately inflates the payment."
+  next_steps:
+    - "Check the bundling rule version that applied."
+    - "Check whether a permitted indicator allows separate payment."
+    - "Reprice or reject the component line."
+  needs: "the individual services on each claim and a table of bundling rules"
+
+PAY-02-R02:
+  title: "Included item billed on a related claim"
+  finding: "A component that is included in a global or episode payment was billed on a related claim, possibly by another provider."
+  what: "Looks across related claims in the same episode for components already included in a package payment."
+  why: "Separately billed components that are already paid in the package lead to paying twice."
+  next_steps:
+    - "Review the related claims in the episode together."
+    - "Check the contract for an agreed split between doctor and facility."
+    - "Reprice the episode if the component is already included."
+  needs: "the individual services on each claim and a table of bundling rules"
+
+PAY-02-R03:
+  title: "Package incomplete or included item charged"
+  finding: "This package claim is missing activities the package requires, or charges for an activity that should be free within it."
+  what: "Compares the claim with the package definition for required and included activities."
+  why: "Charging for included items, or billing a package without its core parts, means the payment does not match the care given."
+  next_steps:
+    - "Compare the claim with the package definition."
+    - "Check whether a documented medical reason explains the missing activity."
+    - "Return or reprice the claim."
+  needs: "the individual services on each claim and the package definitions"
+
+PAY-02-R04:
+  title: "Item paid on top of a fixed package payment"
+  finding: "This claim had an item paid separately even though it is included in a fixed case-rate (DRG) or package payment."
+  what: "Checks paid items against the inclusions of the case-rate or package payment."
+  why: "Items included in a fixed payment should not be paid again, so the extra amount may be recoverable."
+  next_steps:
+    - "Check the inclusions, exclusions and carve-outs in force at the time."
+    - "Confirm the payment amount for the separate item."
+    - "Open a recovery case if confirmed."
+  needs: "the individual services on each claim, payment decisions and amounts, and the case-rate grouping rules"
+
+PAY-02-R05:
+  title: "Unusual combination of separately billed items"
+  finding: "This provider bills certain profitable combinations of services unusually often compared with similar providers, in a way no current bundling rule covers."
+  what: "Looks for pairs of services a provider bills together far more than similar providers do."
+  why: "This may reveal a new way of splitting care into separately paid parts, and is a candidate for policy review rather than refusal."
+  next_steps:
+    - "Review a sample of claims with the combination."
+    - "Ask the medical policy team whether a new bundling rule is needed."
+  needs: "the individual services on each claim, with units and amounts"
+
+PAY-03-R01:
+  title: "Invalid or out-of-date code"
+  finding: "This claim uses a code that does not exist in the stated code set or was not valid on the service date."
+  what: "Checks each code against the declared code set and version for the service date."
+  why: "Claims with invalid codes cannot be priced correctly and should be returned for correction."
+  next_steps:
+    - "Check the code in the code set version that applied on the service date."
+    - "Check whether an approved route for unlisted codes applies."
+    - "Return the claim to the provider for correction."
+  needs: "the services billed and the code set versions with their valid dates"
+
+PAY-03-R02:
+  title: "Service does not fit patient's age or sex"
+  finding: "This claim includes a service that is restricted to a different age group or sex from the patient's."
+  what: "Checks each billed service against its explicit age and sex restrictions."
+  why: "A service that cannot apply to the patient suggests a coding error or a service billed for the wrong person."
+  next_steps:
+    - "Confirm the patient's date of birth and sex."
+    - "Check whether an approved clinical or gender exception applies."
+    - "Ask the provider for the medical record."
+  needs: "each patient's date of birth and sex, and the services billed"
+
+PAY-03-R03:
+  title: "More units than allowed"
+  finding: "This claim bills more units of a service per day or per episode than the administrative or clinical maximum."
+  what: "Compares billed units with the maximum allowed for each service."
+  why: "Units above the maximum are usually not payable and may point to over-billing."
+  next_steps:
+    - "Check whether both sides of the body, repeat services or dosing rules explain the units."
+    - "Check any inpatient rules that apply."
+    - "Reprice the excess or send for clinical review."
+  needs: "the services and units billed and the maximum units allowed for each service"
+
+PAY-03-R04:
+  title: "Timed units do not match recorded time"
+  finding: "This claim bills time-based units that do not match the recorded start and end times, or overlap services that could not happen together."
+  what: "Compares time-based units with the recorded service times."
+  why: "Billing more time than was spent inflates the payment."
+  next_steps:
+    - "Compare the units with the start and end times."
+    - "Check the rounding policy and anaesthesia rules."
+    - "Reprice or hold the claim pending records."
+  needs: "the services and units billed and the start time of each service"
+
+PAY-04-R01:
+  title: "Pre-approval required but missing"
+  finding: "This claim is for a service that needs pre-approval, but no valid approval is linked to it."
+  what: "Checks that services needing pre-approval are linked to a valid approval."
+  why: "Services given without a required approval are usually not payable under the policy terms."
+  next_steps:
+    - "Search for an approval that should have been linked."
+    - "Check whether the service was an emergency or approval was deemed given because of late response."
+  needs: "pre-approval records and their links to claims, and which services need pre-approval under each product"
+
+PAY-04-R02:
+  title: "Service outside approval dates or status"
+  finding: "This claim is for a service outside the dates of its approval, or the approval was refused or cancelled."
+  what: "Checks the service date and the approval status against the linked approval."
+  why: "An approval only covers services within its dates and while it is valid."
+  next_steps:
+    - "Check the approval dates and status."
+    - "Check whether an approved extension or urgent after-the-event approval exists."
+  needs: "pre-approval records, their dates and status, and their links to claims"
+
+PAY-04-R03:
+  title: "Claim differs from what was approved"
+  finding: "The service, provider or facility on this claim differs from what the linked approval covers."
+  what: "Compares the claim with the approved service, provider and facility."
+  why: "Approval for one service or provider does not cover another."
+  next_steps:
+    - "Compare the claim with the approval line by line."
+    - "Check whether an equivalent code or an approved transfer explains the difference."
+  needs: "pre-approval records and their links to claims, and the services billed"
+
+PAY-04-R04:
+  title: "Approved quantity or value used up"
+  finding: "This claim, together with earlier claims, goes beyond the units or value that were approved."
+  what: "Adds up what has been claimed or paid against the approval and compares it with the approved amount."
+  why: "Amounts above what was approved are not covered by the approval."
+  next_steps:
+    - "Check the running total against the approval."
+    - "Remove cancelled or reversed claims and partial fills from the total."
+    - "Reprice or hold only the excess."
+  needs: "pre-approval records and their links to claims, and payment decisions and amounts"
+
+PAY-04-R05:
+  title: "Same approval used more than once"
+  finding: "The approval on this claim has also been used for unrelated patients, episodes or providers, or after it was used up."
+  what: "Looks for approvals linked to claims they could not belong to."
+  why: "Reusing an approval can get unapproved care paid."
+  next_steps:
+    - "List all claims linked to the approval."
+    - "Check whether the policy allows a shared or family approval."
+    - "Hold the claim and refer it if reuse is confirmed."
+  needs: "pre-approval records and their links to claims"
+
+PAY-05-R01:
+  title: "Code and modifier combination not allowed"
+  finding: "This claim uses a combination of service code and modifier that current policy does not allow."
+  what: "Checks each code and modifier pair against the current local policy table."
+  why: "Modifiers can change or unlock payment, so a combination that is not allowed may lead to wrong payment."
+  next_steps:
+    - "Check the combination in the local policy table in force at the time."
+    - "Return the claim to the provider for correction."
+  needs: "the services billed and the modifiers used with them"
+
+PAY-05-R02:
+  title: "Modifier used without supporting records"
+  finding: "This claim uses a modifier that needs a supporting report or note, but none was provided."
+  what: "Checks that modifiers which require supporting documents have them attached."
+  why: "Without the supporting records the extra payment the modifier allows cannot be justified."
+  next_steps:
+    - "Ask the provider for the required report or note."
+    - "Check whether the document is simply still on its way."
+  needs: "the services billed, attached documents and their text"
+
+PAY-05-R03:
+  title: "Modifier used unusually often"
+  finding: "This provider uses a particular modifier much more often than similar providers in the same specialty."
+  what: "Compares each provider's modifier use rate with similar providers, allowing for small numbers."
+  why: "Very high use can mean modifiers are used to get past payment rules, though payment model and facility type can explain some of it."
+  next_steps:
+    - "Check that the provider has enough claims for the rate to be meaningful."
+    - "Review a sample of claims using the modifier."
+  needs: "the services billed and the modifiers used with them"
+
+PAY-05-R04:
+  title: "Modifier use jumps after a new rule"
+  finding: "This provider's use of a modifier rose sharply after a new payment rule and turned many would-be refusals into payments."
+  what: "Compares modifier use before and after new payment rules, and how often it changes refusals into payments."
+  why: "A jump right after a new rule may mean the modifier is being used to avoid it."
+  next_steps:
+    - "Check the date the rule started and any provider education period."
+    - "Review claims where the modifier turned a refusal into payment."
+  needs: "payment decisions, refusal reasons and amounts, and the services billed"
+
+PAY-06-R01:
+  title: "Price differs from contract or tariff"
+  finding: "The price on this claim differs from the agreed contract or tariff price by more than rounding."
+  what: "Compares the price billed for each service with the allowed price in force."
+  why: "Charges above the agreed price should be repriced to the contract amount."
+  next_steps:
+    - "Check the contract and tariff in force on the service date."
+    - "Check for agreed carve-outs, VAT or currency differences."
+    - "Reprice the line to the allowed price."
+  needs: "the tariff and contract prices and the services and amounts billed"
+
+PAY-06-R02:
+  title: "Claim amounts do not add up"
+  finding: "The amounts on this claim are inconsistent, such as an approved amount higher than the billed amount or a negative amount."
+  what: "Checks that the billed and approved amounts on the claim are consistent with each other."
+  why: "Inconsistent amounts point to a data or billing error that needs correcting before payment."
+  next_steps:
+    - "Compare the billed and approved amounts."
+    - "Check whether an approved adjustment or another insurer's amount explains the difference."
+    - "Return the claim for correction."
+  needs: "the billed and approved amounts on each claim"
+
+PAY-06-R03:
+  title: "Billed amount unusually high"
+  finding: "The amount billed on this claim is unusually high compared with similar claims for the same diagnosis and type of provider."
+  what: "Compares each claim amount with similar claims, grouped by diagnosis, administrator, policy type and provider size."
+  why: "An unusually high amount with material money at stake is worth a closer look, though case mix or implants can explain it."
+  next_steps:
+    - "Review the itemised bill and medical record."
+    - "Check for complications, extra units or implant costs."
+    - "Hold the claim only if the amount at stake is material."
+  needs: "the billed amount, diagnosis, administrator, policy type and provider size"
+
+PAY-06-R04:
+  title: "Unusual pattern of approved versus billed amounts"
+  finding: "This provider's approved share of what it bills is either persistently low or unusually uniform compared with similar providers."
+  what: "Compares each provider's approved-to-billed ratio, and how much it varies, with similar providers."
+  why: "Persistent low approval may mean over-billing, and suspiciously uniform full approval may mean claims are not being checked properly."
+  next_steps:
+    - "Check for differences in contract or how claims are assessed."
+    - "Review a sample of the provider's claims."
+    - "Consider provider education, an audit, or a check of internal approvals."
+  needs: "the billed and approved amounts on each claim and the provider"
+
+PAY-07-R01:
+  title: "Patient share differs from plan terms"
+  finding: "The patient's share on this claim differs from what the plan's benefit terms work out to."
+  what: "Recalculates the expected co-payment or deductible and compares it with the share on the claim."
+  why: "A wrong patient share shifts cost onto the insurer or overcharges the patient."
+  next_steps:
+    - "Recalculate the share using the benefit terms in force."
+    - "Check deductible progress, exemptions and rounding."
+    - "Reprice or return the claim."
+  needs: "the patient share on each claim and the benefit terms for each product"
+
+PAY-07-R02:
+  title: "Patient share shifted onto the insurer"
+  finding: "The amounts on this claim suggest that the patient's share was waived or added into what the insurer is asked to pay."
+  what: "Checks that the billed amount, less any valid discount and the patient's share, equals the amount claimed from the insurer."
+  why: "Waiving the patient's share and billing it to the insurer inflates the payment."
+  next_steps:
+    - "Check the discount and patient share on the claim."
+    - "Check whether an approved discount or hardship waiver applies."
+    - "Reprice the claim."
+  needs: "the patient share and discount on each claim"
+
+PAY-07-R03:
+  title: "Patient share often zero or rounded"
+  finding: "This provider records a zero or rounded patient share much more often than similar providers on similar products."
+  what: "Compares how often each provider's patient share is zero or rounded with similar providers."
+  why: "Routinely waiving the patient's share can attract patients and hide over-billing, though some products and programmes have no share."
+  next_steps:
+    - "Check whether the products involved have a zero-share benefit or regulator programme."
+    - "Review a sample of claims with zero share."
+  needs: "the patient share on each claim"
+
+PAY-07-R04:
+  title: "Patient charged more than their share"
+  finding: "Receipts, complaints or collection records suggest the patient was charged more than their approved share."
+  what: "Compares what the patient paid, according to receipts or complaints, with their approved share."
+  why: "Charging the patient more than the agreed share harms members and may breach the provider contract."
+  next_steps:
+    - "Contact the member to confirm what they paid."
+    - "Check for a signed consent for non-covered items."
+    - "Open a member protection case with the provider."
+  needs: "member receipts, complaints and the patient share on each claim"
+
+PAY-08-R01:
+  title: "Resubmission missing a valid link to original"
+  finding: "This corrected or resubmitted claim does not point to a valid original claim, or points to an unrelated one."
+  what: "Checks that corrections and resubmissions reference the correct original claim."
+  why: "Without a proper link the claim could be paid as new or escape earlier refusals."
+  next_steps:
+    - "Find the original claim and compare it with this one."
+    - "Return the claim for a correct reference."
+  needs: "how each claim version relates to the earlier one and what changed"
+
+PAY-08-R02:
+  title: "Refused claim changed to get paid"
+  finding: "This resubmitted claim changes details such as diagnosis, code, units, provider or setting after a refusal, without evidence explaining the change."
+  what: "Compares the resubmitted claim with the refused version and checks the changes against what the refusal reason would allow."
+  why: "Changing key details just to get past a refusal may mean the claim no longer reflects the care given."
+  next_steps:
+    - "Compare the two versions side by side."
+    - "Check whether the changes are an accepted correction for that refusal reason."
+    - "Ask the provider for records supporting the change."
+  needs: "how each claim version relates to the earlier one, what changed, and payment decisions and refusal reasons"
+
+PAY-08-R03:
+  title: "Claim resubmitted many times"
+  finding: "This service was resubmitted more times than allowed, or in changing versions until it was paid."
+  what: "Counts how many times each underlying service was resubmitted."
+  why: "Repeated attempts with changing details can wear down payment checks."
+  next_steps:
+    - "Review all versions of the claim together."
+    - "Check whether any attempts were formal appeals."
+  needs: "how each claim version relates to the earlier one and what changed"
+
+PAY-08-R04:
+  title: "Unusually successful changed resubmissions"
+  finding: "This provider's changed resubmissions succeed far more often than for similar providers and cluster around particular refusal reasons."
+  what: "Compares each provider's success with changed resubmissions against similar providers, by refusal reason."
+  why: "This may mean the provider has learned how to get around specific checks, though billing vendors and policy changes can explain some of it."
+  next_steps:
+    - "Review the refusal reasons involved."
+    - "Check whether the provider uses a billing company or a policy changed."
+    - "Sample resubmitted claims for record review."
+  needs: "how each claim version relates to the earlier one, what changed, and payment decisions and refusal reasons"
+
+PAY-09-R01:
+  title: "Records describe a non-covered service"
+  finding: "The notes or reports for this claim describe a service that is not covered, while the claim uses a covered code."
+  what: "Reads the clinical notes and compares what they describe with the code billed."
+  why: "Billing a non-covered service under a covered code gets it paid when it should not be."
+  next_steps:
+    - "Have a clinician read the notes and confirm what was done."
+    - "Compare the service with the plan's covered benefits."
+  needs: "clinical notes and attachments and the plan's covered benefits"
+
+PAY-09-R02:
+  title: "Frequent use of a substitute code"
+  finding: "This provider uses a particular payable code unusually often around services that are refused or not covered."
+  what: "Looks for providers using a covered code far more often in situations where a non-covered service is likely."
+  why: "Regular substitution may disguise non-covered care as covered care."
+  next_steps:
+    - "Review the provider's refusal history for related services."
+    - "Sample claims with the substitute code for record review."
+  needs: "the services billed and payment decisions and refusal reasons"
+
+PAY-09-R03:
+  title: "Claim may disguise cosmetic or non-medical care"
+  finding: "The diagnosis, setting and service on this claim match a combination known to be used to disguise cosmetic or non-medical care."
+  what: "Compares the claim with an approved list of high-risk combinations."
+  why: "Cosmetic or non-medical care is usually excluded, so disguising it leads to wrong payment."
+  next_steps:
+    - "Send the claim for clinical review."
+    - "Check whether reconstructive or medical-need exceptions apply."
+    - "Ask for photographs or reports where relevant."
+  needs: "the services billed, the visit type and the approved list of high-risk combinations"
+
+PAY-09-R04:
+  title: "Member describes a different service"
+  finding: "The member's receipt or confirmation describes a different item or service from the one billed."
+  what: "Compares what the member says they received with what the provider billed."
+  why: "A difference may mean the claim was billed for something other than what was given."
+  next_steps:
+    - "Contact the member to confirm what they received."
+    - "Check how reliable the confirmation is."
+    - "Refer the case for investigation if the difference is confirmed."
+  needs: "member receipts and member confirmations of services"
+
+PAY-10-R01:
+  title: "Other insurance not coordinated"
+  finding: "This event involves more than one insurer, but no record of coordinating the payment exists."
+  what: "Looks for claims where other insurers are involved in the same event and no coordination record is present."
+  why: "Without coordination the insurer may pay more than its share."
+  next_steps:
+    - "Identify the other insurers and who should pay first."
+    - "Apply the UAE or product coordination rules."
+    - "Reprice or hold the claim until coordination is done."
+  needs: "how many insurers are involved in the same event, the billed amount, and cover records"
+
+PAY-10-R02:
+  title: "Total payments exceed allowed charge"
+  finding: "The payments from all insurers plus the patient's share add up to more than the allowed charge for this claim."
+  what: "Adds up payments from all payers and the patient's share and compares the total with the allowed amount."
+  why: "Payment above the allowed charge is an overpayment that should be recovered."
+  next_steps:
+    - "Collect the payment records from the other insurers."
+    - "Check whether a lawful top-up applies."
+    - "Open a recovery case if confirmed."
+  needs: "other insurers' payment amounts and the patient share"
+
+PAY-10-R03:
+  title: "Accident claim without liable party details"
+  finding: "The diagnosis or visit on this claim suggests a road, work or third-party accident, but no liable-party details are recorded."
+  what: "Looks for accident-type claims that do not record who else may be liable."
+  why: "Another party, such as a motor insurer or employer, may be responsible for the cost."
+  next_steps:
+    - "Ask the provider or member how the injury happened."
+    - "Check the list of diagnoses that often look like accidents but are not."
+    - "Hold the claim for coordination details."
+  needs: "an accident indicator and third-party liability records"
+
+PAY-10-R04:
+  title: "Paid despite a third-party settlement"
+  finding: "This claim was paid by the health insurer after a documented settlement from a liable third party, without an offset."
+  what: "Compares health insurance payments with recorded third-party settlements for the same event."
+  why: "The same cost should not be paid by both the health insurer and the liable party."
+  next_steps:
+    - "Confirm the settlement amount and date."
+    - "Check the recovery policy."
+    - "Start the recovery process if confirmed."
+  needs: "payment decisions and amounts, and third-party settlement records"
+
+PAY-11-R01:
+  title: "Refusal overridden without proper approval"
+  finding: "A refusal or check on this claim was overridden without the required role, approval or reason."
+  what: "Checks manual overrides for the right authority, approval and recorded reason."
+  why: "Overrides without proper control can let wrong payments through."
+  next_steps:
+    - "Identify who made the override and their authority level."
+    - "Check whether an emergency or delegated authority applies."
+    - "Open an internal control case if not explained."
+  needs: "payment decisions and amounts, who made each decision and the reason for any override"
+
+PAY-11-R02:
+  title: "Staff member favours one provider"
+  finding: "This staff member overrides or pays claims for one provider much more than similar colleagues do."
+  what: "Compares each staff member's overrides and payments per provider with colleagues handling similar work."
+  why: "A strong link between one staff member and one provider may point to a conflict of interest, though assigned workloads can explain it."
+  next_steps:
+    - "Check whether the provider is assigned to this staff member."
+    - "Review a sample of the overrides."
+    - "Refer to compliance if not explained."
+  needs: "who made each claim decision"
+
+PAY-11-R03:
+  title: "Payment increased after settlement"
+  finding: "The amount paid on this claim was increased after settlement without a valid adjustment reason or process."
+  what: "Looks for upward changes to settled payments and checks for a valid reason."
+  why: "Unexplained increases after settlement may mean money was paid outside normal controls."
+  next_steps:
+    - "Find the adjustment record and its reason."
+    - "Check for a contract true-up or appeal decision."
+    - "Refer to internal audit if not explained."
+  needs: "payment decisions, refusal reasons and payment amounts over time"
+
+PAY-11-R04:
+  title: "Staff member always pays one provider in full"
+  finding: "This staff member and provider pair shows an unusually high and uniform approval rate compared with similar claims."
+  what: "Compares approval rates and how much they vary for each staff member and provider pair."
+  why: "Near-automatic full approval for one provider may mean claims are not being checked properly."
+  next_steps:
+    - "Exclude automatically assessed claims from the comparison."
+    - "Review a sample of the approved claims."
+    - "Refer to internal audit if not explained."
+  needs: "who made each claim decision, and payment decisions and amounts"
+
+PAY-12-R01:
+  title: "Cancelled claim still paid"
+  finding: "This claim was cancelled or reversed, but a payment still stands against it."
+  what: "Checks cancelled and reversed claims for payments that were not taken back."
+  why: "Payment on a cancelled claim is an overpayment to recover."
+  next_steps:
+    - "Confirm the cancellation date and payment status."
+    - "Check whether the payment is due to be netted off in a later run."
+    - "Start recovery if the payment remains."
+  needs: "payment decisions and amounts, and how each claim version relates to the earlier one"
+
+PAY-12-R02:
+  title: "Same claim paid twice"
+  finding: "This claim or line was paid more than once, or its payment reference was reused inconsistently."
+  what: "Looks for claims paid more than once and payment references used in ways that do not fit."
+  why: "Paying the same claim twice is a direct overpayment."
+  next_steps:
+    - "Compare the payment records for the claim."
+    - "Check whether a split settlement or batch payment explains it."
+    - "Hold for finance review or start recovery."
+  needs: "payment decisions and amounts"
+
+PAY-12-R03:
+  title: "Provider refund not applied"
+  finding: "A refund or credit received from this provider has not been matched to an outstanding recovery within the agreed time."
+  what: "Checks that refunds and credits are linked to the recoveries they settle."
+  why: "Unapplied refunds make the recovery position unclear and can hide money that is still owed."
+  next_steps:
+    - "Find the outstanding recovery the refund relates to."
+    - "Check whether the refund is under dispute or in the unapplied cash queue."
+  needs: "payment decisions and amounts and the recovery ledger"
+
+PAY-12-R04:
+  title: "Unusual use of credits and offsets"
+  finding: "This provider repeatedly offsets credits against unrelated claims or is slower to process reversals than similar providers."
+  what: "Compares each provider's use of offsets and time taken for reversals with similar providers."
+  why: "Such behaviour can delay or avoid repaying money owed, though contract netting rules may explain it."
+  next_steps:
+    - "Check the contract's netting rules."
+    - "Review the provider's offsets and reversal timings."
+  needs: "payment decisions and amounts over time"

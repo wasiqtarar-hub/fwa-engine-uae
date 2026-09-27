@@ -809,3 +809,2153 @@ parameters:
     source: "Design specification for the AI layer."
     approved_by: administrator
     review_date: "2027-01-01"
+
+  # ---------------------------------------------------------------------------
+  # PHR family — unlocked pharmacy, drug and device controls (src/fwa/engine/unlocked/phr.py)
+  # ---------------------------------------------------------------------------
+  - key: phr01_quantity_tolerance
+    value: 0.10
+    owner: pharmacy_policy
+    rationale: "PHR-01-R02/R03: billed quantity or strength may exceed the prescribed, approved or dispensed figure by this fraction before it is a finding, which absorbs pack-size conversion and rounding to whole packs."
+    source: "Chosen for this artefact; a whole-pack rounding allowance, not a regulatory figure."
+    approved_by: pharmacy_policy
+    expected_alert_volume: 20
+    review_date: "2027-01-01"
+
+  - key: phr01_stock_timing_tolerance
+    value: 0.10
+    owner: pharmacy_policy
+    rationale: "PHR-01-R03 stock limb: a pharmacy's billed quantity for one product in one month may exceed opening stock plus purchases by this fraction before it is flagged, because deliveries posted a few days late shift stock between months."
+    source: "Chosen for this artefact; covers the claim-timing differences the catalogue names as an exclusion."
+    approved_by: pharmacy_policy
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: phr01_non_medical_terms
+    value: ["perfume", "fragrance", "cosmetic", "skincare", "skin care", "shampoo", "sunscreen", "makeup", "make-up", "baby formula", "infant formula", "protein powder", "slimming", "hair dye", "toiletries", "electronics", "mobile phone", "gift card", "voucher", "sunglasses", "diapers", "nappies", "chocolate", "energy drink"]
+    owner: siu
+    rationale: "PHR-01-R04: words on a member's receipt that name a non-medical or uncovered item. A receipt naming one of these against a claim that billed a covered medicine is the substitution evidence the catalogue describes."
+    source: "Chosen for this artefact; a governed term list the special investigations unit maintains."
+    approved_by: siu
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: phr01_receipt_window_days
+    value: 30
+    owner: siu
+    rationale: "PHR-01-R04 confirmation reliability: a receipt is only tied to a dispensing record when it is dated within this many days of the fill; a receipt further away may be for another visit."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: phr01_receipt_confidence
+    value: 0.6
+    owner: siu
+    rationale: "PHR-01-R04: confidence given to a receipt-only substitution finding. It rises part of the way towards one when the pharmacy's stock record also could not cover the billed medicine that month."
+    source: "Chosen for this artefact; receipts are member-supplied and not independently verified."
+    approved_by: siu
+    review_date: "2027-01-01"
+
+  - key: phr_dose_change_tolerance
+    value: 0.05
+    owner: pharmacy_policy
+    rationale: "PHR-01-R02 titration and PHR-02-R01 dose-change exclusions: a daily dose that differs from the member's previous fill of the same medicine by more than this fraction is a dose change, which legitimately explains a new strength or an early refill."
+    source: "Chosen for this artefact."
+    approved_by: pharmacy_policy
+    review_date: "2027-01-01"
+
+  - key: phr02_allowed_overlap_days
+    value: 7
+    owner: pharmacy_policy
+    rationale: "PHR-02-R01/R04: days of earlier supply a member may still hold when refilling the same or an equivalent medicine. Beyond this the refill is early; a week covers routine refill-reminder behaviour and weekends."
+    source: "Chosen for this artefact; payers commonly allow a refill once most of a 30-day supply is used."
+    approved_by: pharmacy_policy
+    expected_alert_volume: 40
+    review_date: "2027-01-01"
+
+  - key: phr02_discharge_grace_days
+    value: 3
+    owner: pharmacy_policy
+    rationale: "PHR-02-R01 inpatient exclusion: a refill within this many days after an inpatient discharge is discharge medication and is not treated as an early refill."
+    source: "Chosen for this artefact."
+    approved_by: pharmacy_policy
+    review_date: "2027-01-01"
+
+  - key: phr02_continuity_gap_days
+    value: 15
+    owner: pharmacy_policy
+    rationale: "PHR-02-R02: fills of one medicine are one continuous course while each new fill arrives within this many days of the previous supply running out; a longer gap starts a new course."
+    source: "Chosen for this artefact."
+    approved_by: pharmacy_policy
+    expected_alert_volume: 15
+    review_date: "2027-01-01"
+
+  - key: phr02_prescriber_window_days
+    value: 90
+    owner: pharmacy_policy
+    rationale: "PHR-02-R03: the window in which distinct prescribers of one equivalent medicine are counted for a member; ninety days spans three monthly refills."
+    source: "Chosen for this artefact."
+    approved_by: pharmacy_policy
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: phr02_min_distinct_prescribers
+    value: 3
+    owner: pharmacy_policy
+    rationale: "PHR-02-R03: number of unrelated prescribing units (different facilities with different declared owners) of one equivalent medicine within the window at which a member is flagged. Two covers a referral or second opinion."
+    source: "Chosen for this artefact."
+    approved_by: pharmacy_policy
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: phr02_min_distinct_prescribers_controlled
+    value: 3
+    owner: pharmacy_policy
+    rationale: "PHR-02-R03: the same threshold for controlled medicines, kept as a separate governed value so a policy owner can lower it for controlled drugs without changing the general threshold."
+    source: "Chosen for this artefact."
+    approved_by: pharmacy_policy
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: phr02_min_distinct_pharmacies
+    value: 3
+    owner: siu
+    rationale: "PHR-02-R04: number of different pharmacies supplying overlapping courses of one equivalent medicine to a member at which the member is flagged. Two alone is often a stock shortage or partial fill."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: phr03_dose_rounding_tolerance
+    value: 0.10
+    owner: clinical_policy
+    rationale: "PHR-03-R01: a daily dose may exceed the drug policy's mg/kg/day limit by this fraction before it is flagged, which absorbs tablet-strength rounding and a recorded weight that is a few months old."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    expected_alert_volume: 15
+    review_date: "2027-01-01"
+
+  - key: phr03_loading_dose_days
+    value: 3
+    owner: clinical_policy
+    rationale: "PHR-03-R01 loading-dose exclusion: a member's first fill of a medicine lasting this many days or fewer may legitimately carry a higher loading dose."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    review_date: "2027-01-01"
+
+  - key: phr03_indication_lookback_days
+    value: 365
+    owner: clinical_policy
+    rationale: "PHR-03-R02: diagnoses recorded for the member on any claim within this many days before a fill count as the indication for that medicine, so a chronic condition coded last quarter still supports this month's refill."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    expected_alert_volume: 20
+    review_date: "2027-01-01"
+
+  - key: phr03_rare_disease_prefixes
+    value: ["E70", "E71", "E72", "E74", "E75", "E76", "E77", "E83", "E84", "E85", "D66", "D67", "D68", "D80", "D81", "D82", "D83", "D84", "G12", "G71"]
+    owner: clinical_policy
+    rationale: "PHR-03-R02 rare-disease exclusion: members with a diagnosis in these ICD-10 blocks (inborn metabolic disorders, cystic fibrosis, haemophilias, primary immunodeficiencies, motor neurone and muscular disorders) are not flagged for indication or step-therapy gaps."
+    source: "Chosen for this artefact; a representative subset of ICD-10 rare-disease blocks."
+    approved_by: clinical_policy
+    review_date: "2027-01-01"
+
+  - key: phr03_wastage_peer_multiple
+    value: 3.0
+    owner: analytics
+    rationale: "PHR-03-R04: a provider is flagged when its average billed wastage above the vial arithmetic, per line, is at least this multiple of the median of other providers giving the same drug."
+    source: "Chosen for this artefact."
+    approved_by: pharmacy_policy
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: phr03_wastage_min_lines
+    value: 5
+    owner: analytics
+    rationale: "PHR-03-R04: a provider needs at least this many lines of one vial drug before its wastage is compared, so one unusual administration is never a pattern."
+    source: "Chosen for this artefact."
+    approved_by: pharmacy_policy
+    review_date: "2027-01-01"
+
+  - key: phr03_wastage_min_peer_providers
+    value: 3
+    owner: analytics
+    rationale: "PHR-03-R04: a drug needs at least this many providers billing it before any of them is compared with the others."
+    source: "Chosen for this artefact."
+    approved_by: pharmacy_policy
+    review_date: "2027-01-01"
+
+  - key: phr03_wastage_min_excess_vials
+    value: 1.0
+    owner: analytics
+    rationale: "PHR-03-R04: when peers bill no wastage beyond the vial arithmetic at all, a provider must average at least this many whole vials of excess per line to be flagged, so rounding noise never fires."
+    source: "Chosen for this artefact."
+    approved_by: pharmacy_policy
+    review_date: "2027-01-01"
+
+  - key: phr04_min_prescriptions
+    value: 20
+    owner: siu
+    rationale: "PHR-04-R01/R02: a prescriber (or clinic) needs at least this many dispensed prescriptions before its pharmacy concentration is assessed; below it one pharmacy can dominate by chance."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    review_date: "2027-01-01"
+
+  - key: phr04_top_share_min
+    value: 0.8
+    owner: siu
+    rationale: "PHR-04-R01: the share of a prescriber's prescriptions filled at one pharmacy at or above which the concentration can be a finding; it must also exceed peers by the margin."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: phr04_peer_share_margin
+    value: 0.3
+    owner: siu
+    rationale: "PHR-04-R01: how far, in share points, a prescriber's top-pharmacy share must exceed the median of prescribers of the same specialty and emirate."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    review_date: "2027-01-01"
+
+  - key: phr04_min_peer_prescribers
+    value: 5
+    owner: analytics
+    rationale: "PHR-04-R01: the minimum number of peer prescribers for a peer comparison; with fewer the comparison falls back to a broader peer group."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    review_date: "2027-01-01"
+
+  - key: phr04_narrow_network_min_pharmacies
+    value: 3
+    owner: provider_network
+    rationale: "PHR-04-R01 narrow-network exclusion: where fewer than this many pharmacies dispense in the prescriber's emirate, concentration reflects access rather than steering."
+    source: "Chosen for this artefact."
+    approved_by: provider_network
+    review_date: "2027-01-01"
+
+  - key: phr04_loop_min_share
+    value: 0.5
+    owner: siu
+    rationale: "PHR-04-R02: a clinic-to-pharmacy flow is concentrated when at least this share of the clinic's prescriptions go to that pharmacy; it is a finding only when the two also share a bank account, phone or address."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: phr04_high_cost_share_gap
+    value: 0.4
+    owner: siu
+    rationale: "PHR-04-R03: a prescriber is flagged when the share of their high-cost prescriptions going to one pharmacy exceeds the share of their other prescriptions going there by at least this many share points."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: phr04_high_cost_min_rx
+    value: 8
+    owner: siu
+    rationale: "PHR-04-R03: both the high-cost and the other prescriptions of a prescriber must number at least this many before their concentrations are compared."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    review_date: "2027-01-01"
+
+  - key: phr04_availability_min_pharmacies
+    value: 3
+    owner: provider_network
+    rationale: "PHR-04-R03 product-availability exclusion: if every high-cost product involved is stocked by fewer than this many pharmacies, concentration reflects availability rather than steering."
+    source: "Chosen for this artefact."
+    approved_by: provider_network
+    review_date: "2027-01-01"
+
+  - key: phr04_ramp_months
+    value: 3
+    owner: siu
+    rationale: "PHR-04-R04: the number of months, starting with a new prescriber-pharmacy link's first month, over which its share of the prescriber's prescriptions is measured."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    review_date: "2027-01-01"
+
+  - key: phr04_new_edge_min_prior_months
+    value: 4
+    owner: siu
+    rationale: "PHR-04-R04: the prescriber must have prescribed in at least this many months before the link first appears, so the link is new against an established practice, and the pharmacy itself must have been dispensing that long (new-site exclusion)."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    review_date: "2027-01-01"
+
+  - key: phr04_dominant_share
+    value: 0.6
+    owner: siu
+    rationale: "PHR-04-R04: a new link is dominant when it takes at least this share of the prescriber's prescriptions within the ramp months."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: phr04_ramp_min_rx
+    value: 10
+    owner: siu
+    rationale: "PHR-04-R04: the new link must carry at least this many prescriptions in the ramp months, so a low-volume prescriber switching once is not a pattern."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    review_date: "2027-01-01"
+
+  - key: phr05_rental_price_fraction
+    value: 0.1
+    owner: claims_policy
+    rationale: "PHR-05-R01: when a rented device is billed as a purchase, the line is repriced to this fraction of the billed purchase price as the payable rental charge."
+    source: "Chosen for this artefact; stands in for the contract's monthly rental rate."
+    approved_by: claims_policy
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: phr05_used_price_fraction
+    value: 0.6
+    owner: claims_policy
+    rationale: "PHR-05-R01: when a used device is billed as new, the line is repriced to this fraction of the billed new price."
+    source: "Chosen for this artefact; stands in for the contract's used-equipment rate."
+    approved_by: claims_policy
+    review_date: "2027-01-01"
+
+  - key: phr05_replacement_lookback_days
+    value: 365
+    owner: clinical_policy
+    rationale: "PHR-05-R02 replacement exclusion: an implant billed without a same-day procedure is not flagged when the member had a qualifying procedure within this many days before (a staged or replacement implant)."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: phr05_supply_units_peer_multiple
+    value: 4.0
+    owner: analytics
+    rationale: "PHR-05-R03: supply units on a line at or above this multiple of the median units billed for the same item are flagged as beyond the usual consumption."
+    source: "Chosen for this artefact."
+    approved_by: claims_policy
+    expected_alert_volume: 15
+    review_date: "2027-01-01"
+
+  - key: phr05_supply_min_peer_lines
+    value: 10
+    owner: analytics
+    rationale: "PHR-05-R03: an item needs at least this many billed lines before its median quantity is used as the norm."
+    source: "Chosen for this artefact."
+    approved_by: claims_policy
+    review_date: "2027-01-01"
+
+  - key: phr05_useful_life_fraction
+    value: 0.5
+    owner: clinical_policy
+    rationale: "PHR-05-R03 useful-life limb: a device re-issued to the same member before this fraction of the previous device's expected useful life has passed is flagged."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: phr05_growth_exclusion_age
+    value: 18
+    owner: clinical_policy
+    rationale: "PHR-05-R03 member-growth exclusion: members younger than this age at re-issue are not flagged on the useful-life limb, because growing children outgrow devices before their useful life."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    review_date: "2027-01-01"
+
+  # ---------------------------------------------------------------------------
+  # PAY-01 to PAY-06 dataset unlocks (src/fwa/engine/unlocked/pay_a.py)
+  # ---------------------------------------------------------------------------
+  - key: pay01_cross_payer_amount_tolerance_aed
+    value: 1.0
+    owner: claims_policy
+    rationale: "PAY-01-R04: amount by which the combined payments of two insurers may exceed the billed amount before a coordinated payment is treated as a cross-payer duplicate. It absorbs rounding in the two insurers' patient-share arithmetic, nothing more."
+    source: "Chosen for this artefact; one dirham of rounding across two remittances."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: pay02_cross_claim_window_days
+    value: 1
+    owner: coding_policy
+    rationale: "PAY-02-R02: days either side of a parent procedure within which an included component billed on a different claim for the same patient is treated as part of the same service. Kept short so that genuinely separate later care is not swept in; a longer global surgical period would be a contract-specific setting."
+    source: "Chosen for this artefact; same-day or next-day billing of a bundled component."
+    approved_by: coding_policy
+    expected_alert_volume: 4
+    review_date: "2027-01-01"
+
+  - key: pay02_professional_split_indicators
+    value: ["26", "TC"]
+    owner: coding_policy
+    rationale: "PAY-02-R02 exclusion: indicators that mark a line as the professional or the technical part of a split service. A component carrying one of them is the contractual professional/facility split the catalogue excludes, not a duplicate of the parent."
+    source: "Chosen for this artefact; conventional professional (26) and technical (TC) component indicators."
+    approved_by: coding_policy
+    review_date: "2027-01-01"
+
+  - key: pay02_zero_price_tolerance_aed
+    value: 0.01
+    owner: coding_policy
+    rationale: "PAY-02-R03 and PAY-02-R04: a package component that must be listed at zero price counts as charged, or as paid separately, only above this amount. It exists so that a fils of rounding is not reported as a charge."
+    source: "Chosen for this artefact."
+    approved_by: coding_policy
+    expected_alert_volume: 6
+    review_date: "2027-01-01"
+
+  - key: pay02_package_missing_share
+    value: 0.75
+    owner: coding_policy
+    rationale: "PAY-02-R03: share of a package's core activities that must be absent from the claim before the package is reported as incomplete. A missing listing or two is usually a reporting slip or a different visit level; three quarters or more missing means the package was billed without its core activities."
+    source: "Chosen for this artefact."
+    approved_by: coding_policy
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: pay02_package_core_share
+    value: 0.9
+    owner: coding_policy
+    rationale: "PAY-02-R03: the package definition lists every activity a package may include without marking which are indispensable, so a component counts as a core (required) activity when it appears on at least this share of the claims for that package. Nine in ten keeps optional tests and alternative visit levels out of the core."
+    source: "Chosen for this artefact; a stand-in for a mandatory-activity list the file does not carry."
+    approved_by: coding_policy
+    review_date: "2027-01-01"
+
+  - key: pay02_package_min_claims
+    value: 10
+    owner: coding_policy
+    rationale: "PAY-02-R03: a package needs at least this many claims in the file before its core activities are inferred from them; with fewer, the missing-activity limb is not run for that package."
+    source: "Chosen for this artefact."
+    approved_by: coding_policy
+    review_date: "2027-01-01"
+
+  - key: pay02_novel_min_pair_claims
+    value: 10
+    owner: analytics
+    rationale: "PAY-02-R05 minimum volume: a provider must bill the code pair together on at least this many claims before its co-occurrence rate is compared with peers. Below it the rate is too thin to justify a policy review."
+    source: "Chosen for this artefact; the catalogue names a minimum volume without a value."
+    approved_by: policy_owner
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: pay02_novel_rate_ratio
+    value: 3.0
+    owner: analytics
+    rationale: "PAY-02-R05: a provider's shrunk co-billing rate for a code pair must be at least this multiple of its peers' rate. Shrinkage already pulls small providers toward the peer rate, so the multiple describes a genuine behavioural difference, not noise."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: pay02_novel_min_shrunk_rate
+    value: 0.3
+    owner: analytics
+    rationale: "PAY-02-R05: floor on the provider's shrunk co-billing rate. A pair billed together on a small share of claims is not a billing habit even when peers almost never bill it, so this keeps rare-pair ratios out of the policy-review queue."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: pay02_novel_min_peer_providers
+    value: 3
+    owner: analytics
+    rationale: "PAY-02-R05 and PAY-05-R03 peer adjustment: minimum number of other providers in the same type and specialty needed before a provider is compared with them. With fewer the peer rate is not a population rate."
+    source: "Chosen for this artefact; consistent with the three-entity minimum of the Beta prior fit."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay03_unit_exempt_indicators
+    value: ["50", "RT", "LT", "76", "77"]
+    owner: coding_policy
+    rationale: "PAY-03-R03 exclusion: bilateral, laterality and repeat-procedure indicators. A group of lines carrying one of them may legitimately exceed the single-side daily maximum, so it is not reported."
+    source: "Chosen for this artefact; conventional bilateral (50), side (RT/LT) and repeat (76/77) indicators."
+    approved_by: coding_policy
+    review_date: "2027-01-01"
+
+  - key: pay03_time_rounding_tolerance_minutes
+    value: 7
+    owner: coding_policy
+    rationale: "PAY-03-R04 rounding policy: billed time-based minutes may exceed the recorded service window by up to this many minutes, and two timed services by one clinician may overlap by up to this many, before either is reported. Seven minutes mirrors the usual rule that a unit needs at least eight minutes of service."
+    source: "Chosen for this artefact; mirrors the conventional eight-minute rule for timed units."
+    approved_by: coding_policy
+    expected_alert_volume: 8
+    review_date: "2027-01-01"
+
+  - key: pay04_retrospective_route_days
+    value: 2
+    owner: claims_policy
+    rationale: "PAY-04-R02 urgent retrospective route: an emergency service delivered up to this many days before its approval started is treated as approved after the event rather than as outside the approval's dates."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 6
+    review_date: "2027-01-01"
+
+  - key: pay04_value_tolerance_aed
+    value: 1.0
+    owner: claims_policy
+    rationale: "PAY-04-R04: amount by which the cumulative billed value may exceed an approval's approved value before the excess is reported, absorbing rounding across several claims."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 6
+    review_date: "2027-01-01"
+
+  - key: pay04_family_shared_authorization_permitted
+    value: false
+    owner: claims_policy
+    rationale: "PAY-04-R05 exclusion switch: whether policy permits one approval to be shared by family members under the same sponsor. The catalogue allows shared approvals only where policy permits; no such policy exists for this artefact, so sharing is not permitted."
+    source: "Chosen for this artefact; the catalogue's 'family/shared authorization only if policy permits'."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay05_support_required_indicators
+    value: ["22", "62", "66"]
+    owner: coding_policy
+    rationale: "PAY-05-R02: indicators that unlock extra payment only with a supporting operative report or note (increased procedural service, co-surgeon, surgical team). A line carrying one with no Observation and no claim document is pended."
+    source: "Chosen for this artefact; conventional documentation-dependent indicators."
+    approved_by: coding_policy
+    expected_alert_volume: 6
+    review_date: "2027-01-01"
+
+  - key: pay05_document_arrival_days
+    value: 30
+    owner: claims_operations
+    rationale: "PAY-05-R02 document-arrival latency: a claim submitted fewer than this many days before the file's last submission is not judged, because its supporting report may still be on its way."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay05_rate_min_lines
+    value: 30
+    owner: analytics
+    rationale: "PAY-05-R03 minimum denominator: a provider needs at least this many service lines before its modifier use rate is ranked against peers; the larger of this and min_entity_opportunities applies."
+    source: "Chosen for this artefact; the catalogue names a minimum denominator without a value."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay05_rate_peer_percentile
+    value: 0.95
+    owner: analytics
+    rationale: "PAY-05-R03: a provider's shrunk modifier use rate must lie above this percentile of the use rates of its peers (the other providers of the same type and specialty, leaving the provider itself out), as the catalogue's 'exceeds shrunk specialty peer percentile' requires."
+    source: "The catalogue wording; the percentile is chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 4
+    review_date: "2027-01-01"
+
+  - key: pay05_rate_ratio_to_peer
+    value: 3.0
+    owner: analytics
+    rationale: "PAY-05-R03: the shrunk rate must also be at least this multiple of the peer mean. A percentile alone always selects the top few providers even in a population with no abnormal behaviour; the multiple keeps the control silent on such a population."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 4
+    review_date: "2027-01-01"
+
+  - key: pay05_rate_min_excess
+    value: 0.1
+    owner: analytics
+    rationale: "PAY-05-R03: the shrunk modifier use rate must also exceed the peer mean by at least this many percentage points (as a fraction). When peers almost never use a modifier, a multiple of their tiny rate is met by two or three uses; the absolute gap keeps such providers out of the audit queue."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 4
+    review_date: "2027-01-01"
+
+  - key: pay05_migration_window_days
+    value: 120
+    owner: analytics
+    rationale: "PAY-05-R04: length of the comparison windows before and after a bundling edit takes effect, over which a provider's rate of escaping the edit is measured."
+    source: "Chosen for this artefact; four months either side gives enough claims per provider."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay05_education_period_days
+    value: 30
+    owner: claims_policy
+    rationale: "PAY-05-R04 exclusion: days after an edit takes effect that are ignored as the rule-launch and provider-education period, so that transitional billing is not read as migration."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay05_migration_min_post_claims
+    value: 5
+    owner: analytics
+    rationale: "PAY-05-R04 minimum volume: a provider must bill the edited procedure on at least this many claims after the education period before a change in its behaviour is assessed."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: pay05_migration_min_rate_increase
+    value: 0.3
+    owner: analytics
+    rationale: "PAY-05-R04: rise, in share of the provider's claims with the edited procedure, of paid lines that escape the edit (by a modifier or an unedited code) between before and after the edit. Thirty points is a behavioural change, not drift."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: pay06_price_rounding_tolerance_pct
+    value: 0.01
+    owner: provider_network
+    rationale: "PAY-06-R01 rounding tolerance: a submitted unit price may exceed the contracted allowed price by this fraction before the line is repriced, absorbing rounding of discounts and unit conversions."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: pay06_price_rounding_tolerance_aed
+    value: 0.5
+    owner: provider_network
+    rationale: "PAY-06-R01 absolute rounding tolerance, added to the percentage tolerance, so that sub-dirham differences on low-priced codes are not repriced."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  # ---------------------------------------------------------------------------
+  # DOC / NET unlocked controls (run only on a file that carries the tables)
+  # ---------------------------------------------------------------------------
+  - key: doc01r01_document_sla_days
+    value: 30
+    owner: clinical_policy
+    rationale: "DOC-01-R01. Days after submission within which a document the requirement policy names must arrive; a claim younger than this is not flagged, which is the catalogue's latency exclusion."
+    source: "Chosen for this artefact; a payer would take it from its document-submission policy."
+    approved_by: clinical_policy
+    expected_alert_volume: 15
+    review_date: "2027-01-01"
+
+  - key: doc01r03_span_display_max_chars
+    value: 600
+    owner: clinical_policy
+    rationale: "Longest searched passage quoted on a DOC-01-R03 or DOC-02-R04 signal. The quoted text and its offsets always match exactly; longer passages are cut at this length from their start so the evidence panel stays readable."
+    source: "Chosen for this artefact (presentation of source spans, not a detection threshold)."
+    approved_by: clinical_policy
+    review_date: "2027-01-01"
+
+  - key: doc02r02_age_tolerance_years
+    value: 2
+    owner: clinical_policy
+    rationale: "DOC-02-R02. An age written in a note may differ from the registration age by a birthday or a rounding; only a difference larger than this is treated as the wrong patient's age."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: doc02r04_min_notes_per_provider
+    value: 5
+    owner: analytics
+    rationale: "DOC-02-R04. A provider needs at least this many notes for high-complexity services before the share of generic notes is judged; fewer is too small a denominator."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: doc02r04_generic_length_ratio
+    value: 0.35
+    owner: analytics
+    rationale: "DOC-02-R04. A note counts as generic when its patient-specific narrative (template lines removed) has fewer distinct words than this fraction of the peer median for the same note type and language."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: doc02r04_min_generic_share
+    value: 0.5
+    owner: analytics
+    rationale: "DOC-02-R04. Share of a provider's high-complexity notes that must be generic before the provider is flagged; a single thin note is ordinary, a majority is a pattern."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: net01r02_min_reciprocal_referrals
+    value: 8
+    owner: siu
+    rationale: "NET-01-R02. Each direction of a referral loop must carry at least this many referrals; below it a two-way flow is within the ordinary exchange of transfers between neighbouring hospitals and too thin to call a loop."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: net01r02_min_lift
+    value: 4.0
+    owner: siu
+    rationale: "NET-01-R02. Each direction's share of the referrer's referrals must be at least this multiple of what the recipient's share of all referrals predicts, so a popular hospital receiving many referrals is not a loop."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: net01r02_min_direction_share
+    value: 0.2
+    owner: siu
+    rationale: "NET-01-R02. Each direction must also be a material part of the referrer's own referrals, so a large provider's handful of referrals to a partner is not treated as a loop."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: net01r03_high_cost_line_percentile
+    value: 0.9
+    owner: analytics
+    rationale: "NET-01-R03. A referral converts to a high-cost service when its resulting claim carries a line at or above this percentile of all positive line values in the file."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: net01r03_conversion_window_days
+    value: 60
+    owner: analytics
+    rationale: "NET-01-R03. When a referral does not name the claim it resulted in, the member's first claim at the recipient within this many days is taken as its result."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: net01r03_min_referrals
+    value: 15
+    owner: analytics
+    rationale: "NET-01-R03. Minimum referrals received before a recipient's conversion rate is compared with expectation; fewer gives a rate too noisy to rank."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: net01r03_min_observed_to_expected
+    value: 2.0
+    owner: analytics
+    rationale: "NET-01-R03. Observed high-cost conversions must be at least this multiple of the number expected for the same recipient specialty and referral reason (case-mix adjustment)."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: net01r03_max_tail_probability
+    value: 0.001
+    owner: analytics
+    rationale: "NET-01-R03. Poisson tail probability of seeing at least the observed conversions given the expected number; the excess must also be unlikely by chance, not only large in ratio."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: net01r04_min_downstream_referrals
+    value: 8
+    owner: siu
+    rationale: "NET-01-R04. A referrer needs at least this many laboratory, imaging or pharmacy referrals before the share kept inside linked providers is judged."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: net01r04_min_retained_share
+    value: 0.6
+    owner: siu
+    rationale: "NET-01-R04. Share of a referrer's downstream referrals that must go to providers covertly linked to it (shared bank, phone or address, different declared owner) for the chain to be called closed."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: net02r01_shared_service_max_providers
+    value: 4
+    owner: siu
+    rationale: "NET-02-R01 and NET-04-R04. An identifier shared by more providers than this is treated as a shared service (a billing bureau, a building) rather than a covert link, which is the catalogue's shared-services exclusion."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 6
+    review_date: "2027-01-01"
+
+  - key: net02r04_window_months
+    value: 3
+    owner: siu
+    rationale: "NET-02-R04. Months averaged before and after a candidate change month; averaging over several months stops one busy month from looking like a structural change."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: net02r04_peripheral_percentile
+    value: 0.4
+    owner: siu
+    rationale: "NET-02-R04. A provider is peripheral when its average monthly rank by distinct members served is at or below this percentile in the window before the change."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: net02r04_central_percentile
+    value: 0.9
+    owner: siu
+    rationale: "NET-02-R04. A provider has become central when its average monthly rank by distinct members served is at or above this percentile in the window from the change on."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: net02r04_min_post_value_aed
+    value: 30000
+    owner: siu
+    rationale: "NET-02-R04. The catalogue asks for MATERIAL exposure: the provider must bill at least this much in the window after the change for the rise to be worth a network review (for a clinic, several months of outpatient billing)."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: net03r02_min_members
+    value: 8
+    owner: siu
+    rationale: "NET-03-R02. A provider must serve at least this many distinct members before the employer mix of its patients is judged."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 4
+    review_date: "2027-01-01"
+
+  - key: net03r02_min_employer_share
+    value: 0.4
+    owner: siu
+    rationale: "NET-03-R02. Share of a provider's distinct patients that must come from one employer or sponsor for the activity to be called concentrated; it acts together with the catchment-adjusted lift and the closure share, which carry most of the discrimination."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 4
+    review_date: "2027-01-01"
+
+  - key: net03r02_min_lift
+    value: 5.0
+    owner: siu
+    rationale: "NET-03-R02. That employer's share of the provider's patients must be at least this multiple of its share of members in the provider's emirate, which is the clinic-catchment adjustment."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 4
+    review_date: "2027-01-01"
+
+  - key: net03r02_max_group_providers
+    value: 3
+    owner: siu
+    rationale: "NET-03-R02. The 'same few providers' a closed group uses: the group's claims are measured at this many of its most-used providers."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 4
+    review_date: "2027-01-01"
+
+  - key: net03r02_min_closure_share
+    value: 0.8
+    owner: siu
+    rationale: "NET-03-R02. Share of the employer group's claims that must stay with those few providers for the group to be called closed."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 4
+    review_date: "2027-01-01"
+
+  - key: net03r03_min_claims
+    value: 20
+    owner: siu
+    rationale: "NET-03-R03. A provider needs at least this many claims before its zero-patient-share and repeated high-value rates are compared with all providers."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 4
+    review_date: "2027-01-01"
+
+  - key: net03r03_rate_multiple
+    value: 2.0
+    owner: siu
+    rationale: "NET-03-R03. Both inducement limbs (zero patient share, repeated high-value services) must be at least this multiple of the pooled rate across all providers; either alone is common."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 4
+    review_date: "2027-01-01"
+
+  - key: net03r03_high_value_line_percentile
+    value: 0.9
+    owner: siu
+    rationale: "NET-03-R03. A claim is high-value when one of its lines is at or above this percentile of all positive line values in the file."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 4
+    review_date: "2027-01-01"
+
+  - key: net03r03_min_members_with_both
+    value: 3
+    owner: siu
+    rationale: "NET-03-R03. Distinct patients who must show both a zero patient share and repeated high-value services at the provider, so the signature is a group pattern rather than one patient."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 4
+    review_date: "2027-01-01"
+
+  - key: net03r04_min_distinct_members
+    value: 2
+    owner: siu
+    rationale: "NET-03-R04. Distinct patients whose authenticated confirmations or complaints must corroborate each other before a provider is escalated; one account alone is handled as a single complaint."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  # ---------------------------------------------------------------------------
+  # CLN family: controls unlocked on a multi-table dataset (src/fwa/engine/unlocked/cln.py)
+  # ---------------------------------------------------------------------------
+  - key: cln_changepoint_min_segment_periods
+    value: 3
+    owner: analytics
+    rationale: "CLN-01-R04 and CLN-02-R05. Minimum number of monthly periods on EACH side of a candidate change point, so a before/after mean is never computed from one or two noisy months."
+    source: "Chosen for this artefact; complements min_history_periods, which governs the total series length."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: cln_changepoint_min_z
+    value: 5.0
+    owner: analytics
+    rationale: "CLN-01-R04 and CLN-02-R05. Minimum standardised size of an upward before/after mean shift (pooled within-segment spread). Set high because the best of every admissible split is taken for every provider, which is a multiple-testing search."
+    source: "Chosen for this artefact; calibrated so that month-to-month noise on the clean synthetic population does not declare a change."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: cln_casemix_max_shift
+    value: 0.35
+    owner: coding_policy
+    rationale: "CLN-01-R04 and CLN-02-R05. If the provider's mix of principal-diagnosis chapters moves by more than this total-variation distance across the change point, the patients changed and the shift is not treated as a coding change (catalogue: absent case-mix change; service-line expansion segmentation)."
+    source: "Chosen for this artefact."
+    approved_by: coding_policy
+    review_date: "2027-01-01"
+
+  - key: cln_structural_change_window_days
+    value: 90
+    owner: coding_policy
+    rationale: "CLN-01-R04 and CLN-02-R05. An ownership change or new contract within this many days of a detected change point is a known structural change and suppresses the signal (catalogue exclusion: segment known structural changes)."
+    source: "Chosen for this artefact."
+    approved_by: coding_policy
+    review_date: "2027-01-01"
+
+  - key: cln01_level_min_lines_per_month
+    value: 8
+    owner: coding_policy
+    rationale: "CLN-01-R04. A provider-month enters the top-level-share series only with at least this many graded service lines, so a single month of three visits cannot swing the series."
+    source: "Chosen for this artefact."
+    approved_by: coding_policy
+    review_date: "2027-01-01"
+
+  - key: cln01_level_shift_min_increase
+    value: 0.25
+    owner: coding_policy
+    rationale: "CLN-01-R04. Minimum absolute rise in the share of graded services billed at the top level of their code family before a level-migration change point is reported; a smaller statistically clear shift is not material enough to audit."
+    source: "Chosen for this artefact."
+    approved_by: coding_policy
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: cln02_comorbidity_min_claims
+    value: 20
+    owner: coding_policy
+    rationale: "CLN-02-R02. Minimum inpatient stays before a provider's complication-code rate is compared with risk-adjusted peers (catalogue exclusion: minimum volume)."
+    source: "Chosen for this artefact."
+    approved_by: coding_policy
+    review_date: "2027-01-01"
+
+  - key: cln02_comorbidity_oe_ratio
+    value: 2.0
+    owner: coding_policy
+    rationale: "CLN-02-R02. Observed-to-expected ratio of stays carrying a complication or major-complication code, expected from the principal-diagnosis chapter mix at all providers, above which the rate is material."
+    source: "Chosen for this artefact."
+    approved_by: coding_policy
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: cln02_comorbidity_max_pvalue
+    value: 0.001
+    owner: analytics
+    rationale: "CLN-02-R02 and CLN-05-R04. Tail probability of the observed count under the risk-adjusted expectation (Poisson or binomial) below which the excess is treated as more than chance; strict because every provider is tested."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: cln02_chronic_recurrence_min_share
+    value: 0.5
+    owner: clinical_policy
+    rationale: "CLN-02-R03. A diagnosis category counts as long-standing when at least this share of the patients who have it at all have it on more than one claim; learnt from the file rather than from a fixed code list."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    review_date: "2027-01-01"
+
+  - key: cln02_min_history_claims
+    value: 3
+    owner: clinical_policy
+    rationale: "CLN-02-R03. Minimum number of the patient's claims in the look-back window before absence of a condition from history is used at all; the catalogue warns that absence is weak evidence."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: cln02_history_lookback_days
+    value: 365
+    owner: clinical_policy
+    rationale: "CLN-02-R03. Window before and after the claim in which the patient's other claims are read for a long-standing condition."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    review_date: "2027-01-01"
+
+  - key: cln02_severity_min_claims_per_month
+    value: 4
+    owner: coding_policy
+    rationale: "CLN-02-R05. A provider-month enters the case-severity series only with at least this many inpatient stays."
+    source: "Chosen for this artefact."
+    approved_by: coding_policy
+    review_date: "2027-01-01"
+
+  - key: cln02_severity_shift_min_ratio
+    value: 1.5
+    owner: coding_policy
+    rationale: "CLN-02-R05. The mean severity index after the change point must be at least this multiple of the level before it to be material."
+    source: "Chosen for this artefact."
+    approved_by: coding_policy
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: cln02_severity_explained_by_ratio
+    value: 1.25
+    owner: coding_policy
+    rationale: "CLN-02-R05. If mean length of stay or services per stay rise by at least this factor across the change point, the care changed as well and the severity rise is treated as corroborated (catalogue: without corresponding procedure, LOS or referral shift)."
+    source: "Chosen for this artefact."
+    approved_by: coding_policy
+    review_date: "2027-01-01"
+
+  - key: cln03_indication_lookback_days
+    value: 90
+    owner: clinical_policy
+    rationale: "CLN-03-R02. A supporting diagnosis on any of the patient's claims within this many days before the service counts as an accepted indication (catalogue exclusion: lookback)."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    expected_alert_volume: 20
+    review_date: "2027-01-01"
+
+  - key: cln03_default_pathway_days
+    value: 90
+    owner: clinical_policy
+    rationale: "CLN-03-R03. Window used when a care-pathway policy row does not state its own within_days for the required earlier step."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    review_date: "2027-01-01"
+
+  - key: cln03_rare_code_max_prevalence
+    value: 0.002
+    owner: clinical_policy
+    rationale: "CLN-03-R04. A service code is rare for a specialty when it makes up at most this share of the services billed by the OTHER providers of that specialty (leave-one-out, so a provider cannot make its own codes common)."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    review_date: "2027-01-01"
+
+  - key: cln03_min_provider_lines
+    value: 30
+    owner: clinical_policy
+    rationale: "CLN-03-R04. Minimum service lines before a provider's rare-code share is compared with its specialty (catalogue exclusion: minimum volume)."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    review_date: "2027-01-01"
+
+  - key: cln03_min_specialty_peers
+    value: 3
+    owner: analytics
+    rationale: "CLN-03-R04, CLN-04-R05 and CLN-08-R05. Minimum number of comparable providers before a peer comparison is made at all; fewer peers cannot define what is usual."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: cln03_rare_share_min
+    value: 0.1
+    owner: clinical_policy
+    rationale: "CLN-03-R04. Minimum share of a provider's services that are rare for its specialty before it is reported for monitoring."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: cln03_rare_share_peer_multiple
+    value: 3.0
+    owner: clinical_policy
+    rationale: "CLN-03-R04. The provider's rare-code share must also be at least this multiple of the median share of its specialty peers."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    review_date: "2027-01-01"
+
+  - key: cln04_repeat_window_days
+    value: 30
+    owner: clinical_policy
+    rationale: "CLN-04-R03. Two diagnostic services of the same code for the same patient this close together are a repeat whose justification depends on the first result."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: cln04_result_latency_days
+    value: 3
+    owner: clinical_policy
+    rationale: "CLN-04-R03. A first result recorded up to this many days after the repeat is treated as a reporting delay rather than an absent result (catalogue exclusion: result latency)."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    review_date: "2027-01-01"
+
+  - key: cln04_cascade_window_days
+    value: 30
+    owner: siu
+    rationale: "CLN-04-R05. Claims by the same patient at the referral recipient within this many days of a referral are counted as its downstream services when the referral does not name the resulting claim."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    review_date: "2027-01-01"
+
+  - key: cln04_cascade_min_referrals
+    value: 5
+    owner: siu
+    rationale: "CLN-04-R05. Minimum referrals from a provider before its downstream spend per referral is compared with other referrers; a pattern that reliably triggers needs more than a handful."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    review_date: "2027-01-01"
+
+  - key: cln04_cascade_peer_multiple
+    value: 2.5
+    owner: siu
+    rationale: "CLN-04-R05. Besides a robust residual above robust_residual_flag_threshold, the mean downstream spend per referral must be at least this multiple of the peer median to be material."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: cln05_min_presentations
+    value: 30
+    owner: clinical_policy
+    rationale: "CLN-05-R04. Minimum emergency presentations before a hospital's admission rate is compared with the rate expected from its diagnosis mix."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    review_date: "2027-01-01"
+
+  - key: cln05_admission_oe_ratio
+    value: 1.5
+    owner: clinical_policy
+    rationale: "CLN-05-R04. Observed-to-expected admission ratio above which a hospital admits materially more of its comparable presentations than peers do."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: cln06_artifact_latency_days
+    value: 14
+    owner: clinical_policy
+    rationale: "CLN-06-R01 and CLN-08-R03. A result or report is only expected once this many days have passed since the service, measured back from the latest service date in the file (catalogue exclusion: artefact latency)."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    expected_alert_volume: 15
+    review_date: "2027-01-01"
+
+  - key: cln06_confirmation_recall_max_days
+    value: 180
+    owner: siu
+    rationale: "CLN-06-R04. A member's denial given more than this many days after the service is not relied on (catalogue exclusion: recall)."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: cln06_footprint_min_claims
+    value: 3
+    owner: clinical_policy
+    rationale: "CLN-06-R05. A condition must be billed on at least this many claims (across at least two months) before the absence of any medicine or result for it is examined."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: cln06_footprint_peer_min_rate
+    value: 0.6
+    owner: clinical_policy
+    rationale: "CLN-06-R05. The absence of a footprint is only reported for conditions where at least this share of other patients with the same repeated condition do show medicine or results (versus peers)."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    review_date: "2027-01-01"
+
+  - key: cln07_clinician_day_capacity_minutes
+    value: 720
+    owner: provider_network
+    rationale: "CLN-07-R01. Working minutes available to one clinician in a day (twelve hours); the capacity_tolerance_multiple margin is applied on top, so a breach means more than fifteen hours of minimum service time."
+    source: "Chosen for this artefact."
+    approved_by: provider_network
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: cln08_min_results_for_fingerprint
+    value: 3
+    owner: clinical_policy
+    rationale: "CLN-08-R03. Only claims with at least this many numeric results are compared value-for-value across patients, so that a single common value (a normal template) cannot make two patients' results look copied."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: cln08_passthrough_min_lines
+    value: 10
+    owner: siu
+    rationale: "CLN-08-R04. Minimum tests billed by a provider but performed by another laboratory before its mark-up is compared with other billing providers."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    review_date: "2027-01-01"
+
+  - key: cln08_passthrough_peer_multiple
+    value: 1.5
+    owner: siu
+    rationale: "CLN-08-R04. The provider's median mark-up over the performing laboratory's own price must be at least this multiple of the median mark-up of other pass-through billers."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: cln08_passthrough_min_markup
+    value: 1.8
+    owner: siu
+    rationale: "CLN-08-R04. Absolute floor on the median mark-up (billed price over the performing laboratory's own price), so that a modest handling margin is never reported however low the peer median."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    review_date: "2027-01-01"
+
+  - key: cln08_complexity_min_tests
+    value: 30
+    owner: clinical_policy
+    rationale: "CLN-08-R05. Minimum laboratory tests before a provider's share of genetic or high-complexity tests is ranked against peers."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    review_date: "2027-01-01"
+
+  - key: cln08_complexity_peer_multiple
+    value: 3.0
+    owner: clinical_policy
+    rationale: "CLN-08-R05. The provider's shrunk rate of high-complexity tests must be at least this multiple of the peer mean, and its posterior interval must sit wholly above the peer mean."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  # ---------------------------------------------------------------------------
+  # PAY-07 to PAY-12 dataset-unlocked controls (src/fwa/engine/unlocked/pay_b.py)
+  # ---------------------------------------------------------------------------
+  - key: pay07_share_abs_tolerance_aed
+    value: 2.0
+    owner: claims_policy
+    rationale: "PAY-07 rounding exclusion: a patient share within this many dirhams of the benefit calculation is treated as rounding, not as a mismatch. Also the floor below which a share counts as zero for PAY-07-R03."
+    source: "Chosen for this artefact; covers fils-level rounding across several lines."
+    approved_by: policy_owner
+    expected_alert_volume: 20
+    review_date: "2027-01-01"
+
+  - key: pay07_share_rel_tolerance
+    value: 0.02
+    owner: claims_policy
+    rationale: "PAY-07-R01 relative rounding tolerance: the larger of this share of the expected patient share and the absolute tolerance must be exceeded before a mismatch is raised."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 20
+    review_date: "2027-01-01"
+
+  - key: pay07_share_exemption_terms
+    value: ["exempt", "zero share", "no copay", "no co-pay", "waived by regulator"]
+    owner: claims_policy
+    rationale: "PAY-07 exemptions exclusion: a benefit rule whose exceptions text contains any of these terms is treated as an exemption and its claims are not compared with the co-payment percentage."
+    source: "Chosen for this artefact; a real deployment would read a structured exemption flag."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay07_net_equation_tolerance_aed
+    value: 1.0
+    owner: claims_policy
+    rationale: "PAY-07-R02: the amount claimed from the insurer may exceed billed less discount less patient share by at most this many dirhams (rounding) before the claim is repriced."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 15
+    review_date: "2027-01-01"
+
+  - key: pay07_rounding_unit_aed
+    value: 10.0
+    owner: analytics
+    rationale: "PAY-07-R03: a patient share below the benefit calculation that is an exact multiple of this unit counts as a rounded-down share, alongside zero shares."
+    source: "Chosen for this artefact; whole tens of dirhams are the common manual rounding."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay07_zero_share_min_claims
+    value: 15
+    owner: analytics
+    rationale: "PAY-07-R03: a provider needs at least this many claims on which the plan expects a patient share before its zero-share rate is compared with peers; fewer is insufficient evidence."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: pay07_zero_share_rate_ratio
+    value: 3.0
+    owner: analytics
+    rationale: "PAY-07-R03: the provider's shrunk zero-or-rounded share rate must be at least this multiple of the product-adjusted peer rate to be raised."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: pay07_zero_share_min_excess
+    value: 0.2
+    owner: analytics
+    rationale: "PAY-07-R03: the shrunk rate must also exceed the product-adjusted peer rate by at least this absolute margin, so a provider with one waived share out of a hundred is never raised however low the peer rate is."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: pay07_zero_share_programmes
+    value: ["THIQA", "BASIC", "LOW WAGE", "LSB"]
+    owner: claims_policy
+    rationale: "PAY-07-R03 regulator-programme exclusion: products whose name contains any of these carry a zero or regulated share by design and are left out of the zero-share comparison."
+    source: "Chosen for this artefact; UAE programmes with zero or fixed co-payment."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay07_balance_bill_tolerance_aed
+    value: 5.0
+    owner: claims_policy
+    rationale: "PAY-07-R04: receipted member payments may exceed the approved patient share by at most this many dirhams (rounding, card fees) before a balance-billing case is raised."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: pay07_consented_item_terms
+    value: ["signed consent", "consent on file", "consented non-covered", "patient consent"]
+    owner: claims_policy
+    rationale: "PAY-07-R04 exclusion: receipt lines describing a non-covered elective item bought with documented consent are not counted against the patient share."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay07_overcharge_complaint_terms
+    value: ["overcharg", "balance bill", "charged more", "extra payment", "asked to pay more", "paid more than"]
+    owner: claims_policy
+    rationale: "PAY-07-R04: a member complaint whose type or text contains any of these is treated as an overcharge complaint about the linked claim."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay08_legacy_route_types
+    value: ["LEGACY"]
+    owner: claims_policy
+    rationale: "PAY-08-R01 exclusion: resubmissions whose type names a permitted legacy route are not checked for a prior-claim reference."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay08_reimbursement_field_tokens
+    value: ["diag", "activity_code", "code", "unit", "quantity", "provider", "clinician", "facility", "encounter", "setting", "indicator", "modifier"]
+    owner: claims_policy
+    rationale: "PAY-08: a changed field whose name contains any of these is reimbursement-enabling (diagnosis, code, units, provider, setting or indicator, as the catalogue lists)."
+    source: "Control catalogue PAY-08-R02 trigger; tokens chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay08_accepted_correction_matrix
+    value:
+      CODE: ["code", "units", "indicator"]
+      PRCE: ["units"]
+      ELIG: ["member"]
+      AUTH: ["indicator"]
+      CLAI: ["ordering_clinician"]
+      DOC: ["attachment"]
+      DUPL: []
+    owner: claims_policy
+    rationale: "PAY-08-R02 accepted-correction matrix: for a refusal whose code starts with the key, changing the listed fields is an expected correction and is not pended. Refusals for medical necessity or non-coverage accept no reimbursement-field change."
+    source: "Chosen for this artefact; a payer would maintain this per denial code."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay08_max_attempts
+    value: 3
+    owner: claims_policy
+    rationale: "PAY-08-R03: resubmissions of one underlying service beyond this number (formal appeals excluded) are raised as a resubmission loop."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 8
+    review_date: "2027-01-01"
+
+  - key: pay08_variants_until_paid_min
+    value: 3
+    owner: claims_policy
+    rationale: "PAY-08-R03: a chain with at least this many resubmissions, each changing a different set of fields, that ends in payment is raised as trying variants until paid."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: pay08_appeal_route_types
+    value: ["APPEAL", "COMPLAINT", "RECONSIDERATION"]
+    owner: claims_policy
+    rationale: "PAY-08-R03 exclusion: attempts whose resubmission type names the internal complaint or appeal route are not counted towards the attempt limit."
+    source: "Control catalogue PAY-08-R03 exclusions."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay08_success_min_resubmissions
+    value: 8
+    owner: siu
+    rationale: "PAY-08-R04: a provider needs at least this many changed resubmissions after a refusal before its success rate is compared with other providers."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: pay08_success_uplift
+    value: 0.25
+    owner: siu
+    rationale: "PAY-08-R04: the provider's shrunk success rate on changed resubmissions must exceed other providers' rate by at least this absolute margin, which is what 'materially exceeds peers' means here."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: pay08_denial_concentration_min
+    value: 0.5
+    owner: siu
+    rationale: "PAY-08-R04: at least this share of the provider's successful changed resubmissions must follow one refusal reason, which is what 'concentrates on specific denial edits' means here."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: pay09_noncovered_terms
+    value: ["cosmetic", "aesthetic", "botox", "botulinum toxin for wrinkles", "dermal filler", "hair transplant", "teeth whitening", "liposuction", "weight loss programme", "slimming", "anti-ageing", "anti-aging", "tattoo removal", "تجميل", "تجميلي"]
+    owner: clinical_policy
+    rationale: "PAY-09-R01: phrases in an attached note that describe a service the standard UAE benefit excludes. Supplemented at run time by the excluded-service names in the disguise-risk policy table when the file carries one."
+    source: "Chosen for this artefact from common UAE plan exclusions; Arabic terms for cosmetic included."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay09_negation_terms
+    value: ["no ", "not ", "denies", "ruled out", "without", "non-", "لا ", "ليس"]
+    owner: clinical_policy
+    rationale: "PAY-09-R01 NLP-confidence exclusion: a non-covered term preceded within the negation window by any of these (for example 'not cosmetic') is not treated as describing the service."
+    source: "Chosen for this artefact; a simple negation window in the NegEx tradition."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay09_negation_window_chars
+    value: 25
+    owner: clinical_policy
+    rationale: "PAY-09-R01: number of characters before a matched term that are searched for a negation word."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay09_min_ocr_confidence
+    value: 0.6
+    owner: clinical_policy
+    rationale: "PAY-09-R01 NLP-confidence exclusion: documents read with OCR confidence below this are not used to raise a conflict."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: pay09_substitution_window_days
+    value: 30
+    owner: analytics
+    rationale: "PAY-09-R02: a paid, different code billed for the same patient at the same provider within this many days after a refused service counts as a possible substitution."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: pay09_substitution_min_events
+    value: 5
+    owner: analytics
+    rationale: "PAY-09-R02: a provider needs at least this many refused services followed by a substitute before it is compared with peers."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: pay09_substitution_uplift
+    value: 0.3
+    owner: analytics
+    rationale: "PAY-09-R02: the provider's shrunk substitution rate must exceed other providers' rate by at least this absolute margin, which is what 'unusually often' means here."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: pay09_disguise_risk_settings
+    value: ["OUTPATIENT", "DAY", "OP", "CLINIC"]
+    owner: clinical_policy
+    rationale: "PAY-09-R03: visit settings in which the disguise-risk combinations apply (elective cosmetic work is done as an outpatient or day case); an inpatient stay is left out. Applied only when the visit setting is recorded."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay09_reconstructive_dx_prefixes
+    value: ["C", "D0", "Z42", "Z85", "T20", "T21", "T22", "T23", "T24", "T25", "T30", "T31", "T95", "Q35", "Q36", "Q37", "S01", "S02"]
+    owner: clinical_policy
+    rationale: "PAY-09-R03 reconstructive exclusion: a claim carrying any of these diagnoses (cancer, reconstruction aftercare, burns, cleft lip and palate, facial trauma) is treated as reconstructive, not cosmetic."
+    source: "Chosen for this artefact from ICD-10-CM chapters for reconstructive indications."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay09_receipt_similarity_min
+    value: 0.15
+    owner: analytics
+    rationale: "PAY-09-R04: a member receipt whose description shares less than this word overlap (Jaccard) with every billed service description is treated as describing a different item."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: pay09_generic_receipt_terms
+    value: ["payment", "patient", "share", "copay", "co-payment", "copayment", "deductible", "invoice", "receipt", "visit", "services", "service", "and", "for", "the", "with", "aed", "consultation", "medicines", "laboratory", "imaging", "admission"]
+    owner: analytics
+    rationale: "PAY-09-R04: words ignored when comparing a receipt description with billed services, because they describe the payment or its broad category (consultation, medicines, laboratory, imaging, admission) rather than the item."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay09_unreliable_confirmation_channels
+    value: ["UNVERIFIED", "THIRD_PARTY", "PROXY"]
+    owner: siu
+    rationale: "PAY-09-R04 confirmation-reliability exclusion: confirmations received through these channels lower the signal's confidence rather than being taken at face value."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay10_multi_payer_tolerance_aed
+    value: 5.0
+    owner: claims_policy
+    rationale: "PAY-10-R02: all payers' payments plus the patient share may exceed the allowed charge by at most this many dirhams (rounding) before an overpayment is raised."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 8
+    review_date: "2027-01-01"
+
+  - key: pay10_accident_dx_prefixes
+    value: ["V", "Y96", "Y99.0"]
+    owner: claims_policy
+    rationale: "PAY-10-R03: ICD-10 external-cause codes that point to a road-traffic (V01-V99) or work-related (Y96, Y99.0) event, where another party may be liable."
+    source: "ICD-10-CM external-cause chapter; selection chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: pay10_accident_false_positive_dx_prefixes
+    value: ["Y99.8", "Y99.9", "V00.1", "V00.2"]
+    owner: claims_policy
+    rationale: "PAY-10-R03 clinical false-positive list: external-cause codes that look like accidents but rarely involve a liable third party (leisure, unspecified status, own roller-skate or skateboard falls)."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay10_settlement_tolerance_aed
+    value: 5.0
+    owner: claims_policy
+    rationale: "PAY-10-R04: a payment made after a third-party settlement may exceed the amount still due after the settlement is deducted by at most this many dirhams."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: pay11_authorised_override_roles
+    value: ["CLAIMS_ADJUDICATOR", "SUPERVISOR", "SENIOR_ADJUDICATOR", "CLAIMS_MANAGER", "MEDICAL_DIRECTOR", "MEDICAL_REVIEWER"]
+    owner: claims_operations
+    rationale: "PAY-11-R01: roles authorised to override a refusal or failed payment check. An override by any other role is raised."
+    source: "Chosen for this artefact; a payer's delegated-authority matrix would replace it."
+    approved_by: policy_owner
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: pay11_override_exemption_terms
+    value: ["emergency", "delegated authority", "delegated"]
+    owner: claims_operations
+    rationale: "PAY-11-R01 exclusions: an override whose recorded reason names emergency escalation or delegated authority is not raised."
+    source: "Control catalogue PAY-11-R01 exclusions."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay11_edit_fail_results
+    value: ["FAIL", "DENY", "REJECT", "HIT", "FLAG", "OVERRID"]
+    owner: claims_operations
+    rationale: "PAY-11: a system edit result containing any of these means the automated check did not pass, so a manual approval afterwards is an override."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay11_edit_hit_results
+    value: ["DENY", "DENIAL", "REJECT", "HIT", "FLAG", "WARN", "PEND", "REVIEWED"]
+    owner: claims_operations
+    rationale: "PAY-11-R04: edit results that mark a claim as flagged by a payment check or pended for manual review, so that full-payment rates are compared only on comparable, flagged claims. Explicit overrides are left to PAY-11-R01 and PAY-11-R02."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay11_concentration_min_overrides
+    value: 6
+    owner: siu
+    rationale: "PAY-11-R02: an adjudicator needs at least this many overrides on one provider's claims before the pair is compared with colleagues."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: pay11_concentration_ratio
+    value: 3.0
+    owner: siu
+    rationale: "PAY-11-R02: the adjudicator's override rate on the provider must be at least this multiple of the colleague rate on the same provider, the adjudicator's own rate elsewhere and the overall rate, which is what 'materially exceeds adjusted peers' means here."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: pay11_upward_adjustment_tolerance_aed
+    value: 1.0
+    owner: finance
+    rationale: "PAY-11-R03: upward adjustments after settlement smaller than this many dirhams (rounding corrections) are not raised."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 8
+    review_date: "2027-01-01"
+
+  - key: pay11_valid_adjustment_terms
+    value: ["APPEAL", "TRUE-UP", "TRUE UP", "TRUEUP", "CONTRACT"]
+    owner: finance
+    rationale: "PAY-11-R03 exclusions: an upward adjustment is justified when an adjudication event or claim version for the claim names an appeal decision or a contract true-up."
+    source: "Control catalogue PAY-11-R03 exclusions."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay11_fullpay_min_events
+    value: 12
+    owner: siu
+    rationale: "PAY-11-R04: an adjudicator and provider pair needs at least this many decisions on flagged claims before its full-payment rate is compared."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: pay11_fullpay_rate_uplift
+    value: 0.3
+    owner: siu
+    rationale: "PAY-11-R04: the pair's full-payment rate on flagged claims must exceed the rate elsewhere by at least this absolute margin, which is what 'unusually high approval' means here."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: pay11_fullpay_max_ratio_std
+    value: 0.02
+    owner: siu
+    rationale: "PAY-11-R04: the standard deviation of paid-to-requested ratios for the pair must be at most this (low variance), so a pair that pays in full but also trims some claims is not raised."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: pay11_fullpay_ratio_tolerance
+    value: 0.005
+    owner: siu
+    rationale: "PAY-11-R04: a decision paying at least one minus this fraction of the requested amount counts as payment in full."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay12_cancellation_timing_tolerance_days
+    value: 30
+    owner: finance
+    rationale: "PAY-12-R01 timing and netting exclusion: a cancelled claim whose payment has not yet been reversed is raised only once this many days have passed since the cancellation, allowing for netting in the next payment run."
+    source: "Chosen for this artefact; roughly one monthly payment cycle."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: pay12_duplicate_payment_tolerance_aed
+    value: 1.0
+    owner: finance
+    rationale: "PAY-12: payments within this many dirhams of the payable amount are treated as rounding; used for duplicate payments, residual payments on cancelled claims and credits exceeding what was paid."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 8
+    review_date: "2027-01-01"
+
+  - key: pay12_refund_application_sla_days
+    value: 60
+    owner: finance
+    rationale: "PAY-12-R03: a provider refund or credit must be linked to the recovery it settles within this many days of receipt."
+    source: "Chosen for this artefact; a payer's finance SLA would replace it."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: pay12_refund_hold_terms
+    value: ["DISPUTE", "UNAPPLIED CASH QUEUE", "UNAPPLIED_CASH", "ON HOLD"]
+    owner: finance
+    rationale: "PAY-12-R03 exclusions: a credit whose status or note names a dispute or the unapplied-cash queue is not raised."
+    source: "Control catalogue PAY-12-R03 exclusions."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pay12_offset_min_events
+    value: 3
+    owner: finance
+    rationale: "PAY-12-R04: a provider needs at least this many credits taken against unrelated claims, or claims with negative lines, before the limb is compared with peers."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: pay12_offset_rate_ratio
+    value: 5.0
+    owner: finance
+    rationale: "PAY-12-R04: the provider's rate of unrelated offsets or negative-line claims must be at least this multiple of the peer rate (repeated, versus peers)."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: pay12_reversal_delay_ratio
+    value: 3.0
+    owner: finance
+    rationale: "PAY-12-R04: a provider whose median days from cancellation to reversal is at least this multiple of the peer median is raised as delaying reversals."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  # ---------------------------------------------------------------------------
+  # ENT / POL dataset-unlocked controls (rules/unlocks/ENT.yaml, POL.yaml)
+  # ---------------------------------------------------------------------------
+  - key: ent01_coverage_grace_days
+    value: 7
+    owner: claims_policy
+    rationale: "ENT-01-R01. Days after a cover period ends during which a service is still treated as covered, to absorb late posting of a renewal. A service further outside every cover period is flagged."
+    source: "Chosen for this artefact; a payer would take this from its policy wording."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: ent_newborn_days
+    value: 30
+    owner: claims_policy
+    rationale: "ENT-01-R01, ENT-02-R01, POL-01-R01. A baby younger than this is treated as covered under, and identified through, a parent's policy, so missing cover, a shared ID or an absent roster entry is not flagged."
+    source: "Chosen for this artefact; reflects the common 30-day newborn cover convention in UAE plans."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: ent01_referral_lookback_days
+    value: 90
+    owner: claims_policy
+    rationale: "ENT-01-R04. How far back a referral to the treating provider may be dated and still satisfy a plan rule that the service needs a referral."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: ent02_placeholder_token_max_members
+    value: 4
+    owner: claims_policy
+    rationale: "ENT-02-R01, POL-01-R01. A national-ID token shared by more member records than this is treated as a placeholder value rather than one person, and is excluded from identity-conflict checks."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 4
+    review_date: "2027-01-01"
+
+  - key: ent02_death_source_min_confidence
+    value: 0.8
+    owner: claims_policy
+    rationale: "ENT-02-R02. Minimum reliability of the recorded death source for a post-mortem service to be flagged; a weaker source is left for data correction instead."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: ent02_card_sharing_min_evidence
+    value: 2
+    owner: siu
+    rationale: "ENT-02-R04. Minimum number of independent observations (same-day use in two emirates, or a service that does not fit the member's age or sex) before a card-sharing pattern is raised, as the catalogue requires minimum independent evidence."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: ent03_licence_grace_days
+    value: 14
+    owner: provider_network
+    rationale: "ENT-03-R01. Approved grace around a licence's start and end dates, covering renewals that the register records a few days late."
+    source: "Chosen for this artefact; a regulator's renewal rules would set the real value."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: ent03_specialty_map
+    value:
+      EM_CONSULT: [CARDIOLOGY, GENERAL_SURGERY, INTERNAL_MEDICINE, OBSTETRICS_GYNAECOLOGY, OPHTHALMOLOGY, ORTHOPAEDICS, PAEDIATRICS, DERMATOLOGY, ENT, PSYCHIATRY, GASTROENTEROLOGY, NEUROLOGY, ENDOCRINOLOGY, RHEUMATOLOGY, ONCOLOGY, PULMONOLOGY, UROLOGY]
+      SURG_ORTHO: [ORTHOPAEDICS]
+      OBSTETRIC: [OBSTETRICS_GYNAECOLOGY]
+      SURG_BREAST: [GENERAL_SURGERY]
+      SURG_ABDOMINAL: [GENERAL_SURGERY]
+      SURG_EYE: [OPHTHALMOLOGY]
+      SURG_ENT: [ENT]
+      CARDIAC_INVASIVE: [CARDIOLOGY]
+      ECHO: [CARDIOLOGY]
+      ENDOSCOPY: [GASTROENTEROLOGY, GENERAL_SURGERY]
+      ANAESTHESIA: [ANAESTHESIA]
+      PSYCHOTHERAPY: [PSYCHIATRY, CLINICAL_PSYCHOLOGY]
+      CHEMO: [ONCOLOGY]
+      NEURODIAG: [NEUROLOGY]
+      IMAGING_CT: [RADIOLOGY]
+      IMAGING_MRI: [RADIOLOGY]
+      IMAGING_NM: [RADIOLOGY]
+      PHYSIO: [PHYSIOTHERAPY]
+    owner: coding_policy
+    rationale: "ENT-03-R04 (cfg.specialty_map). The curated map of which treating-clinician specialties normally perform each code family. A code family not in the map is unconstrained; a clinician may also hold a cross-specialty privilege for the family."
+    source: "Chosen for this artefact; a coding-policy owner would curate the real map."
+    approved_by: policy_owner
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: ent03_new_provider_window_days
+    value: 90
+    owner: provider_network
+    rationale: "ENT-03-R05. The early-activity window after a provider is credentialed, reactivated or resumes billing, over which its volume and value are compared with established peers."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: ent03_dormant_gap_days
+    value: 180
+    owner: provider_network
+    rationale: "ENT-03-R05. A provider with no claims for at least this many days that then resumes billing is treated as reactivated after dormancy."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: ent03_burst_peer_percentile
+    value: 0.95
+    owner: siu
+    rationale: "ENT-03-R05. A new or reactivated provider is flagged when its early monthly claim volume or value exceeds this percentile of established providers of the same facility type."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: ent03_burst_min_claims
+    value: 20
+    owner: siu
+    rationale: "ENT-03-R05. Minimum claims in the early window before a burst is assessed, so a provider with a handful of claims is never compared on a rate."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: ent04_max_concurrency
+    value: 2
+    owner: clinical_policy
+    rationale: "ENT-04-R03 (cfg.max_concurrency). The most timed services one clinician may be billed for at the same moment before the day is flagged; two allows a brief handover overlap."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: ent04_min_travel_minutes
+    value: 45
+    owner: siu
+    rationale: "ENT-04-R04. Minimum minutes between the end of a clinician's service in one emirate and the start of the next in another emirate; a shorter gap is treated as an impossible journey."
+    source: "Chosen for this artefact; a conservative inter-emirate drive time."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: ent05_admission_data_latency_days
+    value: 7
+    owner: claims_operations
+    rationale: "ENT-05-R02. Inpatient claims dated within this many days of the end of the file are not checked for admission evidence, because bed and discharge records can arrive late."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: ent05_setting_shift_min_delta
+    value: 0.45
+    owner: analytics
+    rationale: "ENT-05-R04. Minimum rise in a provider's share of inpatient and day-case claims across its best change point before a setting shift is considered."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: ent05_setting_shift_min_months
+    value: 3
+    owner: analytics
+    rationale: "ENT-05-R04. Minimum months of history on each side of a candidate change point, so a single unusual month cannot be read as a shift."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: ent05_setting_shift_min_claims
+    value: 20
+    owner: analytics
+    rationale: "ENT-05-R04. Minimum claims on each side of the change point before a provider's setting mix is compared."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: ent05_setting_shift_peer_percentile
+    value: 0.9
+    owner: analytics
+    rationale: "ENT-05-R04. After the shift, the provider's inpatient share must also exceed this percentile of peer providers' shares, so a genuine hospital with a high share is not flagged."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  - key: ent06_min_interaction_minutes
+    value: 10
+    owner: clinical_policy
+    rationale: "ENT-06-R02. A telehealth consultation shorter than this that nevertheless produces an order is treated as lacking a meaningful clinical interaction."
+    source: "Chosen for this artefact; matches the shortest telephone evaluation code (5-10 minutes)."
+    approved_by: policy_owner
+    expected_alert_volume: 8
+    review_date: "2027-01-01"
+
+  - key: ent06_order_window_days
+    value: 3
+    owner: clinical_policy
+    rationale: "ENT-06-R02, ENT-06-R04. Days after a consultation within which a prescription or referral by the same clinician for the same patient is attributed to that consultation."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: ent06_note_expected_coverage
+    value: 0.8
+    owner: clinical_policy
+    rationale: "ENT-06-R02. The missing-note limb applies only to providers whose other teleconsults carry a note at least this often, so absent documentation is meaningful rather than a gap in what the file holds."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: ent06_referral_concentration_min_orders
+    value: 15
+    owner: siu
+    rationale: "ENT-06-R03. Minimum downstream orders (prescriptions and referrals) a provider must have before its concentration on one supplier is measured."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: ent06_referral_peer_percentile
+    value: 0.95
+    owner: siu
+    rationale: "ENT-06-R03. A telehealth provider's top-supplier share must exceed this percentile of other prescribing providers' top-supplier shares, as well as the governed referral_concentration_threshold."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: ent06_telehealth_provider_min_share
+    value: 0.5
+    owner: siu
+    rationale: "ENT-06-R03, ENT-06-R04. A provider is treated as a telehealth provider when at least this share of its visits are remote."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: ent06_narrow_network_min_suppliers
+    value: 3
+    owner: provider_network
+    rationale: "ENT-06-R03. If fewer suppliers of the same type than this operate in the supplier's emirate, concentration is explained by a narrow network and is not flagged."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: ent06_high_cost_order_aed
+    value: 1500.0
+    owner: siu
+    rationale: "ENT-06-R04. A downstream prescription, test or device order at or above this amount (or a product the drug policy marks high-cost) counts as a high-cost conversion of a consultation."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: ent06_conversion_min_encounters
+    value: 20
+    owner: siu
+    rationale: "ENT-06-R04. Minimum consultations a provider must have before its conversion rate into high-cost orders is compared with peers."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: ent06_conversion_ratio_to_peer
+    value: 2.0
+    owner: siu
+    rationale: "ENT-06-R04. A telehealth provider's conversion rate must be at least this multiple of the peer median, as well as above the peer percentile, to be flagged as materially exceeding peers."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: ent06_conversion_peer_percentile
+    value: 0.95
+    owner: siu
+    rationale: "ENT-06-R04. The peer percentile of consultation-to-high-cost-order conversion rates a telehealth provider must exceed."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: pol01_retro_sla_days
+    value: 30
+    owner: underwriting
+    rationale: "POL-01-R02. An add or change may be backdated by up to this many days (the enrolment SLA); a longer backdating over a high-cost service is flagged unless it is an approved retroactive correction."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: pol01_high_cost_quantile
+    value: 0.9
+    owner: underwriting
+    rationale: "POL-01-R02. A service counts as high-cost when its gross amount is at or above this quantile of all claims in the file."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pol01_contestability_days
+    value: 730
+    owner: underwriting
+    rationale: "POL-01-R03. Application declarations are compared with prior history only within this many days of the application, standing in for the contestability period in which the law allows the comparison."
+    source: "Chosen for this artefact; a legal owner would set the real period."
+    approved_by: policy_owner
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: pol01_prior_history_lookback_days
+    value: 1825
+    owner: underwriting
+    rationale: "POL-01-R03. Prior cover ending more than this many days before the application is not treated as material to the declaration."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pol01_cluster_window_days
+    value: 90
+    owner: siu
+    rationale: "POL-01-R05. Members added by one employer or broker within one window of this many days are assessed together as an enrolment cohort."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pol01_cluster_min_members
+    value: 8
+    owner: siu
+    rationale: "POL-01-R05. Minimum cohort size before an employer's or broker's early-claim rate is compared with other cohorts (the portfolio-size exclusion)."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: pol01_cluster_linked_share
+    value: 0.5
+    owner: siu
+    rationale: "POL-01-R05. At least this share of the cohort's early claims must go to one group of providers that share an owner, bank account, phone or address before the cluster is raised."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: pol01_cluster_peer_percentile
+    value: 0.95
+    owner: siu
+    rationale: "POL-01-R05. The cohort's early-claim rate must exceed this percentile of other employers' or brokers' cohorts."
+    source: "Chosen for this artefact."
+    approved_by: policy_owner
+    expected_alert_volume: 2
+    review_date: "2027-01-01"
+
+  - key: phr02_chronic_therapeutic_classes
+    value: ["BIGUANIDE", "SULFONYLUREA", "DPP4_INHIBITOR", "SGLT2_INHIBITOR", "STATIN", "CALCIUM_CHANNEL_BLOCKER", "ARB", "BETA_BLOCKER", "ANTIPLATELET", "LOOP_DIURETIC", "BRONCHODILATOR", "ICS_LABA", "LEUKOTRIENE_ANTAGONIST", "THYROID_HORMONE", "SSRI", "DMARD", "ALPHA_BLOCKER", "NITRATE", "TNF_INHIBITOR", "RANKL_INHIBITOR"]
+    owner: pharmacy_policy
+    rationale: "PHR-02-R02 chronic-therapy exclusion: therapeutic classes used as long-term maintenance treatment. Their course limits are review points handled by approvals, so continuous fills of these classes are not flagged as exceeding a treatment duration."
+    source: "Chosen for this artefact; the classes follow the drug policy's therapeutic_class vocabulary."
+    approved_by: pharmacy_policy
+    review_date: "2027-01-01"
+
+  - key: phr02_allowed_overlap_fraction
+    value: 0.2
+    owner: pharmacy_policy
+    rationale: "PHR-02-R01: the allowed overlap at a refill is the larger of the fixed overlap days and this fraction of the previous fill's days' supply, so a medicine given every eight weeks earns a proportionate refill window (refill once 80% of the supply is used)."
+    source: "Chosen for this artefact; mirrors the common 80%-used refill rule."
+    approved_by: pharmacy_policy
+    review_date: "2027-01-01"
+
+  - key: phr02_duration_tolerance
+    value: 0.25
+    owner: pharmacy_policy
+    rationale: "PHR-02-R02: a course on one prescription may run this fraction beyond the drug policy's maximum duration before it is flagged, which absorbs refill timing and pack rounding at the end of a course."
+    source: "Chosen for this artefact."
+    approved_by: pharmacy_policy
+    review_date: "2027-01-01"
+
+  - key: ent02_adjacent_emirates
+    value:
+      - [Abu Dhabi, Dubai]
+      - [Dubai, Sharjah]
+      - [Dubai, Ajman]
+      - [Sharjah, Ajman]
+      - [Sharjah, Umm Al Quwain]
+      - [Ajman, Umm Al Quwain]
+      - [Umm Al Quwain, Ras Al Khaimah]
+      - [Sharjah, Ras Al Khaimah]
+      - [Sharjah, Fujairah]
+      - [Ras Al Khaimah, Fujairah]
+    owner: siu
+    rationale: "ENT-02-R04. Pairs of neighbouring emirates a member can plausibly visit on the same day; same-day use of one member's cover counts as a geographic observation only when the emirates are not neighbours."
+    source: "Chosen for this artefact from UAE road geography; a payer would substitute travel times between its providers."
+    approved_by: policy_owner
+    review_date: "2027-01-01"
+
+  - key: cln04_frequency_window_days
+    value: 30
+    owner: clinical_policy
+    rationale: "CLN-04-R02 (line-level upgrade). Trailing window in which a patient's service days in one service family are counted; an episode-length window rather than the half-year window used by the claim-header proxy."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    review_date: "2027-01-01"
+
+  - key: cln04_frequency_peer_percentile
+    value: 0.999
+    owner: clinical_policy
+    rationale: "CLN-04-R02 (line-level upgrade). A patient's service-day count must exceed this percentile of all patients using the same service family (and member_repeat_service_threshold) to be reported as excess frequency."
+    source: "Chosen for this artefact."
+    approved_by: clinical_policy
+    expected_alert_volume: 5
+    review_date: "2027-01-01"
+
+  - key: cln06_signature_min_lines
+    value: 3
+    owner: siu
+    rationale: "CLN-06-R03 (line-level upgrade). Only claims with at least this many lines are compared, so that a single standard visit at the tariff price cannot look like a copied encounter."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    review_date: "2027-01-01"
+
+  - key: cln06_signature_min_members
+    value: 3
+    owner: siu
+    rationale: "CLN-06-R03 (line-level upgrade). Number of different patients at one provider that must share an identical line signature (codes, units, amounts and start times) before it is reported."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 3
+    review_date: "2027-01-01"
+
+  # NET-03-R01 on a multi-table file (docnet agent) — see net_03_r01_repeated_high_value_dyad_multitable
+  - key: net03r01_dyad_peer_percentile
+    value: 0.995
+    owner: siu
+    rationale: "NET-03-R01 on a multi-table file. A patient-provider pair must exceed this percentile of pairs at the same provider type and benefit family on BOTH number of claims and total value; comparing like with like is what stops a patient's ordinary refills or follow-ups from looking like a suspicious pair."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 10
+    review_date: "2027-01-01"
+
+  - key: net03r01_benefit_exhaustion_share
+    value: 0.8
+    owner: siu
+    rationale: "NET-03-R01 on a multi-table file. The benefit-exhaustion limb is met when the member has used at least this share of the yearly benefit limit for the pair's benefit family; it raises confidence and is reported, not required."
+    source: "Chosen for this artefact."
+    approved_by: siu
+    expected_alert_volume: 10
+    review_date: "2027-01-01"

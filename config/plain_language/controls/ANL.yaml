@@ -1,0 +1,45 @@
+# Plain-language text for the ANL (automated pattern-finding) controls. Presentation only: nothing here changes what a control does.
+
+ANL-01-R01:
+  title: "Overall billing pattern unlike similar hospitals"
+  finding: "This hospital's overall billing pattern is unusual compared with similar hospitals."
+  what: "Combines how far a provider sits from similar providers on several measures (cost, cost per day, pharmacy share, approval rate, visit frequency, readmissions and coding mismatches) into one weighted score."
+  why: "A provider unusual on several measures at once deserves a look, and each measure's contribution can be checked by hand; no rule has been broken."
+  next_steps:
+    - "Look at which measures contributed most to the score."
+    - "Check whether the provider's specialty, setting or size explains the difference."
+    - "Pull a sample of claims on the top contributing measure for review."
+  needs: "a set of measures for each provider already compared with similar providers, covering cost, cost per day, pharmacy share, approval rate, visit frequency, readmissions and coding mismatches"
+
+ANL-01-R02:
+  title: "Sudden change in a provider's own billing"
+  finding: "This provider's billing value or volume changed suddenly compared with its own history."
+  what: "Tracks each provider's monthly billing value and claim count and flags a sudden, sustained change once enough history exists."
+  why: "An abrupt change in behaviour can mark the start of a new billing practice worth checking; no rule has been broken."
+  next_steps:
+    - "Note the change date and the before-and-after levels."
+    - "Check for tariff, contract or ownership changes around that date."
+    - "Compare a sample of claims from before and after the change."
+  needs: "contract dates to rule out known changes, and each claim's provider, service date and amount"
+
+ANL-01-R03:
+  title: "Ranked unusual by an automated pattern-finder"
+  finding: "An automated pattern-finder ranked this provider as unusual; no rule was broken."
+  what: "An automated pattern-finder, trained on an earlier period, scores providers on a later one and highlights those it finds most unusual that the other checks have not already raised."
+  why: "It can surface unusual behaviour that fixed checks miss, but it is for monitoring only and never decides a claim."
+  next_steps:
+    - "Look at which measures drove the ranking and compare them with similar providers."
+    - "Look for a plain explanation, such as a new service or data change."
+    - "Keep under monitoring, and refer to investigators only with supporting evidence."
+  needs: "a table of measures for each provider, with identifiers and protected personal characteristics removed"
+
+ANL-01-R04:
+  title: "New kind of pattern found"
+  finding: "An automated pattern-finder grouped this provider into a new kind of pattern that doesn't match known ones; no rule was broken."
+  what: "Groups providers with similar unusual features and highlights sizeable groups that share a coherent pattern and meaningful money involved."
+  why: "New patterns can reveal new schemes, but nothing happens until an analyst reviews them and writes a proper rule."
+  next_steps:
+    - "Review the group's shared features in the quarterly pattern review."
+    - "Decide whether the pattern reflects a real concern or a harmless explanation."
+    - "If it is a concern, draft a new rule for approval rather than acting on the group directly."
+  needs: "the set of measures for each provider already compared with similar providers"

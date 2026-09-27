@@ -30,7 +30,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", default=None, help="Path to a config/ directory.")
     parser.add_argument("--reports", default="reports", help="Output directory.")
     parser.add_argument("--adapter", default="generic_india_tpa",
-                        choices=["generic_india_tpa", "shafafiya", "eclaimlink"])
+                        choices=["generic_india_tpa", "shafafiya", "eclaimlink", "uae_multitable"])
     parser.add_argument("--tenant", default="T001")
     parser.add_argument("--documents", type=int, default=800,
                         help="Number of SYNTHETIC discharge summaries to generate (0 to skip).")

@@ -1,0 +1,31 @@
+# Dataset unlocks for the POL family (enrolment, employer group and policy).
+# Each entry runs its implementation ONLY on a dataset that populates every named table (and, where
+# listed, carries at least one value in every named column). POL-01-R04 already runs on the claim
+# extract and is not declared here.
+unlocks:
+  - rule_id: POL-01-R01
+    implementation: pol_01_r01_roster_conflict
+    requires_tables: [member, employer_roster, coverage_period, claim_header]
+    requires_columns: [member.employer_id]
+    data_support: EXECUTABLE
+    reason: "Runs when the file carries each member's employer and sponsor and the employers' rosters: a member served while neither they nor their sponsor was on the roster is raised, as is one national-ID reference with two overlapping active covers; continuation, newborn and mandated cover are excepted."
+
+  - rule_id: POL-01-R02
+    implementation: pol_01_r02_retroactive_event_after_service
+    requires_tables: [policy_event, coverage_period, claim_header]
+    requires_columns: [policy_event.event_time, policy_event.effective_date]
+    data_support: PARTIAL
+    reason: "Runs the timing limb: an add or change recorded more than the enrolment SLA after the date it takes effect, over a high-cost service already incurred, excepting approved retroactive corrections. The actor is reported but not tested, because the file holds no rule on who may make such changes."
+
+  - rule_id: POL-01-R03
+    implementation: pol_01_r03_application_history_conflict
+    requires_tables: [policy_application, prior_coverage_history]
+    data_support: PARTIAL
+    reason: "Compares application declarations (prior cover, existing conditions) with prior cover and treatment records. Whether the law allows the comparison is approximated by a governed contestability window; privacy and non-discrimination checks remain for compliance to confirm."
+
+  - rule_id: POL-01-R05
+    implementation: pol_01_r05_enrolment_cluster
+    requires_tables: [policy_event, member, provider, coverage_period, claim_header]
+    requires_columns: [member.employer_id]
+    data_support: EXECUTABLE
+    reason: "Runs when the file carries enrolment events, members' employers or brokers and providers' ownership, bank, phone and address references: a cohort of new members whose early-claim rate tops other cohorts and whose early claims go mostly to linked providers is raised, excluding enrolment campaigns and small portfolios."

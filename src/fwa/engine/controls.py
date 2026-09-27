@@ -116,6 +116,36 @@ def _claim_frame(ctx: ControlContext) -> pd.DataFrame:
     return df[df["tenant_id"] == ctx.tenant_id] if "tenant_id" in df.columns else df
 
 
+def _setting_keys(df: pd.DataFrame) -> list[str]:
+    """Group "similar claims" by diagnosis, and by care setting when the file has one.
+
+    A claim-header extract has one row per admission and no claim type, so the
+    diagnosis alone defines the comparison group — exactly as before. A
+    multi-table file mixes inpatient stays, outpatient visits, pharmacy fills and
+    lab claims under the same diagnosis; comparing a knee replacement's stay
+    with a pharmacy fill for the same knee is not a peer comparison. When a
+    ``claim_type`` is present the setting joins the key (catalogue level 3,
+    encounter/facility type).
+    """
+    if "claim_type" in df.columns and df["claim_type"].notna().any():
+        return ["diagnosis_primary", "claim_type"]
+    return ["diagnosis_primary"]
+
+
+def _by_diagnosis(df: pd.DataFrame):
+    """Yield ``(diagnosis, rows)`` per peer group — see :func:`_setting_keys`.
+
+    Used by the length-of-stay residual (CLN-05-R01) only: there, mixing an
+    inpatient stay with same-diagnosis outpatient visits (length of stay 0)
+    makes the comparison meaningless. The amount-based checks keep the
+    diagnosis-only grouping, because narrowing their groups by setting made
+    them tighter and raised more flags, not fewer.
+    """
+    keys = _setting_keys(df)
+    for key, sub in df.groupby(keys if len(keys) > 1 else keys[0], sort=False, dropna=False):
+        yield (key[0] if isinstance(key, tuple) else key), sub
+
+
 def _incremental_over_peer(sub: pd.DataFrame, contributions: list[dict[str, Any]]) -> list[float]:
     """Each claim's excess over the peer median amount, floored at zero.
 
@@ -973,7 +1003,7 @@ def cln_05_r01_los_residual(ctx: ControlContext, control) -> list[Signal]:
     df = _claim_frame(ctx)
     threshold = float(ctx.cfg("los_residual_threshold"))
     out: list[Signal] = []
-    for diagnosis, sub in df.groupby("diagnosis_primary", sort=False):
+    for diagnosis, sub in _by_diagnosis(df):
         stats = robust_stats(sub["length_of_stay_days"])
         if stats.scale <= 0:
             continue

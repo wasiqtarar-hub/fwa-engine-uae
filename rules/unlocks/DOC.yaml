@@ -1,0 +1,46 @@
+# Dataset unlocks for the DOC controls that are not executable on a claim-header file.
+# Each entry runs its implementation ONLY on a dataset that populates every named table.
+# The documents on the UAE demo file are SYNTHETIC; every finding says so and every finding
+# about what a document says carries the exact text and offsets it rests on.
+unlocks:
+  - rule_id: DOC-01-R01
+    implementation: doc_01_r01_required_document_absent
+    requires_tables: [claim_line, activity_code_reference, document_requirement_policy, document]
+    requires_columns: [document_requirement_policy.doc_type, document.doc_type]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries claim lines, the policy that says which document each service needs, and the documents attached to each claim: a required document type that is still absent once the governed deadline after submission has passed is flagged, and a claim whose deadline has not yet passed is not."
+
+  - rule_id: DOC-01-R03
+    implementation: doc_01_r03_medical_necessity_absent
+    requires_tables: [claim_line, medical_necessity_policy, document]
+    requires_columns: [medical_necessity_policy.required_terms, document.text]
+    data_support: PARTIAL
+    reason: "Searches the claim's readable clinical documents for each fact the medical-necessity policy requires for the billed service, counting a fact mentioned only in a negated sentence as absent. The search is for the policy's words and phrases, not a clinical reading of the note, and a claim with no readable clinical document is skipped because absence would prove nothing."
+
+  - rule_id: DOC-01-R04
+    implementation: doc_01_r04_authorization_narrative_drift
+    requires_tables: [claim_line, authorization, authorization_line, activity_code_reference, document]
+    requires_columns: [claim_line.authorization_id, document.doc_type]
+    data_support: PARTIAL
+    reason: "Compares the services named in the approval request (activity codes and their reference descriptions, each with its exact text span) with the lines billed under that approval, and flags a billed service of a different family that the request never mentions. Entity-level comparison only: a paraphrase that names no code or reference description is not understood."
+
+  - rule_id: DOC-02-R02
+    implementation: doc_02_r02_contradictory_copied_facts
+    requires_tables: [member, document]
+    requires_columns: [member.date_of_birth, member.sex, document.text]
+    data_support: PARTIAL
+    reason: "Reads the age, sex and sex-specific findings a note states, each with its exact span and an OCR-adjusted confidence, and compares them with the patient's registration record. The laterality limb does not run because the claim lines carry no body side to contradict."
+
+  - rule_id: DOC-02-R03
+    implementation: doc_02_r03_post_denial_alteration
+    requires_tables: [document, remittance]
+    requires_columns: [document.prior_document_sk, document.created_at, remittance.decision]
+    data_support: PARTIAL
+    reason: "Compares each later version of a claim's document with the version it replaces when it was written after a denial on that claim (or the claim it resubmits), and flags changed or added payment-relevant facts that are not a signed addendum. 'Payment-relevant' is a fixed list of extracted fields (stay, dates, diagnosis, procedure, severity, indication, units), not every fact a clinician could change."
+
+  - rule_id: DOC-02-R04
+    implementation: doc_02_r04_template_complexity_mismatch
+    requires_tables: [claim_line, activity_code_reference, document]
+    requires_columns: [activity_code_reference.complexity, document.text]
+    data_support: PARTIAL
+    reason: "Measures how much patient-specific narrative each note for a high-complexity service contains once template lines are removed, compares it with notes of the same type and language (within specialty where the peer group is large enough), and flags providers where most such notes are far thinner than peers write. 'Generic' is measured by length of patient-specific wording, not by clinical content."

@@ -1,0 +1,271 @@
+# Plain-language text for the ENT controls (entitlement: cover, identity, licences, clinicians, setting, telehealth).
+# Presentation only: nothing here changes what a control does.
+
+ENT-01-R01:
+  title: "Claim made while cover was not active"
+  finding: "This claim is for a service on a date when the patient's insurance cover was not active."
+  what: "Checks each service date against the dates the patient's policy was in force."
+  why: "An insurer is not obliged to pay for care given outside the cover period, so paying it would be an overpayment."
+  next_steps:
+    - "Confirm the policy start and end dates in the policy administration system."
+    - "Check whether a grace period, newborn cover or an emergency rule applies."
+    - "Check whether a late enrolment or backdated renewal explains the gap."
+  needs: "the dates each patient's policy started and ended, its status, and what each product covers"
+
+ENT-01-R02:
+  title: "Service not covered by the patient's plan"
+  finding: "This claim includes a service that the patient's plan, as written at the time, does not cover."
+  what: "Compares each billed service with the benefit schedule of the patient's insurance product."
+  why: "Paying for a service the plan excludes is an overpayment and may point to a service being billed under the wrong description."
+  next_steps:
+    - "Confirm the benefit schedule version that applied on the service date."
+    - "Check whether the service is a mandatory benefit or has an approved exception."
+    - "Check whether the patient agreed to pay for the service themselves."
+  needs: "the benefit schedule for each product, including what is covered, limits and pre-approval rules, and the services billed on each claim"
+
+ENT-01-R03:
+  title: "Benefit limit exceeded"
+  finding: "This claim would take the patient past the limit their plan allows for this benefit."
+  what: "Adds what has already been paid or approved for this benefit to the amount now claimed and compares the total with the plan limit."
+  why: "Amounts above the benefit limit are not payable, so only the excess should be held back or repriced."
+  next_steps:
+    - "Confirm the benefit limit and when it resets, for example each policy year."
+    - "Check whether the limit applies per member or per family."
+    - "Remove reversed claims and still-pending approvals from the running total before deciding."
+  needs: "the benefit limits for each product and a record of what has already been paid for each patient"
+
+ENT-01-R04:
+  title: "Provider outside network or referral missing"
+  finding: "This claim is for care at a provider outside the patient's network, or without a referral the plan requires."
+  what: "Checks whether the treating provider belongs to the patient's network and whether a required referral is on file."
+  why: "Out-of-network or unreferred care is usually paid differently, or not at all, under the plan terms."
+  next_steps:
+    - "Confirm the provider's network status on the service date."
+    - "Ask for the referral letter if the plan requires one."
+    - "Check whether an emergency, an access gap or a regulator exception applies."
+  needs: "which network each patient's plan uses, each provider's network status, and referral records"
+
+ENT-02-R01:
+  title: "Patient identity does not match official record"
+  finding: "The identity details on this claim do not match the official record for the patient, such as a different date of birth or sex, or an Emirates ID linked to another member."
+  what: "Compares the patient's protected national ID, date of birth and sex with the official enrolment record."
+  why: "A mismatch may mean someone else is using the member's card, or simply an identity error that needs correcting before payment."
+  next_steps:
+    - "Compare the claim details with the member's Emirates ID record and enrolment file."
+    - "Check whether the member is a newborn or has a placeholder ID."
+    - "Contact the provider to confirm who was treated; do not rely on names alone."
+  needs: "each patient's date of birth, sex and a protected national ID reference"
+
+ENT-02-R02:
+  title: "Service dated after the patient's death"
+  finding: "This claim is for a service that started after the patient's confirmed date of death."
+  what: "Compares the service start date with a confirmed date of death, allowing a short reporting margin."
+  why: "Care cannot be given after death, so such a claim is either a data error or a service that did not happen."
+  next_steps:
+    - "Confirm the date of death and how reliable its source is."
+    - "Check whether the claim is only an administrative item submitted after an earlier service."
+    - "Ask the provider for the medical record for the billed date."
+  needs: "each patient's date of death, where that date came from and how reliable the source is"
+
+ENT-02-R03:
+  title: "Patient in two places at once"
+  finding: "This patient has overlapping hospital stays at two different providers, which is an unusual pattern worth checking."
+  what: "Looks for the same patient admitted to two different providers over overlapping dates."
+  why: "A person cannot normally be admitted in two places at once, so one of the stays may be wrongly billed or the card may have been used by someone else."
+  next_steps:
+    - "Compare the admission and discharge dates of both stays."
+    - "Check whether one of the stays was a transfer, a telehealth visit or an add-on service."
+    - "Ask both providers for their admission and discharge records."
+  needs: "admission and discharge dates for each stay, and which patient and provider each claim belongs to"
+
+ENT-02-R04:
+  title: "Usage pattern suggests card sharing"
+  finding: "This patient's care shows an unusual pattern, such as visits in far-apart places at the same time or services that do not fit the patient's age or sex."
+  what: "Looks for use of one member's cover in places or ways that are hard to explain for one person."
+  why: "Such a pattern can mean another person is using the member's insurance card; it is worth checking but is never grounds on its own to refuse payment."
+  next_steps:
+    - "Review the patient's visit history by place and provider."
+    - "Check whether a chronic or rare condition explains the pattern."
+    - "Look for at least one more independent sign before referring the case for investigation."
+  needs: "where each provider and visit is located, and each patient's date of birth and sex"
+
+ENT-03-R01:
+  title: "Licence not active on service date"
+  finding: "The licence of the clinician or facility on this claim was not active on the date of service."
+  what: "Checks the licence of the treating, ordering or dispensing clinician and of the facility against the service date."
+  why: "Care given without an active licence is not payable and may be unsafe for patients."
+  next_steps:
+    - "Confirm the licence dates on the DoH or DHA register."
+    - "Check whether an approved grace period applies."
+    - "Check which role on the claim actually needs the licence."
+  needs: "licence dates for each clinician and facility and their regulator reference"
+
+ENT-03-R02:
+  title: "Provider on an exclusion list"
+  finding: "This claim comes from a provider that was on an exclusion list or blacklist on the date of service."
+  what: "Checks the provider against regulator and approved internal exclusion lists on the service date, using an exact match."
+  why: "Excluded providers should not be paid, and their claims need closer review."
+  next_steps:
+    - "Confirm the listing and its effective dates with the source list."
+    - "Make sure the match is to the exact provider, not a similar name."
+    - "Hold the claim and refer it to the investigations team if the listing is confirmed."
+  needs: "each provider's listing status and the dates that status applied"
+
+ENT-03-R03:
+  title: "Service outside the provider's permitted scope"
+  finding: "This claim includes a service that the clinician or facility is explicitly not permitted to perform."
+  what: "Compares each billed service with the regulator or facility privileges held by the provider."
+  why: "Services outside a provider's approved privileges are not payable and may be unsafe."
+  next_steps:
+    - "Confirm the provider's privileges on the service date with the regulator or facility."
+    - "Check whether an approved exception covers this service."
+    - "Ask the provider who actually performed the service."
+  needs: "each provider's licence and privilege details with their dates, and the services billed"
+
+ENT-03-R04:
+  title: "Service unusual for clinician's specialty"
+  finding: "This claim includes a service that does not usually fall within the treating clinician's specialty, although it is not prohibited."
+  what: "Compares each billed service with a list of services normally expected for each specialty."
+  why: "A mismatch can point to coding errors or billing under the wrong clinician, so it calls for coding review, not refusal."
+  next_steps:
+    - "Check the clinician's specialty and any cross-specialty privileges."
+    - "Review the medical record to confirm who performed the service."
+    - "Send the claim for coding review rather than rejecting it."
+  needs: "the treating and ordering clinician for each service, their specialty, and the services billed"
+
+ENT-03-R05:
+  title: "New or dormant provider with sudden high activity"
+  finding: "This provider started or restarted billing and quickly reached unusually high volume or value compared with similar providers."
+  what: "Looks at new or reactivated providers whose early billing is well above what is typical for their specialty."
+  why: "A sudden burst from a new or dormant provider can signal a provider set up to bill heavily, but it may also have a normal business reason."
+  next_steps:
+    - "Confirm the provider's credentialing date and contract start."
+    - "Check for a recent acquisition, merger or new contract."
+    - "Consider a site visit to confirm the provider is operating."
+  needs: "each provider's credentialing date and when its current status began"
+
+ENT-04-R01:
+  title: "Treating clinician missing or invalid"
+  finding: "This claim has no valid treating clinician for a service that needs one."
+  what: "Checks that services requiring a named treating clinician carry a valid clinician, not a blank or a facility-only code."
+  why: "Without a valid clinician the claim cannot be checked for licence or scope, so it should be returned for correction."
+  next_steps:
+    - "Return the claim to the provider to add the treating clinician."
+    - "Confirm the clinician's licence once the name is provided."
+  needs: "the treating and ordering clinician for each service and their specialty"
+
+ENT-04-R02:
+  title: "Conflict between billing and treating roles"
+  finding: "The combination of billing, treating, ordering or supervising clinicians on this claim breaks a stated role rule."
+  what: "Checks that the clinician roles on the claim are a combination the rules allow."
+  why: "Role conflicts can hide who really provided the care, which affects whether the service is payable."
+  next_steps:
+    - "Check the team-care and supervision policy for this service."
+    - "Ask the provider to explain the roles on the claim."
+  needs: "the treating and ordering clinician for each service and their specialty"
+
+ENT-04-R03:
+  title: "Clinician billing overlapping timed services"
+  finding: "This clinician billed more timed services at the same time than is normally possible, which is an unusual pattern worth checking."
+  what: "Looks for a clinician with more overlapping timed services than the allowed limit."
+  why: "One person cannot usually provide many timed services at once, so some may not have been provided as billed."
+  next_steps:
+    - "Build a timeline of the clinician's services for the day."
+    - "Check whether team procedures or anaesthesia rules explain the overlap."
+    - "Ask the provider for appointment and theatre records."
+  needs: "the treating clinician for each service and the start and end times of each service"
+
+ENT-04-R04:
+  title: "Clinician billing while on leave or elsewhere"
+  finding: "This clinician appears to have provided services while on confirmed leave, out of the country, or at facilities too far apart to reach in time."
+  what: "Compares service dates and places with the clinician's leave records and work locations."
+  why: "Services billed when the clinician could not have been present may not have been provided as billed."
+  next_steps:
+    - "Confirm the clinician's leave or travel dates with the facility."
+    - "Check how reliable the recorded service times and locations are."
+    - "Refer for investigation only if the pattern repeats."
+  needs: "the treating clinician for each service, where each service took place, and clinician leave records"
+
+ENT-05-R01:
+  title: "Service needs a different facility type"
+  finding: "This claim includes a service that requires a type of facility the provider is not licensed as."
+  what: "Compares the service and visit type with the provider's licensed facility type."
+  why: "Services billed from the wrong type of facility may be priced too high or not payable."
+  next_steps:
+    - "Confirm the provider's facility type on its licence."
+    - "Check whether a home, mobile or telehealth exception applies."
+  needs: "each provider's facility type, the visit type and the services billed"
+
+ENT-05-R02:
+  title: "Hospital stay billed without admission records"
+  finding: "This claim bills an inpatient, intensive care or day-case stay without the supporting admission, bed or discharge records."
+  what: "Checks that inpatient-level billing is backed by admission, bed and discharge evidence."
+  why: "A stay not supported by records may mean a cheaper outpatient visit was billed as an admission."
+  next_steps:
+    - "Ask the provider for the admission and discharge notes."
+    - "Check whether the records are simply late or the patient was transferred."
+  needs: "admission, bed and discharge records and the visit type"
+
+ENT-05-R03:
+  title: "Linked claims disagree on setting"
+  finding: "The doctor's claim and the facility's claim for this same episode disagree on where the care took place."
+  what: "Compares the setting stated on the professional and facility claims for the same episode."
+  why: "A disagreement may mean one claim states a more expensive setting than the care actually used."
+  next_steps:
+    - "Compare both claims side by side."
+    - "Check whether a transfer or an independent practitioner explains the difference."
+  needs: "the visit type and whether each claim is from a doctor or from a facility"
+
+ENT-05-R04:
+  title: "Shift towards better-paid settings"
+  finding: "This provider's share of care billed in better-paid settings has risen sharply compared with its own history and with similar providers."
+  what: "Tracks how the provider's mix of care settings changes over time and compares it with similar providers."
+  why: "A sudden shift to higher-paying settings may reflect genuine change, but it can also mean care is being billed at a higher level than provided."
+  next_steps:
+    - "Check for a change of contract or facility around the time of the shift."
+    - "Sample claims from after the shift for a medical record review."
+  needs: "the visit type on each claim over time"
+
+ENT-06-R01:
+  title: "Telehealth billed where not allowed"
+  finding: "This claim bills a telehealth service that is not allowed for this service, the patient's location or the provider's privileges."
+  what: "Checks telehealth claims against the regulator and product rules on what can be done remotely and from where."
+  why: "Telehealth that the rules do not allow is not payable."
+  next_steps:
+    - "Check the regulator and product telehealth rules that applied."
+    - "Confirm the provider's telehealth privileges."
+    - "Confirm where the patient was during the consultation."
+  needs: "the services billed, where the provider and patient were, and the visit type"
+
+ENT-06-R02:
+  title: "Remote order without real consultation"
+  finding: "This remote order has no qualifying consultation note, or the interaction was shorter than the policy minimum."
+  what: "Checks that remote orders are backed by a genuine clinical interaction of adequate length."
+  why: "Orders made without a real consultation may not be medically justified."
+  next_steps:
+    - "Ask for the consultation note and the call record."
+    - "Check whether rules for non-live care or emergencies apply."
+    - "Send the case for clinical review."
+  needs: "consultation notes and attachments, and how long each visit lasted"
+
+ENT-06-R03:
+  title: "Telehealth referrals concentrated on one supplier"
+  finding: "This telehealth provider sends an unusually high share of its orders to a single lab, pharmacy or device supplier compared with similar providers."
+  what: "Measures how concentrated each telehealth provider's referrals and prescriptions are."
+  why: "Heavy concentration may point to a financial link between the provider and the supplier, which is worth checking."
+  next_steps:
+    - "Check whether the provider and the supplier share ownership."
+    - "Check whether a narrow network explains the concentration."
+    - "Review a sample of orders sent to that supplier."
+  needs: "referral records and prescription dispensing records, including prescriber and pharmacy"
+
+ENT-06-R04:
+  title: "High rate of costly remote orders"
+  finding: "This provider's remote consultations lead to costly tests, drugs or devices far more often than for similar providers."
+  what: "Compares how often remote consultations turn into high-cost orders, allowing for differences between providers."
+  why: "An unusually high rate may mean orders are driven by payment rather than need, though specialty and case mix can explain some of it."
+  next_steps:
+    - "Check the provider's specialty and patients' diagnoses."
+    - "Check for a new service or campaign that explains the change."
+    - "Review a sample of high-cost orders with a clinician."
+  needs: "the services billed, prescription dispensing records and referral records"

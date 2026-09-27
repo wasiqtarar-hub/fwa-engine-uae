@@ -1,0 +1,202 @@
+# Plain-language names for tables and other information sources.
+#
+# Presentation only: nothing here renames anything in code. Each key is the
+# exact internal table name, or the exact free-text entry used in the check
+# catalogue. `label` names the table for a reader; `needs` is written to
+# complete the sentence "The file doesn't contain ...".
+
+tables:
+
+  # ===========================================================================
+  # The canonical tables
+  # ===========================================================================
+  member:
+    label: "Patient details"
+    needs: "patient details (date of birth, sex, date of death and sponsor or employer)"
+  coverage_period:
+    label: "Insurance cover periods"
+    needs: "insurance cover periods (which plan each patient was on, with which insurer, and when the cover started and ended)"
+  benefit_rule_version:
+    label: "Plan benefit rules"
+    needs: "the plan's benefit rules (what is covered, limits, the patient's share, and which services need prior approval)"
+  provider:
+    label: "Provider details"
+    needs: "provider details (licence, type, specialty, facility, ownership and contact identifiers)"
+  provider_status_period:
+    label: "Provider licence and status history"
+    needs: "provider licence and status history (when each provider was licensed, in network or excluded)"
+  claim_header:
+    label: "Claim summaries"
+    needs: "claim summaries (who was treated, by whom, when, and the amounts billed and approved)"
+  claim_line:
+    label: "Line-level service details"
+    needs: "line-level service details (which procedures, tests and medicines were billed, how many, and by which clinician)"
+  diagnosis:
+    label: "Diagnoses"
+    needs: "diagnoses (the main and secondary conditions coded on each claim)"
+  encounter:
+    label: "Hospital visits and stays"
+    needs: "hospital visit and stay details (type of visit, admission and discharge dates and times, and where the care took place)"
+  observation:
+    label: "Test results and clinical reports"
+    needs: "test results and clinical reports linked to the services billed"
+  authorization:
+    label: "Prior approvals"
+    needs: "prior approvals (requests to the insurer before treatment, and whether and for how much they were approved)"
+  authorization_line:
+    label: "Prior approval details"
+    needs: "prior approval details (which services were approved, in what quantity and value, and any refusal reasons)"
+  claim_version:
+    label: "Claim correction history"
+    needs: "claim correction history (resubmissions and corrections, and what changed each time)"
+  remittance:
+    label: "Payment decisions"
+    needs: "payment decisions (what the insurer paid, refused or adjusted, and when)"
+  prescription_dispense:
+    label: "Prescriptions and dispensing"
+    needs: "prescription and dispensing records (what was prescribed, billed and actually handed over, and in what quantity)"
+  policy_event:
+    label: "Policy changes"
+    needs: "policy change records (enrolments, additions, removals and corrections, who made them and when)"
+  review_outcome:
+    label: "Reviewer decisions"
+    needs: "reviewer decisions (what reviewers concluded, the amounts confirmed, and any appeals)"
+
+  # ===========================================================================
+  # Other information named by the check catalogue
+  # ===========================================================================
+  adjudication_event:
+    label: "Claim handling history"
+    needs: "claim handling history (who decided each claim, and any manual overrides with their reasons)"
+  attendance_record:
+    label: "Attendance records"
+    needs: "attendance records showing whether the patient actually attended"
+  benefit accumulator for exhaustion:
+    label: "Benefit usage to date"
+    needs: "running totals of how much of each patient's benefit has already been used"
+  bundling_edit_table:
+    label: "Service bundling rules"
+    needs: "rules on which services must be billed together as one and not charged separately"
+  care_pathway_policy:
+    label: "Care pathway guidelines"
+    needs: "care pathway guidelines (how often services are expected during a course of treatment)"
+  clinician_roster:
+    label: "Clinician rosters"
+    needs: "clinician rosters (which clinicians work where, their hours and their leave)"
+  code_equivalence_map:
+    label: "Equivalent code list"
+    needs: "a list of service codes that mean the same thing, used to spot near-duplicate claims"
+  code_system_version:
+    label: "Code list versions"
+    needs: "the valid code lists and the dates each code was in force"
+  complaint:
+    label: "Complaints"
+    needs: "complaints from patients or others about providers or charges"
+  contract:
+    label: "Provider contracts"
+    needs: "provider contracts and the dates they took effect"
+  coordination_of_benefits:
+    label: "Other insurance cover"
+    needs: "records of other insurance the patient holds and which insurer should pay first"
+  cross_payer_match_token:
+    label: "Cross-insurer matching codes"
+    needs: "protected codes that let the same claim be recognised when it is sent to other insurers"
+  device_inventory:
+    label: "Medical device records"
+    needs: "medical device records (serial numbers, whether new, used or rented, and expected lifespan)"
+  diagnosis relatedness map:
+    label: "Related-diagnosis list"
+    needs: "a list of which diagnoses are related, to tell a related readmission from an unrelated one"
+  disguise_risk_policy:
+    label: "Disguised-service rules"
+    needs: "rules for spotting cosmetic, alternative or non-medical services billed as medical ones"
+  document:
+    label: "Clinical documents"
+    needs: "clinical documents (the text and language of notes and reports)"
+  document_requirement_policy:
+    label: "Required-document rules"
+    needs: "rules on which documents must accompany each kind of claim"
+  drg_grouper:
+    label: "Case-mix grouping rules"
+    needs: "the case-mix grouping rules that set payment by diagnosis and severity"
+  drug_policy:
+    label: "Medicine rules"
+    needs: "medicine rules (how long each medicine may normally be prescribed for)"
+  dx_proc_prohibition_table:
+    label: "Impossible diagnosis-procedure pairs"
+    needs: "a list of diagnosis and procedure combinations that cannot go together"
+  employer_roster:
+    label: "Employer staff lists"
+    needs: "employer staff lists showing who is eligible for group cover"
+  equipment_inventory:
+    label: "Equipment lists"
+    needs: "lists of the scarce equipment each provider has, such as scanners"
+  indication_policy:
+    label: "Approved-use rules"
+    needs: "rules on which conditions each service or medicine is approved for"
+  longitudinal member history across payers:
+    label: "Patient history across insurers"
+    needs: "each patient's long-term medical history across all insurers"
+  medical_necessity_policy:
+    label: "Medical necessity rules"
+    needs: "rules setting out when a service is medically necessary"
+  member_confirmation:
+    label: "Patient confirmations"
+    needs: "patients' confirmations of the services they actually received"
+  member_receipt:
+    label: "Patient receipts"
+    needs: "receipts showing what patients themselves paid"
+  morbidity_model:
+    label: "Expected illness levels"
+    needs: "expected illness levels for patients of a given age and profile"
+  other_payer_remittance:
+    label: "Other insurers' payments"
+    needs: "payment decisions made by other insurers on the same care"
+  package_definition:
+    label: "Package price definitions"
+    needs: "definitions of what each fixed-price package includes"
+  panel_definition:
+    label: "Test panel definitions"
+    needs: "definitions of which tests make up each laboratory panel"
+  payment_policy:
+    label: "Payment rules"
+    needs: "payment rules, such as when two stays count as one continuous stay"
+  pharmacy_inventory:
+    label: "Pharmacy stock records"
+    needs: "pharmacy stock records showing what medicines were bought and sold"
+  policy_application:
+    label: "Policy applications"
+    needs: "policy application forms and what the applicant declared"
+  prior_coverage_history:
+    label: "Earlier insurance history"
+    needs: "each patient's earlier insurance cover"
+  real clinical documentation with OCR confidence:
+    label: "Real clinical documents"
+    needs: "real clinical documents, with a measure of how legible each scan is"
+  real clinical documents with OCR confidence:
+    label: "Real clinical documents"
+    needs: "real clinical documents, with a measure of how legible each scan is"
+  recovery_ledger:
+    label: "Recoveries and refunds"
+    needs: "records of money recovered from, or refunded by, providers"
+  referral:
+    label: "Referrals"
+    needs: "referral records (which clinician or provider sent the patient to which)"
+  repeat_interval_policy:
+    label: "Minimum repeat intervals"
+    needs: "rules on how soon a service may be repeated"
+  step_therapy_policy:
+    label: "Step treatment rules"
+    needs: "rules on which treatments must be tried first before others are paid for"
+  tariff:
+    label: "Price lists"
+    needs: "the agreed price lists for each service"
+  third_party_liability:
+    label: "Third-party liability"
+    needs: "records of accidents or injuries where someone else may be liable to pay"
+  third_party_settlement:
+    label: "Third-party settlements"
+    needs: "records of settlements already paid by a liable third party"
+  unit_maximum_policy:
+    label: "Maximum units rules"
+    needs: "rules on the most units of a service that may be billed at once"

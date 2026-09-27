@@ -226,7 +226,9 @@ def boot(page_title: str, icon: str = "🛡️") -> None:
     # page render replaces the DOM, so a <style> element added on a previous
     # page is gone — and the AI panel would lose the dashed border that makes
     # it visually distinct from an evidence panel, which is non-negotiable.
-    st.markdown(f"<style>{_stylesheet(active_theme())}</style>", unsafe_allow_html=True)
+    # ``st.html`` with nothing but a <style> block applies the styles without
+    # adding a visible element, so the stylesheet is chrome, never page text.
+    st.html(f"<style>{_stylesheet(active_theme())}</style>")
     chart_template()
 
 
@@ -319,8 +321,8 @@ def require_page(page_name: str, permission: Permission) -> SessionState:
     if service.enforce_timeout(state):
         st.session_state.pop("fwa_session", None)
         st.warning(
-            f"Signed out after {config().get('session_timeout_minutes')} minutes of inactivity "
-            f"(`cfg.session_timeout_minutes`)."
+            f"You were signed out after {config().get('session_timeout_minutes')} minutes without "
+            f"activity. Please sign in again."
         )
         st.stop()
     if not state.can(permission):
@@ -329,10 +331,12 @@ def require_page(page_name: str, permission: Permission) -> SessionState:
             tenant_id=state.tenant_id, subject=page_name,
             reason=f"Role {state.role.value} does not hold {permission.value}.",
         )
+        from fwa.presentation import label as _lbl, page_info as _pi
+
         st.error(
-            f"**Access denied.** The {state.role.value} role does not hold "
-            f"`{permission.value}`, which is required for {page_name}. This attempt has been "
-            f"written to the access log."
+            f"**You don't have access to this page.** The {_lbl(state.role.value, 'role').lower()} "
+            f"role can't open {_pi(page_name)['title']}. This attempt has been written to the "
+            f"access log; ask an administrator if you need access."
         )
         st.stop()
 
@@ -379,12 +383,14 @@ def boundary_note() -> None:
 def session_banner(state: SessionState) -> None:
     started = state.started_at.astimezone().strftime("%H:%M")
     timeout = config().get("session_timeout_minutes")
+    from fwa.presentation import label as _lbl
+
     st.markdown(
         f'<div class="fwa-session">'
         f'<span class="fwa-who">{html.escape(state.display_name)}</span>'
-        f'<span class="fwa-chip s-neutral">{state.role.value}</span>'
-        f'<span class="fwa-tag">tenant {html.escape(state.tenant_id)}</span>'
-        f"<span>signed in {started} · idle timeout {timeout} min</span>"
+        f'<span class="fwa-chip s-neutral">{html.escape(_lbl(state.role.value, "role"))}</span>'
+        f'<span class="fwa-tag">organisation {html.escape(state.tenant_id)}</span>'
+        f"<span>signed in {started} · signs out after {timeout} min without activity</span>"
         f'<span class="fwa-tag">v{__version__}</span>'
         f"</div>",
         unsafe_allow_html=True,
@@ -534,8 +540,23 @@ def _chart_key(fig, prefix: str) -> str:
     return f"{prefix}-{digest}-{index}"
 
 
+def _axes(fig, x_label: str | None, y_label: str | None, horizontal: bool = False) -> None:
+    """Plain axis titles with units. Horizontal bars swap which axis is which."""
+    if horizontal:
+        x_label, y_label = y_label, x_label
+    if x_label is not None:
+        fig.update_xaxes(title_text=x_label)
+    if y_label is not None:
+        fig.update_yaxes(title_text=y_label)
+
+
 def bar(frame: pd.DataFrame, x: str, y: str, *, title: str = "", colour: str | None = None,
-        colour_map: dict[str, str] | None = None, horizontal: bool = False, height: int = 320):
+        colour_map: dict[str, str] | None = None, horizontal: bool = False, height: int = 320,
+        x_label: str | None = None, y_label: str | None = None, how_to_read: str = "",
+        legend_title: str | None = None):
+    """A bar chart. ``title`` should state the finding; ``x_label``/``y_label`` name
+    the axes with units (for a horizontal chart, ``x_label`` still names the
+    category and ``y_label`` the value); ``how_to_read`` adds the one-line hint."""
     import plotly.express as px
 
     fig = px.bar(
@@ -545,23 +566,36 @@ def bar(frame: pd.DataFrame, x: str, y: str, *, title: str = "", colour: str | N
         color_discrete_sequence=SEQUENCE, title=title or None,
     )
     fig.update_layout(template=chart_template(), height=height, showlegend=bool(colour))
+    _axes(fig, x_label, y_label, horizontal)
+    if legend_title is not None:
+        fig.update_layout(legend_title_text=legend_title)
     st.plotly_chart(fig, width="stretch", key=_chart_key(fig, "bar"))
+    if how_to_read:
+        chart_note(how_to_read)
     return fig
 
 
 def line(frame: pd.DataFrame, x: str, y: str | Sequence[str], *, title: str = "",
-         height: int = 300, markers: bool = True):
+         height: int = 300, markers: bool = True, x_label: str | None = None,
+         y_label: str | None = None, how_to_read: str = "", legend_title: str | None = None):
     import plotly.express as px
 
     fig = px.line(frame, x=x, y=y, markers=markers, title=title or None,
                   color_discrete_sequence=SEQUENCE)
     fig.update_layout(template=chart_template(), height=height)
+    _axes(fig, x_label, y_label)
+    if legend_title is not None:
+        fig.update_layout(legend_title_text=legend_title)
     st.plotly_chart(fig, width="stretch", key=_chart_key(fig, "line"))
+    if how_to_read:
+        chart_note(how_to_read)
     return fig
 
 
 def histogram(values: Iterable[float], *, title: str = "", nbins: int = 40,
-              vline: float | None = None, vline_label: str = "", height: int = 300):
+              vline: float | None = None, vline_label: str = "", height: int = 300,
+              x_label: str | None = None, y_label: str | None = "Number of items",
+              how_to_read: str = ""):
     import plotly.express as px
 
     fig = px.histogram(pd.DataFrame({"value": list(values)}), x="value", nbins=nbins,
@@ -570,5 +604,355 @@ def histogram(values: Iterable[float], *, title: str = "", nbins: int = 40,
         fig.add_vline(x=vline, line_dash="dash", line_color=SEQUENCE[0],
                       annotation_text=vline_label or f"{vline:g}", annotation_position="top")
     fig.update_layout(template=chart_template(), height=height, bargap=0.04)
+    _axes(fig, x_label if x_label is not None else "Value", y_label)
     st.plotly_chart(fig, width="stretch", key=_chart_key(fig, "hist"))
+    if how_to_read:
+        chart_note(how_to_read)
     return fig
+
+
+# =============================================================================
+# PLAIN-LANGUAGE LAYER
+# =============================================================================
+# Everything below renders the engine's output for a non-technical reader. It
+# is presentation only: internal identifiers are translated through
+# ``fwa.presentation`` at the moment they are shown, and never renamed.
+
+import json as _json  # noqa: E402
+import logging as _logging  # noqa: E402
+from contextlib import contextmanager  # noqa: E402
+
+from fwa.presentation import (  # noqa: E402
+    aed as _aed, field_label as _field_label, field_meaning as _field_meaning,
+    friendly_frame as _friendly_frame, label as _plain_label, page_info as _page_info,
+    standard_text as _standard_text, status as _status, term_help as _term_help,
+)
+from fwa.presentation.explain_case import (  # noqa: E402
+    CaseExplanation, diagnosis_names, explain_case, explain_model_claim,
+)
+
+_log = _logging.getLogger("fwa.app")
+
+#: Per-user interface preferences (Simple/Advanced). A small JSON file rather
+#: than a database table because it is a convenience, not governed state: it
+#: never affects what the engine does, only which pages are listed.
+PREFS_PATH = Path(__import__("os").environ.get("FWA_UI_PREFS", str(ROOT / "data" / "ui_prefs.json")))
+MODE_KEY = "fwa_ui_mode"
+
+__all__ += [
+    "ui_mode", "set_ui_mode", "is_simple", "mode_toggle", "pages_for_mode", "page_header",
+    "status_badge", "friendly_table", "headline_cards", "chart_note", "case_explanation",
+    "render_explanation", "render_model_claim", "friendly_failure", "friendly_error", "tone_class",
+    "help_text", "synthetic_banner", "PREFS_PATH", "explain_model_claim", "is_synthetic_dataset",
+]
+
+
+# ---------------------------------------------------------------- mode
+
+
+def _read_prefs() -> dict:
+    try:
+        return _json.loads(PREFS_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _write_prefs(prefs: dict) -> None:
+    try:
+        PREFS_PATH.parent.mkdir(parents=True, exist_ok=True)
+        PREFS_PATH.write_text(_json.dumps(prefs, indent=1, sort_keys=True), encoding="utf-8")
+    except Exception:  # a preference that cannot be saved is not an error worth showing
+        _log.warning("Could not save interface preferences to %s", PREFS_PATH)
+
+
+def ui_mode() -> str:
+    """``"simple"`` (the default) or ``"advanced"``, remembered per user."""
+    mode = st.session_state.get(MODE_KEY)
+    if mode in ("simple", "advanced"):
+        return mode
+    state = session()
+    stored = _read_prefs().get(state.username, {}).get("mode") if state else None
+    mode = stored if stored in ("simple", "advanced") else "simple"
+    st.session_state[MODE_KEY] = mode
+    return mode
+
+
+def set_ui_mode(mode: str) -> None:
+    mode = "advanced" if mode == "advanced" else "simple"
+    st.session_state[MODE_KEY] = mode
+    state = session()
+    if state is not None:
+        prefs = _read_prefs()
+        prefs.setdefault(state.username, {})["mode"] = mode
+        _write_prefs(prefs)
+
+
+def is_simple() -> bool:
+    return ui_mode() == "simple"
+
+
+def mode_toggle() -> None:
+    """The sidebar switch. On by default; remembered for this user."""
+    simple = st.toggle(
+        "Simple view", value=is_simple(), key="fwa_mode_toggle",
+        help="Simple view shows the pages you need to review cases: Overview, Review queue, "
+             "Case evidence, Data and Help. Turn it off to add the analysis and governance "
+             "pages (models, hospital comparisons, connections, settings, the checks library, "
+             "validation and governance). Your choice is remembered next time you sign in. "
+             "It never changes what you are allowed to see: access still depends on your role.",
+    )
+    wanted = "simple" if simple else "advanced"
+    if wanted != ui_mode():
+        set_ui_mode(wanted)
+        st.rerun()
+
+
+def pages_for_mode(allowed: Sequence[str]) -> list[str]:
+    """Filter a role's pages by the current mode (role-based access applies first)."""
+    if not is_simple():
+        return list(allowed)
+    return [p for p in allowed if _page_info(p).get("simple")]
+
+
+# ---------------------------------------------------------------- frame
+
+
+def page_header(name: str) -> None:
+    """Plain page title plus its two- or three-line "what this page is for" caption."""
+    info = _page_info(name)
+    st.markdown(f"# {info['title']}")
+    if info.get("purpose"):
+        st.markdown(f"<div class='fwa-intro'>{html.escape(str(info['purpose']))}</div>",
+                    unsafe_allow_html=True)
+
+
+def is_synthetic_dataset() -> bool:
+    spec = active_dataset()
+    name = f"{spec.name} {spec.path}".lower()
+    return "synthetic" in name or "uae_demo" in name
+
+
+def synthetic_banner() -> None:
+    """The SYNTHETIC notice, shown whenever the active file is one of the generated datasets."""
+    if is_synthetic_dataset():
+        body = _standard_text("synthetic").replace("SYNTHETIC data. ", "")
+        st.markdown(
+            f"<div class='fwa-banner'><strong>SYNTHETIC data.</strong> {html.escape(body)}</div>",
+            unsafe_allow_html=True,
+        )
+
+
+def help_text(term: str, fallback: str = "") -> str:
+    """Tooltip text for a glossary term (``help=`` argument)."""
+    return _term_help(term) or fallback
+
+
+# ---------------------------------------------------------------- chips
+
+
+_TONE_CLASS = {"ok": "s-ok", "warn": "s-warn", "bad": "s-bad", "info": "s-info", "neutral": "s-neutral"}
+
+
+def tone_class(tone: str) -> str:
+    return _TONE_CLASS.get(str(tone), "s-neutral")
+
+
+def status_badge(value, kind: str | None = None) -> str:
+    """A coloured chip carrying the plain label of any status or enum value."""
+    if kind in (None, "status"):
+        phrase = _status(value)
+        return chip(phrase.label, tone_class(phrase.tone))
+    return chip(_plain_label(value, kind), "s-neutral")
+
+
+def disposition_chip(disposition) -> str:  # noqa: F811 - plain wording, same colour classes
+    value = disposition.value if isinstance(disposition, Disposition) else str(disposition)
+    return chip(_status(value).label, f"d-{value}")
+
+
+def priority_chip(band: str, label: str = "", score: float | None = None) -> str:  # noqa: F811
+    text = _plain_label(band, "band") + (f" · {score:.0f}/100" if score is not None else "")
+    return chip(text, f"p-{band}")
+
+
+def status_chip(status: str) -> str:  # noqa: F811
+    return status_badge(status)
+
+
+# ---------------------------------------------------------------- tables
+
+
+def friendly_table(
+    frame: pd.DataFrame,
+    *,
+    key: str,
+    columns: Sequence[str] | None = None,
+    max_default: int = 8,
+    money: Iterable[str] = (),
+    ratios: Iterable[str] = (),
+    dates: Iterable[str] = (),
+    keep_numeric: Iterable[str] = (),
+    rename: dict[str, str] | None = None,
+    value_kinds: dict[str, str] | None = None,
+    height: int | None = None,
+    empty_title: str = "Nothing to show here",
+    empty_body: str = "No rows matched. Widen the filters above.",
+) -> None:
+    """A table for a non-technical reader: plain column names, translated values,
+    at most ``max_default`` columns until "Show all columns" is ticked."""
+    if frame is None or frame.empty:
+        empty_state(empty_title, empty_body)
+        return
+    ordered = [c for c in (columns or list(frame.columns)) if c in frame.columns]
+    extra = [c for c in frame.columns if c not in ordered]
+    show_all = False
+    if len(ordered) > max_default or extra:
+        show_all = st.checkbox(
+            "Show all columns", key=f"{key}_all",
+            help="The table starts with the columns most people need. Tick this to see every "
+                 "column, including technical ones.",
+        )
+    cols = (ordered + extra) if show_all else ordered[:max_default]
+    view = _friendly_frame(frame, cols, money=money, ratios=ratios, dates=dates,
+                           keep_numeric=keep_numeric, rename=rename, value_kinds=value_kinds)
+    config = {}
+    for original, shown in zip(cols, view.columns):
+        meaning = _field_meaning(original)
+        if meaning:
+            config[shown] = st.column_config.Column(help=meaning)
+    kwargs = {"height": height} if height else {}
+    st.dataframe(view, width="stretch", hide_index=True, column_config=config, key=key, **kwargs)
+
+
+def headline_cards(items: Sequence[tuple[str, str]]) -> None:
+    """Cards with a big number and a sentence underneath: ``[(big, sentence), ...]``."""
+    cells = "".join(
+        f"<div class='fwa-hcard'><div class='fwa-big'>{big}</div>"
+        f"<div class='fwa-say'>{say}</div></div>"
+        for big, say in items
+    )
+    st.markdown(f"<div class='fwa-cards'>{cells}</div>", unsafe_allow_html=True)
+
+
+def chart_note(how_to_read: str) -> None:
+    """The one-line "How to read this chart" under every chart."""
+    st.markdown(f"<div class='fwa-howto'><strong>How to read this chart:</strong> "
+                f"{html.escape(how_to_read)}</div>", unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------- explanations
+
+
+def case_explanation(result, case, state) -> CaseExplanation:
+    """The plain explanation of one case, with identities masked for this user."""
+    signals = result.signals_for_case(case.case_id)
+    assigned = case.case_id in state.assigned_case_ids
+    cache_key = f"_fwa_dx_names_{id(result)}"
+    names = st.session_state.get(cache_key)
+    if names is None:
+        names = diagnosis_names(result.dataset)
+        st.session_state[cache_key] = names
+    return explain_case(
+        case, signals, registry=result.registry, claims=result.claims,
+        mask=lambda v: mask(v, state, assigned=assigned), dx_names=names,
+    )
+
+
+def render_explanation(expl: CaseExplanation, *, key: str, compact: bool = False) -> None:
+    """Headline, ranked reasons, strength, what it does not mean, next steps, details."""
+    reasons = "".join(
+        f"<li>{html.escape(r.sentence)}"
+        + (f" <span class='fwa-sub'>({r.more_like_it} more like it)</span>" if r.more_like_it else "")
+        + (" <span class='fwa-sub'>(simplified check)</span>" if r.simplified else "")
+        + "</li>"
+        for r in expl.reasons
+    )
+    strength = (
+        f"<div class='fwa-strength'>{chip(expl.strength.label + ' evidence', tone_class(expl.strength.tone))} "
+        f"{html.escape(expl.strength.why)}"
+        + (f" {html.escape(expl.strength.shared_fact_note)}" if expl.strength.shared_fact_note else "")
+        + "</div>"
+    )
+    st.markdown(
+        f"<div class='fwa-explain'><div class='fwa-headline'>{html.escape(expl.headline)}</div>"
+        f"<div class='fwa-sub' style='margin-top:.5rem'><strong>Why it was flagged</strong></div>"
+        f"<ol>{reasons}</ol>{strength}</div>",
+        unsafe_allow_html=True,
+    )
+    st.markdown("<div class='fwa-caveat'><strong>What this does not mean.</strong> "
+                + " ".join(html.escape(c) for c in expl.caveats) + "</div>",
+                unsafe_allow_html=True)
+    if expl.next_steps:
+        st.markdown("**What to check next**\n\n" + "\n".join(
+            f"{i}. {s}" for i, s in enumerate(expl.next_steps, start=1)))
+    if compact:
+        return
+    with st.expander("Technical details (for auditors and examiners)", expanded=False):
+        dataframe(pd.DataFrame(expl.technical).drop(columns=["evidence"], errors="ignore"))
+        st.caption("Rule id and version, the control's score, confidence, evidence strength and the "
+                   "underlying fact each signal rests on. Signals sharing an underlying fact count "
+                   "once: their evidence is capped at the strongest, never added.")
+        for t in expl.technical:
+            st.markdown(f"**{t['rule_id']}@{t['rule_version']}** · `{t['reason_code']}`")
+            st.code(t["evidence"], language="json")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.download_button(
+            "Download one-page summary (HTML, printable)",
+            expl.to_html(synthetic_notice=_standard_text("synthetic") if is_synthetic_dataset() else ""),
+            file_name=f"{expl.case_id}_summary.html", mime="text/html", key=f"{key}_html",
+            help="A printable one-page summary of this case: headline, reasons, strength, "
+                 "caveats, next steps and the technical details. Open it and print to PDF.",
+        )
+    with c2:
+        st.download_button(
+            "Download summary (Markdown)", expl.to_markdown(),
+            file_name=f"{expl.case_id}_summary.md", mime="text/markdown", key=f"{key}_md",
+            help="The same summary as plain text with simple formatting, for pasting into a "
+                 "report or a case-management system.",
+        )
+
+
+def render_model_claim(expl) -> None:
+    """A pattern-finder's reasons for ranking one claim as unusual."""
+    if expl is None:
+        empty_state("No explanation available",
+                    "This claim was not scored by the pattern-finder, so there is nothing to explain.")
+        return
+    if expl.exploratory:
+        st.markdown(
+            "<div class='fwa-banner'><strong>Exploratory scores.</strong> The model has seen some of "
+            "these hospitals during training, so these scores are not used for the promotion gate."
+            "</div>", unsafe_allow_html=True)
+    st.markdown(
+        f"<div class='fwa-explain'><div class='fwa-headline'>{html.escape(expl.headline)}</div>"
+        + ("<ol>" + "".join(f"<li>{html.escape(r)}</li>" for r in expl.reasons) + "</ol>"
+           if expl.reasons else "")
+        + "</div>", unsafe_allow_html=True)
+    st.markdown("<div class='fwa-caveat'>" + " ".join(html.escape(c) for c in expl.caveats)
+                + "</div>", unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------- failures
+
+
+def friendly_error(what: str, how_to_fix: str, exc: BaseException | None = None) -> None:
+    """A plain message instead of a traceback: what is missing and how to fix it."""
+    st.warning(f"**{what}** {how_to_fix}")
+    if exc is not None:
+        _log.error("UI section failed: %s: %s: %s", what, type(exc).__name__, exc)
+        with st.expander("Technical details", expanded=False):
+            st.code(f"{type(exc).__name__}: {exc}")
+
+
+@contextmanager
+def friendly_failure(what: str, how_to_fix: str = "Try another dataset, or ask an administrator "
+                                                   "to check the application log."):
+    """``with friendly_failure("the model charts"):`` - never a raw traceback on screen."""
+    try:
+        yield
+    except Exception as exc:  # noqa: BLE001 - the whole point is to catch everything
+        # Streamlit's own control flow (st.stop, st.rerun) must pass through.
+        if type(exc).__name__ in ("StopException", "RerunException", "RerunData"):
+            raise
+        friendly_error(f"Couldn't show {what}.", how_to_fix, exc)

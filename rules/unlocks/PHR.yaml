@@ -1,0 +1,139 @@
+# Dataset unlocks for the PHR family (pharmacy, drugs and supplies).
+# Each entry runs its implementation ONLY on a dataset that populates every named table
+# (and, where listed, every named column with at least one value). On a claim-header file
+# none of these tables exist, so every PHR control below stays NOT_EXECUTABLE there.
+# Implementations: src/fwa/engine/unlocked/phr.py. PHR-03-R03 already runs from the
+# catalogue and is deliberately not listed.
+unlocks:
+  - rule_id: PHR-01-R01
+    implementation: phr_01_r01_product_identity_mismatch
+    requires_tables: [prescription_dispense, drug_policy]
+    requires_columns: [prescription_dispense.billed_product, prescription_dispense.prescribed_product, drug_policy.equivalence_group]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries dispensing records with the prescribed and billed product and a drug policy that lists approved equivalents; the approved product on a linked approval is also checked when approvals are present."
+
+  - rule_id: PHR-01-R02
+    implementation: phr_01_r02_quantity_strength_mismatch
+    requires_tables: [prescription_dispense, drug_policy, authorization, authorization_line]
+    requires_columns: [prescription_dispense.billed_qty, prescription_dispense.prescribed_qty]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries dispensing records with billed and prescribed quantity, strength and form, the drug policy, and the approvals with their approved units."
+
+  - rule_id: PHR-01-R03
+    implementation: phr_01_r03_dispense_claim_mismatch
+    requires_tables: [prescription_dispense, pharmacy_inventory, drug_policy]
+    requires_columns: [prescription_dispense.dispensed_product]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries the pharmacy's own dispensing record (product and quantity handed over) and its monthly stock movements, so both can be compared with what was billed."
+
+  - rule_id: PHR-01-R04
+    implementation: phr_01_r04_non_medical_substitution
+    requires_tables: [prescription_dispense, member_receipt, drug_policy]
+    requires_columns: [member_receipt.item_description]
+    data_support: PARTIAL
+    reason: "Runs when the file carries dispensing records and member receipts. Whether a receipt names a non-medical item is judged against a governed word list rather than a coded product catalogue; the pharmacy's stock record, when present, only raises confidence."
+
+  - rule_id: PHR-02-R01
+    implementation: phr_02_r01_refill_overlap
+    requires_tables: [prescription_dispense, drug_policy]
+    requires_columns: [prescription_dispense.days_supply, prescription_dispense.fill_date]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries each fill's date and days' supply, so the supply still in hand at the next fill of an equivalent medicine can be worked out."
+
+  - rule_id: PHR-02-R02
+    implementation: phr_02_r02_therapy_duration_excess
+    requires_tables: [prescription_dispense, drug_policy]
+    requires_columns: [prescription_dispense.days_supply, drug_policy.max_duration_days]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries fills with days' supply and a drug policy stating the maximum treatment duration for each medicine."
+
+  - rule_id: PHR-02-R03
+    implementation: phr_02_r03_multi_prescriber
+    requires_tables: [prescription_dispense, drug_policy, clinician_roster, provider]
+    requires_columns: [prescription_dispense.prescriber_id]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries the prescriber of each fill and a clinician roster and provider register, so prescribers in one care team or provider group are counted once."
+
+  - rule_id: PHR-02-R04
+    implementation: phr_02_r04_multi_pharmacy
+    requires_tables: [prescription_dispense, drug_policy, pharmacy_inventory]
+    requires_columns: [prescription_dispense.pharmacy_id, prescription_dispense.days_supply]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries the dispensing pharmacy and days' supply of each fill, with pharmacy stock records so stock shortages can be excluded."
+
+  - rule_id: PHR-03-R01
+    implementation: phr_03_r01_dose_weight_conflict
+    requires_tables: [prescription_dispense, drug_policy, member]
+    requires_columns: [member.weight_kg, drug_policy.max_mg_per_kg_day]
+    data_support: PARTIAL
+    reason: "Runs when the file carries daily doses, members' weights and weight-based dose limits. Only the mg-per-kg limb runs: the drug policy states no body-surface limits, so height is shown but not used."
+
+  - rule_id: PHR-03-R02
+    implementation: phr_03_r02_drug_diagnosis_step_conflict
+    requires_tables: [prescription_dispense, drug_policy, step_therapy_policy, diagnosis]
+    requires_columns: [drug_policy.indication_prefixes]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries fills, coded diagnoses, each drug's approved indications and the step-therapy policy naming the first-line treatment that must come first."
+
+  - rule_id: PHR-03-R04
+    implementation: phr_03_r04_wastage_anomaly
+    requires_tables: [claim_line, prescription_dispense, drug_policy]
+    requires_columns: [claim_line.wastage_units, drug_policy.vial_size_mg]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries billed wastage per line, the dose given and each drug's vial size, so billed wastage can be compared with the vial arithmetic and with other providers giving the same drug."
+
+  - rule_id: PHR-04-R01
+    implementation: phr_04_r01_top_pharmacy_concentration
+    requires_tables: [prescription_dispense, clinician_roster, provider]
+    requires_columns: [prescription_dispense.prescriber_id, prescription_dispense.pharmacy_id]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries prescriber and pharmacy on each fill and a roster and provider register giving each prescriber's specialty, emirate and facility for the peer comparison and the on-site exclusion."
+
+  - rule_id: PHR-04-R02
+    implementation: phr_04_r02_reciprocal_value_loop
+    requires_tables: [prescription_dispense, clinician_roster, provider]
+    requires_columns: [provider.owner_entity_id, provider.bank_account_token]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries prescriber-to-pharmacy flows and a provider register with owners and bank, phone and address tokens; referrals are counted when a referral table is present."
+
+  - rule_id: PHR-04-R03
+    implementation: phr_04_r03_high_cost_steering
+    requires_tables: [prescription_dispense, drug_policy]
+    requires_columns: [drug_policy.is_high_cost, prescription_dispense.prescriber_id]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries prescriber and pharmacy on each fill and a drug policy marking high-cost products; pharmacy stock records, when present, supply the product-availability exclusion."
+
+  - rule_id: PHR-04-R04
+    implementation: phr_04_r04_rapid_relationship_formation
+    requires_tables: [prescription_dispense]
+    requires_columns: [prescription_dispense.prescriber_id, prescription_dispense.pharmacy_id, prescription_dispense.fill_date]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries dated fills with prescriber and pharmacy over enough months to see a new link form; contracts, when present, supply the contract-launch exclusion."
+
+  - rule_id: PHR-05-R01
+    implementation: phr_05_r01_new_used_rental_mismatch
+    requires_tables: [claim_line, device_inventory]
+    requires_columns: [claim_line.device_serial, device_inventory.condition]
+    data_support: PARTIAL
+    reason: "Runs when the file carries device serials on claim lines and a device register with each serial's condition and rental or purchase status. What the line bills (new, used, rental, purchase) is read from its description; the approval and the supplier contract are not compared."
+
+  - rule_id: PHR-05-R02
+    implementation: phr_05_r02_implant_not_linked
+    requires_tables: [claim_line, activity_code_reference]
+    requires_columns: [activity_code_reference.is_implant]
+    data_support: PARTIAL
+    reason: "Runs when the file carries claim lines and a code reference marking implants. Any surgical procedure for the member that day counts as the qualifying procedure, operation notes are checked when documents are present, and laterality is not checked because no line records the body side."
+
+  - rule_id: PHR-05-R03
+    implementation: phr_05_r03_supply_quantity_excess
+    requires_tables: [claim_line, device_inventory]
+    requires_columns: [device_inventory.useful_life_days]
+    data_support: PARTIAL
+    reason: "Runs when the file carries supply lines and a device register with useful life. The usual quantity is the median billed for the same item rather than a procedure or episode norm, which the file does not state."
+
+  - rule_id: PHR-05-R04
+    implementation: phr_05_r04_serial_duplication
+    requires_tables: [claim_line, device_inventory]
+    requires_columns: [claim_line.device_serial]
+    data_support: PARTIAL
+    reason: "Runs when the file carries device serials on claim lines and a device register. The same-serial-for-several-patients limb runs in full; the limb comparing claimed stock with acquisitions is not run because the register records issued devices, not purchases."

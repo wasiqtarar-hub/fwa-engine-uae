@@ -1,0 +1,86 @@
+# Dataset unlocks for the NET controls that are not executable on a claim-header file.
+# Each entry runs its implementation ONLY on a dataset that populates every named table.
+#
+# NET-04-R01 (confirmed-outcome rate) is deliberately NOT unlocked: its only input is
+# reviewer-confirmed outcomes (review_outcome), which no dataset may synthesise — doing so
+# would invent the performance the control is meant to measure. It stays not executable
+# until real reviewer decisions exist.
+#
+# NET-03-R01 (repeated high-value dyad) has a multi-table implementation ready in
+# fwa.engine.unlocked.net (net_03_r01_repeated_high_value_dyad_multitable: pairs compared only with
+# pairs of the same provider type and benefit family, chronic/rare/oncology/maternity pathways and
+# members' declared conditions excluded, benefit exhaustion reported). It is NOT declared here because
+# the catalogue classifies NET-03-R01 as EXECUTABLE, and an unlock may only upgrade a PARTIAL control
+# (tests/governance/test_dataset_unlocks.py). Once rules/NET/NET-03.yaml classifies it PARTIAL (its own
+# reason already says the benefit-exhaustion limb is missing), register the function in net.py's
+# IMPLEMENTATIONS and declare:
+#
+#  - rule_id: NET-03-R01
+#    implementation: net_03_r01_repeated_high_value_dyad_multitable
+#    requires_tables: [claim_header, claim_line, provider, activity_code_reference, benefit_rule_version, coverage_period]
+#    requires_columns: [provider.provider_type, activity_code_reference.service_family, benefit_rule_version.benefit_limit]
+#    data_support: EXECUTABLE
+#    upgrades_partial: true
+#    reason: "Compares each patient-provider pair only with pairs at the same kind of provider for the same benefit family, on both number of claims and value, excludes chronic, rare-disease, oncology and maternity pathways and conditions the member declared, and evaluates benefit exhaustion from the benefit rules."
+unlocks:
+  - rule_id: NET-01-R02
+    implementation: net_01_r02_reciprocal_referral_loop
+    requires_tables: [referral]
+    requires_columns: [referral.referrer_provider_sk, referral.recipient_provider_sk]
+    data_support: PARTIAL
+    reason: "Runs on the file's DIRECTED provider-to-provider referrals: a pair is flagged when both directions carry a minimum count and each is several times stronger than the recipient's share of all referrals predicts. The multidisciplinary-team exclusion is approximated by the declared owner: two providers under one owner are treated as one organisation's team."
+
+  - rule_id: NET-01-R03
+    implementation: net_01_r03_high_cost_conversion
+    requires_tables: [referral, claim_line]
+    requires_columns: [referral.recipient_provider_sk, claim_line.net_amount]
+    data_support: PARTIAL
+    reason: "Links each referral to the claim it produced and counts it as converted when that claim carries a top-tail line value; a recipient is flagged when its conversions far exceed the number expected for the same recipient specialty and referral reason, with a Poisson tail test. 'High cost' is a percentile of the file's own line values rather than a payer-defined list of high-cost services."
+
+  - rule_id: NET-01-R04
+    implementation: net_01_r04_closed_downstream_chain
+    requires_tables: [referral, provider]
+    requires_columns: [provider.provider_type, provider.bank_account_token, provider.phone_token, provider.address_token]
+    data_support: PARTIAL
+    reason: "Follows each referrer's referrals to laboratories, imaging centres and pharmacies and flags a referrer whose downstream referrals stay mostly with providers sharing its bank account, phone or address under a different declared owner. A disclosed common owner, and a narrow network recorded on the payer's contracts, are excluded. The dense-group test is the retained share of referrals, not a full community detection."
+
+  - rule_id: NET-02-R01
+    implementation: net_02_r01_shared_admin_identity
+    requires_tables: [provider]
+    requires_columns: [provider.owner_entity_id, provider.bank_account_token, provider.phone_token, provider.address_token]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the provider register carries bank, phone, address and owner identifiers: legally distinct providers sharing an exact token are linked, providers under one declared owner are treated as a known group, and a token shared by many providers is treated as a shared service. Exact matches only; device identifiers are not in the file."
+
+  - rule_id: NET-02-R04
+    implementation: net_02_r04_structural_change
+    requires_tables: [provider, contract]
+    requires_columns: [contract.valid_from]
+    data_support: PARTIAL
+    reason: "Tracks each provider's monthly rank by distinct members served and flags a move from the edge to the centre of the network with material value, excluding a new contract, a merger with a same-owner provider and a newly credentialed provider; a recorded ownership change is reported alongside. Centrality is measured by members served, not by a full graph-centrality score."
+
+  - rule_id: NET-03-R02
+    implementation: net_03_r02_closed_member_group
+    requires_tables: [member, provider]
+    requires_columns: [member.employer_id]
+    data_support: PARTIAL
+    reason: "Flags a provider whose patients come overwhelmingly from one employer or sponsor, far beyond that employer's share of members in the provider's own emirate, when the group's claims stay with the same few providers. On-site and occupational clinics are excluded. Catchment is judged by emirate; visit location is not used."
+
+  - rule_id: NET-03-R03
+    implementation: net_03_r03_inducement_signature
+    requires_tables: [claim_header, claim_line]
+    requires_columns: [claim_header.patient_share, claim_line.net_amount]
+    data_support: PARTIAL
+    reason: "Flags a provider where claims with no patient share (on products that normally charge one) and patients with repeated top-tail services are both several times the rate across all providers, and enough patients show both. The non-medical substitution limb is reported only when dispensing records exist, and approved programmes are recognised only through products whose benefit rules charge no share."
+
+  - rule_id: NET-03-R04
+    implementation: net_03_r04_complaint_corroboration
+    requires_tables: [member_confirmation, complaint]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries member confirmations and complaints: evidence counts only when it is tied to the patient's own claim at that provider through an authenticated channel, and a provider is escalated when several distinct patients independently report a service, item or charge they did not receive."
+
+  - rule_id: NET-04-R04
+    implementation: net_04_r04_shared_identifiers_actors
+    requires_tables: [provider, member, coverage_period]
+    requires_columns: [provider.owner_entity_id, coverage_period.agent_id]
+    data_support: PARTIAL
+    reason: "Looks for one identifier value that appears on actors of different kinds — a clinic's recorded owner who is also the agent who sold its patients' policies, or an employer or patient identifier — using exact matches only, and excludes on-site employer clinics as known corporate links. The file has no device identifiers and no contact details for agents, so those links cannot be seen."

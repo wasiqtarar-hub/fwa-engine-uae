@@ -40,7 +40,7 @@ from typing import Any
 
 import pandas as pd
 
-__all__ = ["SyntheticDocument", "SyntheticCorpus", "SYNTHETIC_MARKER"]
+__all__ = ["SyntheticDocument", "SyntheticCorpus", "SYNTHETIC_MARKER", "render_discharge_summary"]
 
 SYNTHETIC_MARKER = "SYNTHETIC"
 
@@ -125,6 +125,28 @@ INCONSISTENCY_TYPES = (
     "diagnosis_conflict",         # the note describes a different condition
     "date_conflict",              # the note states a different admission date
 )
+
+
+def render_discharge_summary(fields: dict[str, Any], language: str = "en", addendum: str = "") -> str:
+    """Render one discharge summary from the same templates the corpus uses.
+
+    Used by the SYNTHETIC multi-table demo generator (``tools/uae_demo``) so that
+    the documents shipped inside that dataset and the ones this module writes
+    share one structure — and one ``SYNTHETIC`` marker. ``fields`` needs the
+    template keys (provider, member, claim, admit, discharge, los, los_text,
+    dx_code, dx_text, pharm, extra); ``marker`` and ``generated`` default to the
+    marker and a fixed label so output is reproducible. ``addendum`` is inserted
+    before the footer.
+    """
+    values = {"marker": SYNTHETIC_MARKER, "generated": "by a seeded generator", **fields}
+    if language == "ar":
+        head, body, foot = _HEADER_AR, _BODY_AR, _FOOTER_AR
+    else:
+        head, body, foot = _HEADER_EN, _BODY_EN, _FOOTER_EN
+    text = (head + body).format(**values)
+    if addendum:
+        text += "\n" + addendum.rstrip() + "\n"
+    return text + foot.format(**values)
 
 
 @dataclass

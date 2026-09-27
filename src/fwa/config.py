@@ -313,13 +313,22 @@ class ParameterRegistry:
         Stamped onto every signal so that a peer comparison or model result can
         be reproduced from its stored baseline version at any later date
         (§3.10 reproducibility NFR).
+
+        Memoised: the registry is immutable once built (its records are frozen
+        and only ``__init__`` fills it), and the digest was being recomputed
+        for every signal — about 10 ms each, which on a multi-table dataset
+        with tens of thousands of signals was most of the evaluation time.
         """
+        cached = getattr(self, "_fingerprint_cache", None)
+        if cached is not None:
+            return cached
         payload = json.dumps(
             [r.to_row() for r in sorted(self.all_records(), key=lambda r: (r.key, r.valid_from))],
             sort_keys=True,
             default=str,
         )
-        return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+        self._fingerprint_cache = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+        return self._fingerprint_cache
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,162 @@
+# Dataset unlocks for the ENT family (entitlement: cover, identity, licences, clinicians, setting, telehealth).
+# Each entry runs its implementation ONLY on a dataset that populates every named table (and, where
+# listed, carries at least one value in every named column). On a claim-header file none of these is
+# satisfied and every control below stays NOT_EXECUTABLE_ON_THIS_DATASET, exactly as the catalogue says.
+unlocks:
+  - rule_id: ENT-01-R01
+    implementation: ent_01_r01_coverage_inactive
+    requires_tables: [claim_header, coverage_period, policy_event, member]
+    requires_columns: [coverage_period.valid_from, coverage_period.valid_to, member.date_of_birth]
+    data_support: EXECUTABLE
+    reason: "Runs as the catalogue specifies when the file carries each member's cover periods with real start and end dates and the enrolment event log: every service date is checked against the cover in force, with the grace, newborn, emergency and pending-backdated-change (retroactive update) exceptions applied."
+
+  - rule_id: ENT-01-R02
+    implementation: ent_01_r02_benefit_not_covered
+    requires_tables: [claim_line, coverage_period, benefit_rule_version, activity_code_reference]
+    requires_columns: [benefit_rule_version.covered, coverage_period.product]
+    data_support: EXECUTABLE
+    reason: "Runs when the file carries claim lines, each member's product, the dated benefit schedule and a code reference that maps each service to its benefit family: each line is checked against the benefit version in force, allowing mandatory benefits, approved exceptions and self-paid lines."
+
+  - rule_id: ENT-01-R03
+    implementation: ent_01_r03_benefit_limit_exceeded
+    requires_tables: [claim_line, coverage_period, benefit_rule_version, activity_code_reference, remittance]
+    requires_columns: [benefit_rule_version.benefit_limit]
+    data_support: EXECUTABLE
+    reason: "Runs when the file carries benefit limits, claim lines and payments: what was already paid for the benefit in the cover period (reversals and pending approvals left out) is added to the amount now claimed and compared with the limit, per member or per family as the benefit row says."
+
+  - rule_id: ENT-01-R04
+    implementation: ent_01_r04_network_referral_violation
+    requires_tables: [claim_header, coverage_period, provider_status_period]
+    requires_columns: [coverage_period.network]
+    data_support: EXECUTABLE
+    reason: "Runs when the file carries each member's network and each provider's dated network status: the provider is checked against the member's network on the service date, and, where the benefit schedule and referral records are present, a required referral is looked for; emergencies and access gaps are excluded."
+
+  - rule_id: ENT-02-R01
+    implementation: ent_02_r01_identity_conflict
+    requires_tables: [member]
+    requires_columns: [member.protected_id_token, member.date_of_birth]
+    data_support: EXECUTABLE
+    reason: "Runs when member records carry a protected national-ID reference with date of birth and sex: records sharing one reference but disagreeing on date of birth or sex are raised, leaving out placeholder IDs and newborns and never matching on names."
+
+  - rule_id: ENT-02-R02
+    implementation: ent_02_r02_post_mortem_service
+    requires_tables: [member, claim_header]
+    requires_columns: [member.death_date]
+    data_support: EXECUTABLE
+    reason: "Runs when member records carry a date of death with its source and reliability: services starting after that date plus the reporting margin are raised, unless the source is unreliable or the claim is only an administrative item."
+
+  - rule_id: ENT-02-R04
+    implementation: ent_02_r04_card_sharing_pattern
+    requires_tables: [claim_header, provider, member, claim_line, activity_code_reference]
+    requires_columns: [provider.emirate, member.date_of_birth]
+    data_support: PARTIAL
+    reason: "Runs the two limbs the file supports: same-day use of one member's cover in different emirates, and services that do not fit the member's age or sex, requiring at least two independent observations. The chronic and rare-disease pathway exclusion is not modelled, so the reviewer must check it."
+
+  - rule_id: ENT-03-R01
+    implementation: ent_03_r01_inactive_licence
+    requires_tables: [claim_header, claim_line, provider_status_period, clinician_roster]
+    requires_columns: [clinician_roster.licence_valid_to]
+    data_support: EXECUTABLE
+    reason: "Runs when the file carries dated facility licences and clinician licence dates: the facility and the treating and ordering clinicians are each checked on the service date, with the approved grace period applied."
+
+  - rule_id: ENT-03-R03
+    implementation: ent_03_r03_hard_privilege_violation
+    requires_tables: [claim_line, clinician_roster]
+    requires_columns: [clinician_roster.privileges]
+    data_support: EXECUTABLE
+    reason: "Runs when the clinician roster (or the provider status register) records privileges, including services a clinician or facility is explicitly not permitted to perform: a line for such a service is raised unless an approved authorisation covers it."
+
+  - rule_id: ENT-03-R04
+    implementation: ent_03_r04_soft_specialty_mismatch
+    requires_tables: [claim_line, clinician_roster, activity_code_reference]
+    requires_columns: [clinician_roster.specialty]
+    data_support: EXECUTABLE
+    reason: "Runs when the file names the treating clinician on each line and the roster records their specialty and privileges: each service is compared with the governed specialty map, and cross-specialty privileges are honoured."
+
+  - rule_id: ENT-03-R05
+    implementation: ent_03_r05_dormant_new_provider_burst
+    requires_tables: [claim_header, provider, provider_status_period]
+    requires_columns: [provider.credentialing_date]
+    data_support: PARTIAL
+    reason: "Runs the volume-and-value limb: a provider newly credentialed, relicensed or resuming after a long gap whose early billing tops the peer percentile for its facility type, excluding acquisitions. The 'lacks an expected operating footprint' limb needs staffing and site data the file does not hold."
+
+  - rule_id: ENT-04-R01
+    implementation: ent_04_r01_missing_rendering_clinician
+    requires_tables: [claim_line, clinician_roster, provider, activity_code_reference]
+    data_support: EXECUTABLE
+    reason: "Runs when claim lines carry the treating clinician and a roster lists valid clinicians: services that need a clinician but carry none, the facility's own code, or an ID on no roster are returned for correction."
+
+  - rule_id: ENT-04-R02
+    implementation: ent_04_r02_billing_rendering_role_conflict
+    requires_tables: [claim_line, clinician_roster, activity_code_reference]
+    requires_columns: [clinician_roster.role]
+    data_support: PARTIAL
+    reason: "Runs two explicit role rules: the treating clinician must be on the billing facility's roster unless an in-house clinician ordered the service, and a non-independent role may not bill a physician-level service alone. The file has no supervising-clinician field, so the ordering clinician stands in for the supervisor."
+
+  - rule_id: ENT-04-R03
+    implementation: ent_04_r03_concurrent_clinician_services
+    requires_tables: [claim_line, activity_code_reference]
+    requires_columns: [claim_line.service_start_time, claim_line.service_end_time]
+    data_support: EXECUTABLE
+    reason: "Runs when claim lines carry start and end times: each clinician's overlapping timed services are counted against the governed maximum, leaving out anaesthesia, team procedures and date-only records."
+
+  - rule_id: ENT-04-R04
+    implementation: ent_04_r04_geographic_leave_impossibility
+    requires_tables: [claim_line, clinician_roster, provider]
+    requires_columns: [clinician_roster.leave_periods]
+    data_support: PARTIAL
+    reason: "Runs the leave limb as specified (services dated inside a clinician's recorded leave). The travel limb uses emirate-level location and one governed minimum travel time between emirates, a stand-in for facility-to-facility travel times the file does not hold."
+
+  - rule_id: ENT-05-R01
+    implementation: ent_05_r01_facility_type_incompatible
+    requires_tables: [claim_line, activity_code_reference, provider]
+    requires_columns: [activity_code_reference.facility_types, provider.facility_type]
+    data_support: EXECUTABLE
+    reason: "Runs when the code reference lists the facility types each service may be billed from and the provider register records each provider's licensed type; home, mobile and telehealth visits are excepted."
+
+  - rule_id: ENT-05-R02
+    implementation: ent_05_r02_admission_evidence_conflict
+    requires_tables: [claim_header, encounter]
+    requires_columns: [encounter.bed_id]
+    data_support: PARTIAL
+    reason: "Checks that inpatient, intensive-care and day-case billing has an encounter with admission, bed and discharge records, excepting transfers and records too recent to have arrived. The 'required observation trail' limb is not run because no policy in the file says which observations a stay requires."
+
+  - rule_id: ENT-05-R03
+    implementation: ent_05_r03_related_claim_setting_conflict
+    requires_tables: [claim_header, encounter]
+    requires_columns: [encounter.admission_type]
+    data_support: PARTIAL
+    reason: "Compares claims from the same provider for the same patient: an outpatient visit billed inside an inpatient stay (or on the same encounter) is a setting conflict, excluding transfers. The file does not separate professional-fee from facility claims, so claims from one provider stand in for the professional/facility pair."
+
+  - rule_id: ENT-05-R04
+    implementation: ent_05_r04_setting_shift_anomaly
+    requires_tables: [claim_header, encounter, provider]
+    requires_columns: [provider.facility_type]
+    data_support: EXECUTABLE
+    reason: "Runs when every claim has an encounter type: each provider's monthly share of inpatient and day-case claims is split at its best change point and the later share is compared with peers of the same facility type, excluding ownership or contract changes."
+
+  - rule_id: ENT-06-R01
+    implementation: ent_06_r01_telehealth_eligibility
+    requires_tables: [claim_line, encounter, activity_code_reference]
+    requires_columns: [activity_code_reference.is_telehealth_eligible]
+    data_support: PARTIAL
+    reason: "Checks each telehealth visit's services against the code reference's remote-eligibility flag and, where the register records telehealth privileges, the provider's privilege on the date. The member-geography limb is not run: the file holds no rule on where a patient may be seen from."
+
+  - rule_id: ENT-06-R02
+    implementation: ent_06_r02_no_meaningful_interaction
+    requires_tables: [encounter, claim_line, prescription_dispense]
+    requires_columns: [encounter.duration_minutes]
+    data_support: EXECUTABLE
+    reason: "Runs when telehealth encounters carry their duration and the file holds the prescriptions and referrals that follow them: a remote visit that led to an order but lasted less than the policy minimum, or lacks a note where this provider's notes are normally present, is raised."
+
+  - rule_id: ENT-06-R03
+    implementation: ent_06_r03_downstream_referral_concentration
+    requires_tables: [claim_header, encounter, prescription_dispense, clinician_roster, provider]
+    data_support: EXECUTABLE
+    reason: "Runs when the file carries prescriptions (and referrals) with prescriber and pharmacy or recipient: each telehealth provider's top supplier share is compared with the governed threshold and with other prescribing providers, excluding shared ownership and narrow networks."
+
+  - rule_id: ENT-06-R04
+    implementation: ent_06_r04_remote_order_conversion_spike
+    requires_tables: [claim_header, claim_line, encounter, prescription_dispense, drug_policy]
+    data_support: EXECUTABLE
+    reason: "Runs when the file carries consultations, the prescriptions and referrals that follow them, and a drug policy marking high-cost products: each telehealth provider's rate of visits turning into a high-cost order is compared with other consulting providers."

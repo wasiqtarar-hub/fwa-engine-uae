@@ -26,12 +26,60 @@ explanation-quality check (Table 6.1), which is checked in
 
 from __future__ import annotations
 
-from typing import Any, Iterable
+import concurrent.futures as _futures
+import logging
+import threading
+from typing import Any, Callable, Iterable
 
 import numpy as np
 import pandas as pd
 
-__all__ = ["ShapExplainer", "FEATURE_UNITS", "humanise_feature"]
+__all__ = ["ShapExplainer", "FEATURE_UNITS", "humanise_feature", "ExplanationTimeout"]
+
+_log = logging.getLogger(__name__)
+
+
+class ExplanationTimeout(RuntimeError):
+    """A SHAP call exceeded its wall-clock budget."""
+
+
+#: Stack size for the SHAP worker thread (bytes). A platform limit, not a threshold.
+_SHAP_THREAD_STACK_BYTES = 64 * 1024 * 1024
+
+
+def _bounded(fn: Callable[[], Any], seconds: float | None) -> Any:
+    """Run ``fn`` with a wall-clock budget; raise :class:`ExplanationTimeout` past it.
+
+    SHAP cannot be interrupted from outside, so a timed-out call is abandoned
+    (its worker thread finishes in the background and its result is discarded)
+    rather than killed. What matters for the UI is that the page does not wait
+    on it. ``None`` or a non-positive budget runs ``fn`` inline.
+    """
+    if not seconds or seconds <= 0:
+        return fn()
+    # Worker threads on Windows get a small default stack, and SHAP's tree
+    # traversal recurses deeply; after a long test session that surfaced as a
+    # "Windows fatal exception: stack overflow" inside this worker. The thread
+    # is created at submit(), so the larger size applies to it alone and the
+    # process-wide default is restored immediately afterwards.
+    previous = threading.stack_size()
+    try:
+        threading.stack_size(_SHAP_THREAD_STACK_BYTES)
+    except (ValueError, RuntimeError):  # platform refuses a custom size
+        previous = None
+    pool = _futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="shap")
+    try:
+        future = pool.submit(fn)
+    finally:
+        if previous is not None:
+            threading.stack_size(previous)
+    try:
+        return future.result(timeout=seconds)
+    except _futures.TimeoutError as exc:
+        future.cancel()
+        raise ExplanationTimeout(f"SHAP call exceeded its {seconds:g}s budget") from exc
+    finally:
+        pool.shutdown(wait=False)
 
 #: feature name -> (label, unit). Anything not listed renders in its raw name
 #: with a blank unit, which is a prompt to add it here rather than a silent gap.
@@ -105,7 +153,20 @@ def _fmt(value: float | None, unit: str) -> str:
 
 
 class ShapExplainer:
-    """Wraps SHAP and renders contributions the way §4.8 requires."""
+    """Wraps SHAP and renders contributions the way §4.8 requires.
+
+    Never raises: construction failures leave :attr:`available` False with a
+    :attr:`failure_reason`, and every per-call failure or timeout comes back as
+    an ``EXPLANATION_FAILED`` row (which the promotion gate already counts as a
+    failed explanation-quality check) with the reason in :attr:`last_failure`.
+    """
+
+    #: Wall-clock budget for one claim's explanation. KernelExplainer work is
+    #: already bounded by the kmeans background and ``nsamples``; this is the
+    #: backstop for a pathological input so a page never hangs on SHAP.
+    explain_timeout_seconds: float = 30.0
+    #: Budget for the Models page's global-importance panel.
+    importance_timeout_seconds: float = 180.0
 
     def __init__(self, model, feature_columns: list[str], background: pd.DataFrame) -> None:
         self.model = model
@@ -114,6 +175,8 @@ class ShapExplainer:
         self._explainer = None
         self.method = "unavailable"
         self.failure_reason = ""
+        #: technical reason for the most recent per-call failure ("" if none).
+        self.last_failure = ""
         # SIGN CONVENTION. The system's anomaly score is -score_samples(x), so
         # that HIGHER means MORE ANOMALOUS. A TreeExplainer built on
         # IsolationForest explains the model's own output, where higher means
@@ -122,13 +185,33 @@ class ShapExplainer:
         # "lowered" its score, which is worse than no explanation at all.
         self._sign = -1.0 if type(model).__name__ == "IsolationForest" else 1.0
         self._kernel_nsamples: int | None = None
-        self._build()
+        try:
+            self._build()
+        except Exception as exc:  # noqa: BLE001 - never let construction crash a page
+            self._explainer = None
+            self.method = "unavailable"
+            self.failure_reason = f"SHAP explainer construction failed: {type(exc).__name__}: {exc}"
+        if self.failure_reason:
+            _log.warning("SHAP unavailable for %s: %s", type(model).__name__, self.failure_reason)
 
     def _build(self) -> None:
         try:
             import shap
         except Exception as exc:  # pragma: no cover
             self.failure_reason = f"shap is not installed: {exc}"
+            return
+        if self.background is None or len(self.background) < 2:
+            # Both explainers below need a background; KernelExplainer's kmeans
+            # summary needs at least two rows to form two centroids.
+            try:
+                self._explainer = shap.TreeExplainer(self.model)
+                self.method = "TreeExplainer"
+            except Exception as exc:
+                self.failure_reason = (
+                    f"No SHAP explainer could be constructed for {type(self.model).__name__}: "
+                    f"the background has {0 if self.background is None else len(self.background)} "
+                    f"row(s), fewer than the 2 KernelExplainer needs ({exc})."
+                )
             return
         try:
             self._explainer = shap.TreeExplainer(self.model)
@@ -201,14 +284,53 @@ class ShapExplainer:
                     or "No SHAP explainer available for this model. The promotion gate requires feature "
                        "attribution for every flagged entity; a model that cannot supply it "
                        "fails the model gate's explanation-quality check.",
+                    "plain_language": (
+                        "No explanation is available for this model's scores, so they have no "
+                        "feature breakdown. The technical reason is in the log."
+                    ),
                 }
             ]
         try:
-            values = self._explainer.shap_values(row.to_frame().T, **self._shap_kwargs())
+            frame = row.to_frame().T
+            kwargs = self._shap_kwargs()
+            values = _bounded(
+                lambda: self._explainer.shap_values(frame, **kwargs), self.explain_timeout_seconds
+            )
             arr = np.asarray(values).reshape(-1) * self._sign
-        except Exception as exc:  # pragma: no cover
-            return [{"feature": "EXPLANATION_FAILED", "label": "Explanation failed", "note": str(exc)}]
+            if arr.shape[0] != len(self.feature_columns):
+                raise ValueError(
+                    f"SHAP returned {arr.shape[0]} attributions for "
+                    f"{len(self.feature_columns)} features"
+                )
+            return self._render(arr, raw_values, peer_values, top_n)
+        except Exception as exc:  # noqa: BLE001 - a failed explanation, never a crash
+            return [self._failed(exc)]
 
+    def _failed(self, exc: BaseException) -> dict[str, Any]:
+        """One ``EXPLANATION_FAILED`` row. The gate counts it as a failed check."""
+        timed_out = isinstance(exc, ExplanationTimeout)
+        self.last_failure = f"{type(exc).__name__}: {exc}"
+        _log.warning("SHAP explanation failed (%s): %s", self.method, self.last_failure)
+        return {
+            "feature": "EXPLANATION_FAILED",
+            "label": "Explanation failed",
+            "note": str(exc),
+            "plain_language": (
+                f"The explanation took longer than {self.explain_timeout_seconds:g} seconds and "
+                f"was stopped, so this score has no feature breakdown."
+                if timed_out else
+                "The explanation for this score could not be calculated, so it has no feature "
+                "breakdown. The technical reason is in the log."
+            ),
+        }
+
+    def _render(
+        self,
+        arr: np.ndarray,
+        raw_values: pd.Series,
+        peer_values: pd.Series | None,
+        top_n: int,
+    ) -> list[dict[str, Any]]:
         order = np.argsort(-np.abs(arr))[:top_n]
         out: list[dict[str, Any]] = []
         for i in order:
@@ -250,12 +372,22 @@ class ShapExplainer:
             return pd.DataFrame(columns=["feature", "label", "mean_abs_shap"])
         sub = matrix.sample(min(sample, len(matrix)), random_state=0)
         try:
-            values = np.asarray(self._explainer.shap_values(sub, **self._shap_kwargs())) * self._sign
-        except Exception:  # pragma: no cover
+            kwargs = self._shap_kwargs()
+            values = np.asarray(_bounded(
+                lambda: self._explainer.shap_values(sub, **kwargs), self.importance_timeout_seconds
+            )) * self._sign
+            if values.ndim == 3:
+                values = values[..., 0]
+            mean_abs = np.abs(values).mean(axis=0)
+            if len(mean_abs) != len(self.feature_columns):
+                raise ValueError(
+                    f"SHAP returned {len(mean_abs)} attributions for "
+                    f"{len(self.feature_columns)} features"
+                )
+        except Exception as exc:  # noqa: BLE001
+            self.last_failure = f"{type(exc).__name__}: {exc}"
+            _log.warning("SHAP global importance failed (%s): %s", self.method, self.last_failure)
             return pd.DataFrame(columns=["feature", "label", "mean_abs_shap"])
-        if values.ndim == 3:
-            values = values[..., 0]
-        mean_abs = np.abs(values).mean(axis=0)
         rows = []
         for name, v in zip(self.feature_columns, mean_abs):
             label, unit = humanise_feature(name)
