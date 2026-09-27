@@ -1,0 +1,2395 @@
+# =============================================================================
+# Plain-language wording for every governed parameter in config/parameters.yaml.
+#
+# PRESENTATION ONLY. Keys are the registry keys, never renamed. Each entry
+# gives the setting's plain name, what it controls, and what raising or
+# lowering it would do. Read by fwa.presentation.parameter_text(key) on the
+# Settings and thresholds page and the Governance page. A key with no entry
+# here still displays (its name is humanised), so a parameter added to the
+# registry later never breaks a page; it just reads less well until it is
+# described here.
+#
+# "Raise" and "lower" describe the effect on flags and reviewer workload.
+# A flag is a reason to look, not proof of fraud, and no setting here changes
+# that: more flags means more claims to review, not more fraud found.
+# =============================================================================
+
+parameters:
+  session_timeout_minutes:
+    label: Reviewer login idle timeout
+    meaning: How many minutes a reviewer can be inactive before the review screen logs them out.
+    raise: Reviewers stay logged in longer without typing anything, which is more convenient but leaves
+      an unattended screen open longer.
+    lower: Reviewers get logged out sooner when idle, which is more secure but may interrupt a slow reviewer
+      more often.
+  alerts_per_reviewer_per_day:
+    label: Alerts each reviewer can handle daily
+    meaning: The assumed number of flagged cases one reviewer can realistically work through in a day.
+    raise: The tool assumes more capacity, so thresholds loosen and more claims or providers get flagged
+      for review.
+    lower: The tool assumes less capacity, so thresholds tighten and fewer, higher-priority cases are
+      flagged.
+  reviewer_count:
+    label: Number of reviewers available
+    meaning: How many reviewers are assumed to be working the queue, used to work out total daily review
+      capacity.
+    raise: Total capacity goes up, so the tool can afford to surface more flagged cases.
+    lower: Total capacity goes down, so fewer cases are flagged to keep the queue manageable.
+  fully_loaded_review_cost_per_case_aed:
+    label: Cost of reviewing one case (AED)
+    meaning: The all-in cost, in AED, of a reviewer's time to work one flagged case, used to calculate
+      savings.
+    raise: Each review is treated as more expensive, so the reported net savings from catching an issue
+      looks smaller.
+    lower: Each review is treated as cheaper, so the reported net savings from catching an issue looks
+      larger.
+  alert_volume_ceiling_per_rule_per_run:
+    label: Maximum alerts one rule may raise per run
+    meaning: A safety cap stopping any single rule from flooding the queue with too many alerts in one
+      run.
+    raise: A rule is allowed to raise more alerts before it gets automatically switched to watch-only,
+      so more of its flags reach reviewers.
+    lower: A rule is switched to watch-only sooner if it fires too often, reducing reviewer workload but
+      possibly hiding a genuinely busy rule.
+  random_audit_sample_size:
+    label: Random audit sample size
+    meaning: How many claims are pulled into the random spot-check sample used to estimate how many real
+      issues the tool is missing.
+    raise: The random sample is bigger, giving a more precise estimate of missed issues but costing more
+      reviewer time.
+    lower: The random sample is smaller, saving reviewer time but making the estimate of missed issues
+      less precise.
+  random_seed:
+    label: Fixed randomness seed for reproducibility
+    meaning: A fixed starting number that makes every random step in the analysis repeatable, so results
+      can be reproduced exactly.
+    raise: Changing this changes nothing about the rules or findings, but the exact reported numbers would
+      no longer match previous runs.
+    lower: Changing this changes nothing about the rules or findings, but the exact reported numbers would
+      no longer match previous runs.
+  min_peer_group_n:
+    label: Minimum peer group size before comparison
+    meaning: The smallest number of similar providers needed before the tool will compare one provider
+      against that group.
+    raise: Fewer, only larger peer groups are trusted, so more providers fall back to a broader comparison
+      group and small niche groups are used less.
+    lower: Smaller peer groups become usable, so comparisons happen at a more specific level but may be
+      based on less data.
+  min_entity_opportunities:
+    label: Minimum claims before rating a provider
+    meaning: The minimum number of claims a provider must have before the tool will calculate a comparative
+      rate for them at all.
+    raise: Providers need more claims on record before they get rated at all, so more low-volume providers
+      are reported as 'not enough evidence' rather than flagged.
+    lower: Providers with fewer claims start getting rated, which covers more providers but on thinner
+      evidence.
+  max_posterior_width:
+    label: Maximum uncertainty allowed before excluding a rate
+    meaning: How wide the uncertainty range around an adjusted provider rate can be before that provider
+      is left out of rankings rather than shown a shaky number.
+    raise: More uncertain estimates are still allowed into the rankings, so more providers appear but
+      some estimates are less reliable.
+    lower: Only providers with tighter, more confident estimates are ranked, so fewer providers appear
+      but the ones shown are more reliable.
+  posterior_interval_mass:
+    label: Confidence range shown beside each rate
+    meaning: How wide a confidence range is reported alongside each provider's adjusted rate (for example,
+      a 90% range).
+    raise: The reported confidence range widens, making rates look less precise even though the underlying
+      estimate hasn't changed.
+    lower: The reported confidence range narrows, making rates look more precise even though the underlying
+      estimate hasn't changed.
+  robust_residual_flag_threshold:
+    label: How far from typical before an amount is flagged
+    meaning: How far a claim amount must sit from the typical value of similar claims before it is flagged
+      as an outlier.
+    raise: Only more extreme, further-from-typical amounts are flagged, so fewer claims are flagged overall
+      but the ones shown are more clearly unusual.
+    lower: More moderately unusual amounts get flagged, so more claims are flagged but some may be ordinary
+      variation, not a real issue.
+  amount_per_los_day_peer_percentile:
+    label: Cut-off for unusually high daily inpatient cost
+    meaning: The share of similar claims a claim's cost-per-inpatient-day must beat to be flagged as unusually
+      expensive (for example, the top 1%).
+    raise: Only the very highest daily-cost claims are flagged, so fewer claims are flagged but they stand
+      out more clearly.
+    lower: More moderately high daily-cost claims get flagged, increasing flags and reviewer workload,
+      with more false alarms mixed in.
+  early_tenure_amount_peer_percentile:
+    label: Cut-off for unusually costly early-policy claims
+    meaning: The share of similar claims a new policyholder's claim cost must exceed, within the early-tenure
+      window, to be flagged.
+    raise: Only the priciest early-tenure claims are flagged, reducing flags but missing more moderately
+      high ones.
+    lower: More early-tenure claims are flagged as costing more than expected, increasing flags and reviewer
+      workload.
+  referral_concentration_peer_residual_threshold:
+    label: How unusual an agent's referral pattern must be
+    meaning: How far an agent's share of referrals to their top provider must sit from other agents' patterns
+      before it is flagged as concentrated.
+    raise: Only agents with a far more extreme referral concentration than their peers are flagged, reducing
+      flags.
+    lower: Agents with more moderate referral concentration get flagged too, increasing flags and reviewer
+      workload.
+  min_history_periods:
+    label: Minimum months of history before trend checks run
+    meaning: How many months of billing history a provider needs before the tool will attempt to detect
+      a sudden change in their billing.
+    raise: Providers need a longer track record before change checks run on them, so fewer, more established
+      providers are checked.
+    lower: Providers with shorter histories get checked too, covering more providers but on less historical
+      evidence.
+  cusum_k:
+    label: Sensitivity of the sudden-change detector
+    meaning: How large a shift in a provider's billing pattern the sudden-change detector is tuned to
+      notice quickly.
+    raise: The detector is tuned to notice only bigger shifts, so smaller genuine changes may be missed.
+    lower: The detector is tuned to notice smaller shifts, so more changes are picked up but some may
+      be normal fluctuation.
+  cusum_h:
+    label: Alarm threshold for the sudden-change detector
+    meaning: How much accumulated evidence of a shift in a provider's billing is needed before the sudden-change
+      detector raises an alarm.
+    raise: More evidence is required before an alarm is raised, so fewer change points are declared but
+      real ones may be missed given the limited history available.
+    lower: Less evidence is required before an alarm is raised, so more change points are declared but
+      more may be false alarms.
+  ewma_lambda:
+    label: How much weight recent months get in trend tracking
+    meaning: How heavily the smoothed trend of a provider's monthly figures weights recent months versus
+      older months.
+    raise: Recent months are weighted more heavily, so the tracked trend reacts faster to recent changes
+      but is noisier.
+    lower: Recent months are weighted less heavily, so the tracked trend is smoother but slower to react
+      to real changes.
+  ewma_L:
+    label: Alarm width for the smoothed-trend detector
+    meaning: How far a provider's smoothed monthly trend must drift from normal before the tool raises
+      a change alarm.
+    raise: Only bigger drifts trigger an alarm, so fewer alarms are raised but smaller real shifts may
+      be missed.
+    lower: Smaller drifts trigger an alarm, so more alarms are raised but more may be normal month-to-month
+      noise.
+  composite_flag_threshold:
+    label: Overall score needed to flag a provider
+    meaning: The combined score, blending several warning signs, that a provider must reach before being
+      raised as a lead.
+    raise: Fewer, only the highest-scoring providers are flagged, sized to what the review team can handle.
+    lower: More providers are flagged as their combined score needs to clear a lower bar, increasing reviewer
+      workload.
+  composite_feature_weights:
+    label: Weighting of each warning sign in the overall score
+    meaning: How much each individual warning sign (billing amount, pharmacy share, approval ratio, and
+      so on) contributes to a provider's overall combined score.
+    raise: Increasing one warning sign's weight makes providers with that particular issue more likely
+      to be flagged overall.
+    lower: Decreasing one warning sign's weight makes providers with that particular issue less likely
+      to drive an overall flag.
+  early_tenure_days:
+    label: Length of the 'new policy' window
+    meaning: How many days after a policy starts count as the 'early tenure' period used by several new-policy
+      checks.
+    raise: A longer period after policy start is treated as 'early tenure', so more claims fall into checks
+      aimed at new policyholders.
+    lower: A shorter period is treated as 'early tenure', so fewer claims are covered by these new-policyholder
+      checks.
+  readmit_window_days:
+    label: Readmission review window
+    meaning: How many days after discharge a new admission counts as a possible related readmission needing
+      episode review.
+    raise: A longer window after discharge counts as a possible related readmission, so more admissions
+      get flagged for episode review.
+    lower: A shorter window is used, so fewer admissions get flagged, potentially missing readmissions
+      that occur just outside it.
+  duplicate_window_days:
+    label: Near-duplicate claim time window
+    meaning: How many days apart two claims for the same member, provider and diagnosis can be and still
+      be checked as possible duplicates.
+    raise: A longer time gap between claims is still checked for duplication, so more claim pairs are
+      flagged as possible duplicates.
+    lower: Only claims closer together in time are checked, so fewer possible duplicates are flagged.
+  duplicate_amount_tolerance:
+    label: Amount difference allowed for near-duplicate claims
+    meaning: How much two claims' billed amounts can differ, as a percentage, and still be treated as
+      the same billed service.
+    raise: Claims with a bigger difference in billed amount are still treated as likely duplicates, increasing
+      flags.
+    lower: Only claims with near-identical billed amounts are treated as likely duplicates, reducing flags.
+  exact_duplicate_amount_tolerance:
+    label: Amount tolerance for automatic duplicate rejection
+    meaning: How much difference in billed amount is allowed before two claims are treated as an exact
+      duplicate that can be automatically rejected.
+    raise: Claims with slightly different amounts could be auto-rejected as duplicates, which risks wrongly
+      rejecting genuine claims, so this is kept at zero by design.
+    lower: This is already at zero (no tolerance); lowering it further has no effect, as exact equality
+      is already required for an automatic rejection.
+  approval_ratio_peer_percentile:
+    label: Cut-off for unusually low approval rates
+    meaning: How low a provider's share of approved-versus-billed amount must fall, compared with similar
+      providers, before it is flagged.
+    raise: A higher share of similar providers now counts as 'too low', so more providers are flagged
+      for low approval rates.
+    lower: Only providers with the very lowest approval rates among their peers are flagged, reducing
+      flags.
+  approval_ratio_invariance_percentile:
+    label: Cut-off for suspiciously steady approval rates
+    meaning: How unusually steady (low variation) a provider's approval rate must be, compared with peers,
+      before it is flagged as possibly manipulated.
+    raise: More providers with only moderately steady approval rates get flagged as suspicious, increasing
+      flags.
+    lower: Only providers with the most unusually steady approval rates are flagged, reducing flags.
+  pharmacy_share_peer_multiple:
+    label: Pharmacy spend spike threshold
+    meaning: How many times higher than the typical diagnosis group's pharmacy spend a claim's pharmacy
+      share must be to be flagged as a spike.
+    raise: Only much bigger pharmacy-spend spikes are flagged, reducing flags but missing more moderate
+      spikes.
+    lower: More moderate increases in pharmacy spend get flagged, increasing flags and reviewer workload.
+  los_residual_threshold:
+    label: Cut-off for unusual length of hospital stay
+    meaning: How far a patient's length of stay must differ from similar diagnoses' typical stay before
+      it is flagged for utilisation review.
+    raise: Only more extreme differences in length of stay are flagged, reducing flags but missing smaller
+      anomalies.
+    lower: More moderate differences in length of stay are flagged, increasing flags and reviewer workload.
+  utilisation_velocity_window_days:
+    label: Window for tracking how fast services are used
+    meaning: How many days back the tool looks when working out how quickly a member or provider is using
+      services.
+    raise: A longer look-back window smooths out short bursts of activity, which may under-count fast,
+      recent spikes in use.
+    lower: A shorter look-back window reacts faster to recent bursts of activity, but may be noisier and
+      less stable.
+  member_repeat_service_threshold:
+    label: Repeat admissions threshold per member
+    meaning: How many admissions a member can have within the tracking window before it is flagged as
+      unusually frequent.
+    raise: Members need more admissions in the window before being flagged, so fewer members are flagged
+      as unusually frequent.
+    lower: Members with fewer admissions in the window get flagged, so more members are flagged, some
+      of whom may just be genuinely unwell.
+  min_repeat_interval_days:
+    label: Minimum gap before a repeat service looks normal
+    meaning: How many days must pass between the same or an equivalent service before repeating it sooner
+      is flagged as unusual.
+    raise: Services repeated within a longer gap are still allowed without being flagged, reducing flags.
+    lower: Services repeated even after a shorter gap get flagged, increasing flags, some of which may
+      be legitimate follow-up care.
+  max_concurrent_admissions_per_member:
+    label: Maximum simultaneous admissions allowed per member
+    meaning: How many inpatient admissions a member is allowed to have at the exact same time before it
+      is flagged as physically impossible.
+    raise: More simultaneous admissions per member would be tolerated before flagging, which risks missing
+      genuine impossible-presence cases and is not recommended given this is a physical limit.
+    lower: This is already set to the physical limit of one; lowering it further is not meaningful.
+  concurrent_admission_overlap_tolerance_days:
+    label: Grace period for overlapping admission dates
+    meaning: How much overlap between two admission date ranges is tolerated (for same-day transfers or
+      date-only records) before it counts as an impossible overlap.
+    raise: More overlap between admissions is tolerated before flagging, so fewer overlap cases are flagged
+      but some genuine impossibilities may be missed.
+    lower: Even a small overlap gets flagged, increasing flags but possibly catching ordinary same-day
+      transfer records as false alarms.
+  provider_daily_capacity_admissions:
+    label: Assumed maximum admissions a provider can handle daily
+    meaning: The assumed maximum number of patients a provider could plausibly admit in one day, used
+      to spot throughput that looks physically impossible.
+    raise: Providers are assumed to be able to handle more admissions per day, so fewer providers are
+      flagged for impossible throughput.
+    lower: Providers are assumed to have less daily capacity, so more providers are flagged for impossible
+      throughput, including some that are just busy.
+  capacity_tolerance_multiple:
+    label: Buffer above declared provider capacity
+    meaning: The multiplier applied to a provider's declared admission capacity before a breach is declared,
+      allowing for roster or data errors.
+    raise: A bigger buffer above declared capacity is allowed before flagging, reducing flags but possibly
+      missing real capacity breaches.
+    lower: A smaller buffer is allowed, increasing flags but risking false alarms from roster or data
+      errors.
+  coding_mismatch_peer_percentile:
+    label: Cut-off for unusual coding mismatch rates
+    meaning: How high a provider's rate of coding mismatches must be, compared with similar providers,
+      before it is flagged.
+    raise: Only providers with the very highest mismatch rates among peers are flagged, reducing flags.
+    lower: More providers with moderately high mismatch rates get flagged, increasing flags and reviewer
+      workload.
+  cob_min_insurers:
+    label: Number of insurers triggering coordination-of-benefits check
+    meaning: The number of insurers covering the same event at or above which the claim must show evidence
+      of coordination of benefits.
+    raise: Only events covered by more insurers require coordination-of-benefits evidence, reducing flags.
+    lower: Events covered by fewer insurers also require this evidence, increasing flags.
+  blacklist_requires_exact_match:
+    label: Require exact match for exclusion-list rejections
+    meaning: A switch controlling whether a provider or member must match an exclusion list exactly before
+      a claim can be automatically rejected.
+    raise: Switching it on means only an exact identifier match can trigger an automatic rejection; a
+      fuzzy match can only be sent for review, protecting against wrongful rejections.
+    lower: Switching it off would allow a fuzzy match to trigger automatic rejection, risking wrongly
+      rejecting a genuine claim, so this is not recommended.
+  max_resubmission_attempts:
+    label: Resubmission attempts before a loop is flagged
+    meaning: How many times the same underlying service can be resubmitted before the pattern is flagged
+      as a resubmission loop.
+    raise: More resubmission attempts are tolerated before flagging, reducing flags but possibly missing
+      genuine resubmission abuse.
+    lower: Fewer resubmission attempts are tolerated before flagging, increasing flags, some of which
+      may be legitimate correction attempts.
+  max_member_travel_speed_kmh:
+    label: Maximum plausible travel speed for a member
+    meaning: The fastest speed a member could plausibly travel between two service locations, used to
+      spot physically impossible visit patterns.
+    raise: A higher travel speed is treated as plausible, so fewer visit patterns are flagged as physically
+      impossible.
+    lower: A lower travel speed is treated as the limit, so more visit patterns are flagged, some of which
+      may reflect fast but genuine travel (for example, by air).
+  death_reporting_tolerance_days:
+    label: Grace period for services just after death
+    meaning: How many days after a recorded death a service can still be billed before it is flagged as
+      a post-mortem service issue.
+    raise: A longer grace period after death is allowed before flagging, reducing flags but possibly missing
+      genuine issues.
+    lower: A shorter grace period is allowed, increasing flags, some of which may reflect normal reporting
+      delays.
+  graph_snapshot_period:
+    label: How often the referral network is refreshed
+    meaning: How often (currently weekly) the network of referral relationships between agents and providers
+      is rebuilt into a fresh snapshot.
+    raise: Snapshots are taken less often (a longer period), so the network view updates more slowly but
+      is more stable.
+    lower: Snapshots are taken more often (a shorter period), so the network view updates faster but each
+      snapshot has less data.
+  referral_concentration_threshold:
+    label: Absolute referral concentration limit
+    meaning: The fixed share of an agent's or provider's referrals going to one counterparty above which
+      concentration is considered, alongside a peer comparison.
+    raise: A higher fixed share is required before this absolute limit is even considered, reducing its
+      role as a supporting check.
+    lower: A lower fixed share triggers this absolute check more easily, though the peer-relative comparison
+      remains the main driver of flags.
+  community_min_size:
+    label: Minimum group size for referral-ring checks
+    meaning: The smallest number of connected agents and providers in a referral cluster before density
+      statistics are calculated for it at all.
+    raise: Only larger connected clusters are checked for ring-like behaviour, so fewer small clusters
+      are examined.
+    lower: Smaller connected clusters are also checked, so more clusters are examined but a pair of two
+      may be wrongly treated as a ring.
+  community_density_threshold:
+    label: Absolute density floor for referral rings (reference only)
+    meaning: A fixed density level referral clusters are compared against, kept for reference; the actual
+      flagging uses a size-matched comparison instead.
+    raise: This absolute floor is kept only for reference and reported alongside findings; changing it
+      does not change which clusters get flagged.
+    lower: This absolute floor is kept only for reference and reported alongside findings; changing it
+      does not change which clusters get flagged.
+  community_density_peer_multiple:
+    label: How much denser than peers a referral ring must be
+    meaning: How many times denser than similarly sized clusters a referral cluster's internal connections
+      must be before it is flagged as abnormally tight.
+    raise: Only clusters far denser than similarly sized peers are flagged, reducing flags but missing
+      more moderate cases.
+    lower: Clusters only moderately denser than peers get flagged, increasing flags and reviewer workload.
+  community_external_flow_max:
+    label: Maximum outside activity for a 'closed' referral ring
+    meaning: The maximum share of a cluster's connections that may lead outside the cluster before it
+      is no longer considered a closed, ring-like group.
+    raise: Clusters with more outside connections can still count as 'closed', so more clusters qualify
+      for the ring check and more get flagged.
+    lower: Only clusters with very little outside activity count as 'closed', so fewer clusters qualify
+      and fewer get flagged.
+  community_min_distinct_members:
+    label: Minimum members and providers in a referral ring
+    meaning: The minimum number of distinct members and distinct providers a cluster must contain before
+      it can be flagged as a circulating ring.
+    raise: Clusters need more distinct members and providers to qualify, so fewer clusters (mainly single
+      busy-clinic patterns) get flagged.
+    lower: Clusters with fewer distinct members and providers can qualify, so more clusters get flagged,
+      including some ordinary busy-clinic patterns.
+  entity_resolution_auto_merge_min_confidence:
+    label: Confidence needed to auto-merge duplicate records (fixed, unreachable)
+    meaning: The match confidence needed before two provider or member records could be merged automatically,
+      deliberately set above the maximum possible score.
+    raise: This is deliberately set above the highest possible score so automatic merging never happens;
+      changing it does not enable automatic merging in this design.
+    lower: Lowering it below the maximum possible score would allow automatic merging without human review,
+      which is against the design and not recommended.
+  entity_resolution_review_min_confidence:
+    label: Confidence needed to surface a possible duplicate record
+    meaning: The minimum match confidence a candidate pair of provider or member records needs before
+      it is shown to a human reviewer at all.
+    raise: Only stronger-looking matches are shown to reviewers, reducing the review workload but possibly
+      missing some genuine duplicates.
+    lower: Weaker-looking matches are also shown to reviewers, increasing the review workload with more
+      false alarms.
+  model_train_fraction:
+    label: Share of history used to train the model
+    meaning: The proportion of the claim history, in date order, used to train the statistical model rather
+      than to test it afterwards.
+    raise: More of the history is used for training and less is left to test the model on, which may make
+      training richer but the test less informative.
+    lower: Less history is used for training and more is left for testing, which gives a more thorough
+      test but a less-informed model.
+  isolation_forest_n_estimators:
+    label: Number of trees in the anomaly-detection model
+    meaning: How many individual decision trees the anomaly-detection model builds when scoring claims
+      or providers as unusual.
+    raise: More trees are built, generally giving steadier, more stable anomaly scores but taking longer
+      to run.
+    lower: Fewer trees are built, running faster but with anomaly scores that may vary more between runs.
+  isolation_forest_contamination:
+    label: Assumed share of anomalies (model setting only)
+    meaning: The share of the data the anomaly-detection model assumes is unusual when it first sets up
+      its scoring scale; the actual cut-off for flagging is set separately by reviewer capacity.
+    raise: The model assumes a larger share of the data is unusual when scaling its scores, but this does
+      not by itself change how many claims are actually flagged.
+    lower: The model assumes a smaller share of the data is unusual when scaling its scores, but this
+      does not by itself change how many claims are actually flagged.
+  lof_n_neighbors:
+    label: Neighbourhood size for local anomaly detection
+    meaning: How many nearby similar claims or providers this anomaly-detection method compares each case
+      against to judge if it looks locally unusual.
+    raise: Each case is compared against a larger, broader neighbourhood, which smooths out results but
+      may miss anomalies that are only unusual in a small local cluster.
+    lower: Each case is compared against a smaller, tighter neighbourhood, which better catches small
+      local clusters of anomalies but can be noisier.
+  psi_warn_threshold:
+    label: Early-warning level for data drift
+    meaning: How much the incoming data has shifted since the model was trained before the tool issues
+      an early warning about drift.
+    raise: A bigger shift in the data is needed before an early warning is issued, so warnings appear
+      later or less often.
+    lower: A smaller shift in the data triggers an early warning, so warnings appear sooner and more often,
+      including for minor shifts.
+  psi_breach_threshold:
+    label: Serious drift level requiring recalibration
+    meaning: How much the incoming data has shifted since the model was trained before the tool recommends
+      recalibrating or switching the model off.
+    raise: A bigger shift is needed before recalibration or a kill switch is recommended, so the model
+      keeps running longer even as data drifts.
+    lower: A smaller shift triggers a recommendation to recalibrate or switch off the model, acting sooner
+      but possibly more cautiously than needed.
+  model_promotion_min_lift:
+    label: Improvement needed before a model goes live
+    meaning: How much better a new model must perform than the existing transparent scoring method, on
+      real later data, before it is allowed to go live.
+    raise: A model must show a bigger improvement before it can go live, making it harder for new models
+      to be promoted from trial to active use.
+    lower: A model needs only a smaller improvement to go live, making it easier for new models to be
+      promoted, though with less proven benefit.
+  model_calibration_max_ece:
+    label: Maximum allowed miscalibration before a model can go live
+    meaning: How far a model's predicted confidence can be from its actual accuracy before it fails the
+      check required to go live.
+    raise: A model is allowed to be less well-calibrated and still pass, making it easier for a poorly
+      calibrated model to go live.
+    lower: A model must be more accurately calibrated to pass, making it harder for a poorly calibrated
+      model to go live.
+  novel_cluster_min_size:
+    label: Minimum size for a new suspicious pattern group
+    meaning: The smallest number of providers a newly discovered cluster of unusual behaviour must contain
+      before it is proposed as a pattern worth reviewing quarterly.
+    raise: Only larger newly discovered clusters get proposed as patterns, reducing the number of patterns
+      raised but making each one more substantial.
+    lower: Smaller newly discovered clusters also get proposed, increasing the number of patterns raised,
+      some of which may be coincidental.
+  priority_weights:
+    label: Weighting of each factor in the case-priority score
+    meaning: How much each factor (evidence strength, exposure amount, how many independent checks agree,
+      and so on) contributes to a case's overall priority score.
+    raise: These are reproduced exactly from the design specification and are not meant to be tuned freely;
+      changing one weight would need a recorded governance decision, and would make that factor drive
+      priority more.
+    lower: These are reproduced exactly from the design specification and are not meant to be tuned freely;
+      changing one weight would need a recorded governance decision, and would make that factor drive
+      priority less.
+  priority_exposure_scale_aed:
+    label: Scale for converting exposure amount into the priority score
+    meaning: The AED amount used to convert a case's financial exposure into the scaled figure that feeds
+      into its overall priority score.
+    raise: A larger AED amount is needed to move the exposure part of the score by the same amount, so
+      priority becomes less sensitive to exposure size.
+    lower: A smaller AED amount moves the exposure part of the score more easily, so priority becomes
+      more sensitive to exposure size.
+  recency_half_life_days:
+    label: How quickly older evidence loses weight
+    meaning: The number of days after which older evidence counts for half as much in a case's priority
+      score.
+    raise: Older evidence keeps more of its weight for longer, so older cases stay relatively higher priority
+      for longer.
+    lower: Older evidence loses its weight faster, so priority shifts more quickly towards the most recent
+      evidence.
+  max_independent_domains:
+    label: Number of detection types counted in priority scoring
+    meaning: The number of independent detection types (rule-based, statistical, network, document, model)
+      used to normalise how much variety of evidence boosts a case's priority.
+    raise: Agreement across detection types needs to cover more types to reach the same normalised boost,
+      making that part of the score harder to max out.
+    lower: Agreement across fewer detection types is enough to reach the same normalised boost, making
+      that part of the score easier to max out.
+  gate_key_linkage_min:
+    label: Minimum data-linkage quality to pass go-live check
+    meaning: The minimum share of claims and lines that must be correctly linked by key before the data
+      is considered ready to run the tool on.
+    raise: A higher share of correctly linked data is required to pass this readiness check, making it
+      harder for imperfectly linked data to pass.
+    lower: A lower share is accepted, making it easier to pass this check even with more linkage errors
+      in the data.
+  gate_hard_edit_reproducibility_min:
+    label: Minimum consistency required for hard-edit decisions
+    meaning: The minimum share of times a hard-edit rule (one that can reject a claim) must reach the
+      same decision on the same data before it passes its readiness check.
+    raise: Hard-edit rules must be more consistently reproducible to pass this check, setting a stricter
+      bar before they can be relied on.
+    lower: Hard-edit rules need to be less consistently reproducible to pass, allowing more variability
+      before this check is failed.
+  gate_statistical_min_review_yield:
+    label: Minimum useful-flag rate required to activate a statistical rule
+    meaning: The minimum share of a statistical rule's flagged cases that must turn out to be worth reviewing,
+      measured over a trial period, before the rule can go live.
+    raise: A rule must prove a higher share of useful flags during its trial before being activated, making
+      it harder for weak rules to go live.
+    lower: A rule needs only a lower share of useful flags to be activated, making it easier for rules
+      to go live even if less accurate.
+  shadow_period_min_days:
+    label: Minimum trial period before a new rule can activate
+    meaning: The minimum number of days a new statistical rule must run silently in the background, being
+      watched but not acted on, before it can be considered for activation.
+    raise: New rules must run silently for longer before being considered for activation, giving more
+      evidence but delaying rollout.
+    lower: New rules can be considered for activation after a shorter trial, speeding up rollout but with
+      less evidence behind the decision.
+  latency_ceiling_ms:
+    label: Maximum acceptable processing time per stage
+    meaning: The maximum time, in milliseconds, each processing stage (data intake, real-time checks,
+      daily batch, and so on) is expected to take, reproduced from the design specification.
+    raise: A stage is allowed to run longer before it is reported as exceeding its expected performance
+      ceiling.
+    lower: A stage has less time before it is reported as exceeding its expected performance ceiling,
+      flagging performance issues sooner.
+  nlp_min_extraction_confidence:
+    label: Minimum confidence to show a document-based finding
+    meaning: The minimum confidence, adjusted for scan quality, a finding extracted from a discharge summary
+      or similar document must reach before it is shown to a reviewer at all.
+    raise: Only more confidently extracted findings are shown, reducing the number of document-based findings
+      but making them more reliable.
+    lower: Less confidently extracted findings are also shown, increasing the number of document-based
+      findings but with more that may be extraction errors.
+  nlp_synthetic_inconsistency_rate:
+    label: Share of test documents made deliberately inconsistent
+    meaning: The proportion of generated test discharge summaries that are deliberately made to contradict
+      their claim, so the document-checking pipeline has both correct and incorrect examples to prove
+      itself against.
+    raise: More of the generated test documents are made deliberately inconsistent, giving the pipeline
+      more negative test cases to prove it can catch them.
+    lower: Fewer of the generated test documents are made deliberately inconsistent, giving the pipeline
+      fewer negative test cases to demonstrate its detection ability.
+  doc_clone_similarity_threshold:
+    label: Similarity level for flagging copied documents
+    meaning: How similar two patients' discharge summaries must be, after removing standard boilerplate
+      wording, before they are flagged as a suspicious near-duplicate.
+    raise: Documents must be more nearly identical before being flagged as copied, reducing flags but
+      only catching the most blatant cases.
+    lower: Documents that are only moderately similar get flagged as possibly copied, increasing flags
+      but with more that may just share standard wording.
+  ai_enabled:
+    label: Master switch for the AI assistance layer
+    meaning: The overall on/off switch for every AI-assisted feature in the tool; the tool is designed
+      to work fully with this switched off.
+    raise: Switching it on turns on the AI assistance layer, though it is designed never to change any
+      disposition, priority or exposure figure by itself.
+    lower: Switching it off disables all AI assistance features; the tool remains fully functional using
+      its rule-based and statistical checks alone.
+  ai_provider:
+    label: Which AI engine is used
+    meaning: Which AI service the tool calls on for its AI-assisted features; the default requires no
+      internet connection or external key.
+    raise: Changing this to a different provider would route AI features to an external service, which
+      would need network access and a key, and is not the reproducible offline default.
+    lower: Keeping the offline default means AI features run without any internet connection or external
+      key, keeping results reproducible and demonstrable offline.
+  ai_features_enabled:
+    label: Which individual AI-assisted features are switched on
+    meaning: A set of separate on/off switches for each AI-assisted feature (narrative write-ups, rule-drafting
+      help, reviewer assistant, pattern-grouping suggestions).
+    raise: Switching on more of these features gives reviewers more AI-generated assistance, though none
+      of them can change a case's disposition, priority or exposure.
+    lower: Switching off some or all of these features removes that AI-generated assistance, leaving reviewers
+      to work from the rule-based and statistical findings alone.
+  phr01_quantity_tolerance:
+    label: Allowed pharmacy quantity variance before flagging
+    meaning: How much the billed quantity or strength of a medicine can exceed what was prescribed or
+      dispensed, as a percentage, before it is flagged, allowing for pack-size rounding.
+    raise: A bigger difference between billed and prescribed quantity is tolerated before flagging, reducing
+      flags but possibly missing genuine over-billing.
+    lower: A smaller difference is tolerated, increasing flags but with more that may just be ordinary
+      pack-size rounding.
+  phr01_stock_timing_tolerance:
+    label: Allowed pharmacy stock variance before flagging
+    meaning: How much a pharmacy's billed quantity for a product in one month can exceed its recorded
+      opening stock plus purchases, as a percentage, before it is flagged.
+    raise: A bigger stock discrepancy is tolerated before flagging, reducing flags but possibly missing
+      genuine stock issues.
+    lower: A smaller stock discrepancy is tolerated, increasing flags, some of which may reflect deliveries
+      simply posted a few days late.
+  phr01_non_medical_terms:
+    label: Words that mark a receipt item as non-medical
+    meaning: The list of words the tool looks for on a member's receipt that indicate a non-medical or
+      uncovered item was billed as if it were medicine.
+    raise: Adding words to this list means more kinds of non-medical items on receipts get picked up as
+      possible substitution evidence.
+    lower: Removing words from this list means fewer kinds of non-medical items get picked up, possibly
+      missing some substitution cases.
+  phr01_receipt_window_days:
+    label: Pharmacy receipt matching window
+    meaning: How many days apart a member's paper receipt and the pharmacy's own dispensing record can
+      be and still count as the same fill.
+    raise: Widening the window links more distant receipts to a fill, so fewer substitution cases are
+      flagged.
+    lower: Narrowing the window means only very closely dated receipts count, so more mismatches get flagged,
+      with some genuine matches missed.
+  phr01_receipt_confidence:
+    label: Confidence in receipt-only findings
+    meaning: How much weight is given to a finding that rests only on a member-supplied receipt, since
+      receipts are not independently checked.
+    raise: Raising it treats receipt-only findings as more trustworthy, so they carry more weight in scoring.
+    lower: Lowering it treats these findings as less certain, so they carry less weight and are less likely
+      to drive a case forward on their own.
+  phr_dose_change_tolerance:
+    label: Allowed dose-change margin
+    meaning: How much a member's daily dose can differ from their previous fill of the same medicine before
+      it counts as a genuine dose change rather than a suspicious pattern.
+    raise: Allowing a bigger difference excuses more dose changes as legitimate, so fewer early refills
+      or strength changes are flagged.
+    lower: Allowing only a small difference means more dose changes are treated as unexplained, so more
+      cases are flagged, with some genuine changes wrongly caught.
+  phr02_allowed_overlap_days:
+    label: Allowed early-refill leeway
+    meaning: How many days of previously supplied medicine a member may still be holding when they refill,
+      before the refill counts as early.
+    raise: Allowing more leftover days means more early refills are accepted as normal, so fewer are flagged.
+    lower: Allowing fewer leftover days makes refills easier to flag as early, catching more genuine problems
+      but also more routine early pickups.
+  phr02_discharge_grace_days:
+    label: Post-discharge refill grace period
+    meaning: How many days after leaving hospital a refill is treated as discharge medicine rather than
+      as an early refill.
+    raise: Extending the grace period excuses more post-discharge refills, so fewer are flagged as early.
+    lower: Shortening it means more refills soon after discharge get flagged as early, some of which are
+      legitimate discharge medicine.
+  phr02_continuity_gap_days:
+    label: Gap allowed between refills of the same medicine
+    meaning: How many days can pass after one supply of a medicine runs out before the next fill is treated
+      as starting a brand new course rather than continuing the same one.
+    raise: Allowing a longer gap treats more refills as one continuing course, so fewer are counted as
+      separate, unusual restarts.
+    lower: Allowing only a short gap means more refills are treated as a fresh course, which can flag
+      more patterns but also split up normal ongoing treatment.
+  phr02_prescriber_window_days:
+    label: Window for counting different prescribers
+    meaning: The period over which the number of different doctors prescribing the same or an equivalent
+      medicine to one member is counted.
+    raise: Widening the window counts prescribers over a longer span, making it easier to reach the threshold,
+      so more members are flagged.
+    lower: Narrowing the window only counts recent prescribers, so fewer members reach the threshold and
+      fewer are flagged.
+  phr02_min_distinct_prescribers:
+    label: Doctor-shopping prescriber threshold
+    meaning: The number of different, unrelated prescribers of the same medicine to one member within
+      the window that triggers a flag.
+    raise: Raising the number needed means only members seeing many different prescribers are flagged,
+      so fewer cases are raised.
+    lower: Lowering the number means members seeing only a couple of different prescribers are flagged,
+      catching more real cases but also referrals and second opinions.
+  phr02_min_distinct_prescribers_controlled:
+    label: Doctor-shopping threshold for controlled medicines
+    meaning: The same prescriber-count trigger as the general doctor-shopping check, but set separately
+      for controlled medicines so it can be tightened on its own.
+    raise: Raising it means controlled-medicine cases need more different prescribers before being flagged,
+      so fewer are raised.
+    lower: Lowering it flags controlled-medicine cases with fewer different prescribers, catching more
+      real cases but also more referrals.
+  phr02_min_distinct_pharmacies:
+    label: Pharmacy-shopping threshold
+    meaning: The number of different pharmacies supplying overlapping courses of the same medicine to
+      one member that triggers a flag.
+    raise: Raising it means a member needs to use more different pharmacies before being flagged, so fewer
+      cases are raised.
+    lower: Lowering it flags members using fewer different pharmacies, catching more real cases but also
+      ordinary stock shortages or partial fills.
+  phr03_dose_rounding_tolerance:
+    label: Weight-based dose limit allowance
+    meaning: How far a daily dose can exceed the recommended weight-based limit before it is flagged,
+      allowing for tablet sizes and slightly outdated recorded weight.
+    raise: Allowing a bigger margin excuses larger doses as rounding, so fewer overdoses are flagged.
+    lower: Allowing only a small margin flags more doses above the limit, catching more real overdoses
+      but also more rounding noise.
+  phr03_loading_dose_days:
+    label: Loading-dose exclusion period
+    meaning: How many days a member's very first fill of a medicine can last and still be excused as a
+      legitimate higher starting dose.
+    raise: Extending the period excuses more first fills as loading doses, so fewer are flagged.
+    lower: Shortening the period means more first fills are flagged as unusually high, including some
+      genuine starting doses.
+  phr03_indication_lookback_days:
+    label: Diagnosis lookback for medicine justification
+    meaning: How far back a member's recorded diagnoses are searched to find a medical reason that justifies
+      a medicine they are taking.
+    raise: Looking further back finds more supporting diagnoses, so fewer refills are flagged for lacking
+      a justification.
+    lower: Looking back a shorter time misses older diagnoses, so more refills are flagged as unjustified,
+      some of which are genuine chronic conditions.
+  phr03_rare_disease_prefixes:
+    label: Rare-disease diagnosis codes exempted
+    meaning: The list of diagnosis code groups for rare inherited and metabolic conditions whose members
+      are not flagged for missing justification or skipped step-therapy.
+    raise: Adding more diagnosis codes exempts more members with rare conditions from these checks, reducing
+      flags for them.
+    lower: Removing codes means fewer members are exempted, so more members with genuine rare conditions
+      could be flagged by mistake.
+  phr03_wastage_peer_multiple:
+    label: Drug wastage peer comparison multiple
+    meaning: How many times higher than the typical provider's billed drug wastage a provider's own wastage
+      must be before it is flagged.
+    raise: Raising the multiple only flags providers whose wastage is far above typical, so fewer providers
+      are flagged.
+    lower: Lowering the multiple flags providers whose wastage is only somewhat above typical, catching
+      more real cases but also normal variation.
+  phr03_wastage_min_lines:
+    label: Minimum billing lines for wastage comparison
+    meaning: The number of billed lines of one injectable drug a provider needs before its wastage pattern
+      is compared with others.
+    raise: Requiring more lines means fewer providers qualify for comparison, so fewer are flagged, but
+      the ones that are flagged are more reliable.
+    lower: Requiring fewer lines lets more providers be compared, which can flag more cases but also single
+      unusual administrations.
+  phr03_wastage_min_peer_providers:
+    label: Minimum providers for wastage peer group
+    meaning: The number of different providers billing a drug that must exist before any one of them is
+      compared against the others for wastage.
+    raise: Requiring more peer providers means fewer drugs have a large enough group for comparison, so
+      fewer flags are possible for those drugs.
+    lower: Requiring fewer peer providers allows comparison with a thinner group, which can be less reliable
+      but flags more drugs.
+  phr03_wastage_min_excess_vials:
+    label: Minimum excess vials when peers show no wastage
+    meaning: When no other provider bills any wastage at all for a drug, the average whole vials of extra
+      medicine a provider must bill before being flagged, so small rounding differences are ignored.
+    raise: Raising it means a provider needs to waste more vials on average before being flagged, so fewer
+      flags in this situation.
+    lower: Lowering it flags providers over smaller amounts of extra vials, catching more real waste but
+      also more rounding noise.
+  phr04_min_prescriptions:
+    label: Minimum prescriptions for pharmacy-concentration checks
+    meaning: The number of dispensed prescriptions a prescriber or clinic needs before how concentrated
+      their business is with one pharmacy is assessed.
+    raise: Raising it excludes lower-volume prescribers from this check entirely, reducing flags among
+      them.
+    lower: Lowering it includes lower-volume prescribers, where one pharmacy dominating by chance is more
+      likely, potentially adding false alarms.
+  phr04_top_share_min:
+    label: Minimum share sent to one pharmacy
+    meaning: The share of a prescriber's prescriptions filled at a single pharmacy that must be reached,
+      alongside exceeding peers, before a concentration finding is possible.
+    raise: Raising the share needed means only very concentrated prescribers can be flagged, so fewer
+      are flagged.
+    lower: Lowering it flags prescribers with a less extreme concentration, catching more real steering
+      but also more incidental patterns.
+  phr04_peer_share_margin:
+    label: Margin above peers for pharmacy concentration
+    meaning: How far, in percentage points, a prescriber's top-pharmacy share must exceed the typical
+      share among prescribers of the same specialty and emirate.
+    raise: Raising the required margin means a prescriber must stand out from peers by more before being
+      flagged, so fewer are flagged.
+    lower: Lowering the margin flags prescribers who are only slightly above their peers, catching more
+      real cases but also normal variation.
+  phr04_min_peer_prescribers:
+    label: Minimum peer group size for concentration comparison
+    meaning: The smallest number of similar prescribers needed to form a fair comparison group; with fewer,
+      a wider peer group is used instead.
+    raise: Raising it means a wider fallback peer group is used more often, which can smooth out small,
+      less reliable comparison groups.
+    lower: Lowering it lets a narrower peer group be used more often, which is more specific but can be
+      based on very few prescribers.
+  phr04_narrow_network_min_pharmacies:
+    label: Minimum pharmacies for a competitive area
+    meaning: The number of pharmacies dispensing in a prescriber's area below which concentration is excused
+      as limited choice rather than steering.
+    raise: Raising it excuses concentration in more areas as having limited pharmacy choice, reducing
+      flags there.
+    lower: Lowering it excuses fewer areas, so concentration in more places is flagged even where choice
+      may genuinely be limited.
+  phr04_loop_min_share:
+    label: Clinic-to-pharmacy loop concentration threshold
+    meaning: The share of a clinic's prescriptions that must go to one pharmacy before the flow is considered
+      concentrated enough to be a possible loop, alongside a shared business link.
+    raise: Raising the share needed means only very concentrated clinic-pharmacy flows can be flagged,
+      so fewer loops are found.
+    lower: Lowering it flags less concentrated flows, catching more real loops but also more ordinary
+      local referral patterns.
+  phr04_high_cost_share_gap:
+    label: High-cost prescription steering gap
+    meaning: How much more, in percentage points, a prescriber's high-cost prescriptions go to one pharmacy
+      compared with their other prescriptions, before it is flagged as steering.
+    raise: Raising the required gap flags only the most obvious steering of expensive prescriptions, so
+      fewer cases are raised.
+    lower: Lowering the gap flags smaller differences, catching more real steering but also more coincidental
+      patterns.
+  phr04_high_cost_min_rx:
+    label: Minimum prescriptions for high-cost steering comparison
+    meaning: The number of high-cost prescriptions, and of other prescriptions, a prescriber needs before
+      their pharmacy patterns for each are compared.
+    raise: Raising it means only higher-volume prescribers are compared, reducing flags among lower-volume
+      ones.
+    lower: Lowering it allows lower-volume prescribers to be compared, which can flag more cases from
+      thinner, less reliable data.
+  phr04_availability_min_pharmacies:
+    label: Minimum pharmacies stocking a high-cost product
+    meaning: The number of pharmacies that must stock a high-cost product before a concentrated pattern
+      for it is treated as steering rather than limited availability.
+    raise: Raising it excuses more products as having limited availability, reducing flags for them.
+    lower: Lowering it excuses fewer products, so more concentration involving less widely stocked items
+      gets flagged.
+  phr04_ramp_months:
+    label: New pharmacy-link measurement period
+    meaning: How many months from a new prescriber-pharmacy relationship's start are used to measure how
+      much business it quickly captures.
+    raise: Extending the period gives a new link more time to be measured, which can smooth out an early
+      spike and reduce flags.
+    lower: Shortening the period measures only the earliest months, making a fast takeover of business
+      easier to flag.
+  phr04_new_edge_min_prior_months:
+    label: Minimum history before a link counts as new
+    meaning: How many months a prescriber must already have a track record, and a pharmacy must already
+      have been dispensing, before a new relationship between them is treated as genuinely new.
+    raise: Raising it means only well-established prescribers and pharmacies can trigger this check, reducing
+      flags among newer ones.
+    lower: Lowering it applies the check to less established prescribers and pharmacies too, which can
+      flag more cases but also normal early-stage referral patterns.
+  phr04_dominant_share:
+    label: Dominant share threshold for a new pharmacy link
+    meaning: The share of a prescriber's prescriptions a brand new pharmacy relationship must capture
+      within the measurement period to be flagged as dominant.
+    raise: Raising the share needed flags only links that very quickly take over most of the business,
+      so fewer are flagged.
+    lower: Lowering it flags less extreme early growth, catching more real cases but also normal new working
+      relationships.
+  phr04_ramp_min_rx:
+    label: Minimum prescriptions for a new pharmacy link
+    meaning: The number of prescriptions a new prescriber-pharmacy link must carry during the measurement
+      period before it can be flagged as dominant.
+    raise: Raising it means only higher-volume new links can be flagged, so fewer low-volume switches
+      are raised.
+    lower: Lowering it allows lower-volume new links to be flagged, which can catch more real cases but
+      also a single prescriber's one-off switch.
+  phr05_rental_price_fraction:
+    label: Equipment rental repricing fraction
+    meaning: When a rented medical device is billed as if purchased outright, the share of the billed
+      purchase price treated as the fair rental charge instead.
+    raise: Raising the fraction allows a higher payable amount for misbilled rentals, reducing the recovered
+      overcharge.
+    lower: Lowering the fraction reduces the payable amount further, recovering more of the overcharge
+      but risking underpaying a genuine rental.
+  phr05_used_price_fraction:
+    label: Used equipment repricing fraction
+    meaning: When a used medical device is billed as new, the share of the billed new price treated as
+      the fair charge for a used item.
+    raise: Raising the fraction allows a higher payable amount for misbilled used devices, reducing the
+      recovered overcharge.
+    lower: Lowering the fraction reduces the payable amount further, recovering more of the overcharge
+      but risking underpaying a genuinely near-new device.
+  phr05_replacement_lookback_days:
+    label: Implant replacement exclusion window
+    meaning: How far back a qualifying procedure is searched for before an implant billed without a same-day
+      procedure is excused as a staged or replacement implant.
+    raise: Extending the window excuses more implants as legitimate replacements, so fewer are flagged.
+    lower: Shortening the window means more implants are flagged as lacking a supporting procedure, including
+      some genuine staged replacements.
+  phr05_supply_units_peer_multiple:
+    label: Supply quantity peer comparison multiple
+    meaning: How many times higher than the typical billed quantity for an item a provider's billed quantity
+      must be before it is flagged as excessive.
+    raise: Raising the multiple only flags very large excess quantities, so fewer lines are flagged.
+    lower: Lowering the multiple flags smaller excesses, catching more real overbilling but also normal
+      variation in patient need.
+  phr05_supply_min_peer_lines:
+    label: Minimum billed lines for supply comparison
+    meaning: The number of billed lines for an item needed before its typical (median) quantity is used
+      as the norm for comparison.
+    raise: Raising it means fewer items have a large enough sample to be checked, reducing flags for those
+      items.
+    lower: Lowering it lets more items be checked against a thinner sample, which can be less reliable
+      but flags more items.
+  phr05_useful_life_fraction:
+    label: Device reissue timing threshold
+    meaning: The share of a device's expected useful life that must have passed before reissuing the same
+      device to a member is not flagged as too soon.
+    raise: Raising the required fraction allows earlier replacement without being flagged, reducing flags.
+    lower: Lowering it flags earlier replacements as too soon more readily, catching more real cases but
+      also genuine early failures.
+  phr05_growth_exclusion_age:
+    label: Child growth exclusion age for device reissue
+    meaning: The age below which a member's early device replacement is excused as growth rather than
+      flagged as too soon.
+    raise: Raising the age excuses older children from the early-replacement check, reducing flags for
+      them.
+    lower: Lowering the age means fewer children are excused, so more early replacements in growing children
+      could be flagged by mistake.
+  pay01_cross_payer_amount_tolerance_aed:
+    label: Cross-payer duplicate payment tolerance
+    meaning: The amount, in AED, by which two insurers' combined payments may exceed the billed amount
+      before it is treated as a duplicate payment, allowing for rounding.
+    raise: Raising the tolerance excuses larger combined overpayments as rounding, so fewer duplicate
+      payments are flagged.
+    lower: Lowering the tolerance flags smaller combined overpayments, catching more real duplicates but
+      also ordinary rounding differences.
+  pay02_cross_claim_window_days:
+    label: Bundled component timing window
+    meaning: How many days either side of a main procedure a related component billed on a separate claim
+      still counts as part of the same service.
+    raise: Widening the window links more separately billed components to the main procedure, so fewer
+      are flagged as duplicate billing.
+    lower: Narrowing the window means fewer separate claims are linked, so more components are flagged,
+      including some genuinely separate later care.
+  pay02_professional_split_indicators:
+    label: Professional or technical split-billing markers
+    meaning: The billing markers that show a line is the professional or the technical half of a service
+      split between two bills, which is not treated as duplicate billing.
+    raise: Adding more markers excuses more split-billing patterns as legitimate, reducing flags.
+    lower: Removing markers means fewer split bills are excused, so more of them could be flagged as duplicates
+      by mistake.
+  pay02_zero_price_tolerance_aed:
+    label: Zero-price package component tolerance
+    meaning: The amount, in AED, above which a package component that should be listed at zero cost is
+      treated as actually charged or separately paid.
+    raise: Raising the tolerance excuses larger stray amounts as rounding, so fewer package components
+      are flagged as wrongly charged.
+    lower: Lowering the tolerance flags smaller stray amounts, catching more real overcharges but also
+      tiny rounding differences.
+  pay02_package_missing_share:
+    label: Missing package activities threshold
+    meaning: The share of a package's core activities that must be missing from a claim before the package
+      is reported as billed incomplete.
+    raise: Raising the share needed means only packages missing most of their core activities are flagged,
+      so fewer are flagged.
+    lower: Lowering it flags packages missing even a smaller share of core activities, catching more real
+      gaps but also occasional reporting slips.
+  pay02_package_core_share:
+    label: Core package activity threshold
+    meaning: The share of claims for a package that must include an activity before that activity is treated
+      as a required, core part of the package.
+    raise: Raising the share needed means fewer activities count as core, so the missing-activity check
+      has less to work with and flags less.
+    lower: Lowering it treats more activities as core, including some optional ones, which can flag more
+      packages as incomplete by mistake.
+  pay02_package_min_claims:
+    label: Minimum claims to define a package's activities
+    meaning: The number of claims for a package needed before its core activities are worked out from
+      real billing patterns.
+    raise: Raising it means fewer packages have enough claims to define their core activities, so the
+      missing-activity check runs for fewer packages.
+    lower: Lowering it lets the check run for packages with thinner data, which can be less reliable but
+      covers more packages.
+  pay02_novel_min_pair_claims:
+    label: Minimum claims for a code-pair habit check
+    meaning: The number of claims on which a provider must bill two particular codes together before their
+      combined use is compared with other providers.
+    raise: Raising it means only frequently paired codes are checked, reducing flags for rarer combinations.
+    lower: Lowering it lets rarer code pairs be checked too, which can flag more habits but from thinner,
+      less certain evidence.
+  pay02_novel_rate_ratio:
+    label: Unusual code-pairing multiple
+    meaning: How many times more often than similar providers a provider must bill two particular codes
+      together before it is flagged as an unusual billing habit.
+    raise: Raising the multiple only flags providers whose pairing habit is far above peers, so fewer
+      are flagged.
+    lower: Lowering the multiple flags providers only somewhat above peers, catching more real habits
+      but also normal variation.
+  pay02_novel_min_shrunk_rate:
+    label: Minimum code-pairing rate floor
+    meaning: The smallest adjusted share of claims where two codes are billed together needed before the
+      pairing counts as a genuine billing habit, even if peers rarely do it.
+    raise: Raising the floor means only providers who pair the codes on a bigger share of claims can be
+      flagged, so fewer are flagged.
+    lower: Lowering the floor allows less frequent pairing to be flagged, catching more real habits but
+      also rare, incidental combinations.
+  pay02_novel_min_peer_providers:
+    label: Minimum peer providers for pairing comparison
+    meaning: The smallest number of similar providers needed before one provider's use of a code pair,
+      or a modifier, is compared against them as a group.
+    raise: Raising it means fewer specialties have a large enough peer group, so this comparison runs
+      less often.
+    lower: Lowering it lets the comparison run against a smaller, less reliable peer group, but covers
+      more specialties.
+  pay03_unit_exempt_indicators:
+    label: Same-day repeat billing exemption markers
+    meaning: The billing markers, such as for two-sided procedures or a repeated procedure, that excuse
+      a group of lines from the usual same-day maximum-units check.
+    raise: Adding more markers excuses more legitimately repeated or two-sided billing, reducing flags.
+    lower: Removing markers means fewer legitimate repeats are excused, so more of them could be flagged
+      by mistake.
+  pay03_time_rounding_tolerance_minutes:
+    label: Timed-service rounding allowance
+    meaning: How many minutes billed time can exceed the recorded service window, or two timed services
+      can overlap, before either is flagged.
+    raise: Allowing more minutes of leeway excuses larger timing mismatches, so fewer timed services are
+      flagged.
+    lower: Allowing fewer minutes flags smaller timing mismatches, catching more real overbilling but
+      also ordinary rounding of recorded times.
+  pay04_retrospective_route_days:
+    label: Urgent-care retrospective approval window
+    meaning: How many days before an approval's start date an emergency service can still be treated as
+      covered by that later approval.
+    raise: Extending the window covers more emergency services delivered earlier, so fewer are flagged
+      as outside the approval's dates.
+    lower: Shortening the window means more emergency services delivered just before approval are flagged
+      as outside its dates.
+  pay04_value_tolerance_aed:
+    label: Approval value overrun tolerance
+    meaning: The amount, in AED, by which the total billed across several claims may exceed an approval's
+      approved value before the excess is reported, allowing for rounding.
+    raise: Raising the tolerance excuses larger overruns as rounding, so fewer are reported.
+    lower: Lowering the tolerance reports smaller overruns, catching more real cases but also small rounding
+      differences across claims.
+  pay04_family_shared_authorization_permitted:
+    label: Family-shared approval allowed switch
+    meaning: Whether policy allows one approval to be used by more than one family member under the same
+      sponsor, which would excuse an otherwise flagged shared approval.
+    raise: Switching it on excuses shared use of one approval by family members, reducing flags for that
+      pattern.
+    lower: Switching it off means shared use of one approval by family members is always flagged, as no
+      policy currently permits it.
+  pay05_support_required_indicators:
+    label: Documentation-required billing markers
+    meaning: The billing markers, such as for extra procedural work or a co-surgeon, that require a supporting
+      operative report before extra payment is allowed.
+    raise: Adding more markers requires supporting documents for more billing patterns, which can hold
+      up more payments pending proof.
+    lower: Removing markers requires documents for fewer patterns, letting more of these payments through
+      without a supporting report.
+  pay05_document_arrival_days:
+    label: Supporting document arrival grace period
+    meaning: How close to the file's cut-off date a claim can be submitted and still be excused from judgement,
+      because its supporting report may not have arrived yet.
+    raise: Extending the grace period excuses more recent claims from judgement, so fewer are flagged
+      for missing documents.
+    lower: Shortening the grace period judges more recent claims straight away, which can flag more real
+      gaps but also documents still in transit.
+  pay05_rate_min_lines:
+    label: Minimum lines for modifier-use ranking
+    meaning: The number of service lines a provider needs before its use of a payment-boosting marker
+      is ranked against peers.
+    raise: Raising it excludes lower-volume providers from this ranking, reducing flags among them.
+    lower: Lowering it includes lower-volume providers, whose rate is less reliable but who can now be
+      flagged too.
+  pay05_rate_peer_percentile:
+    label: Modifier-use peer percentile threshold
+    meaning: The percentile of similar providers' adjusted marker-use rates that a provider's own rate
+      must exceed before it can be flagged.
+    raise: Raising the percentile flags only the most extreme outliers among peers, so fewer providers
+      are flagged.
+    lower: Lowering the percentile flags providers who are less exceptional compared with peers, catching
+      more real cases but also normal high performers.
+  pay05_rate_ratio_to_peer:
+    label: Modifier-use multiple above peer average
+    meaning: How many times above the average rate of similar providers a provider's adjusted marker-use
+      rate must also be before it is flagged, alongside the percentile check.
+    raise: Raising the multiple means a provider must be much further above the peer average, so fewer
+      are flagged.
+    lower: Lowering the multiple flags providers only somewhat above the peer average, catching more real
+      cases but also ordinary variation.
+  pay05_rate_min_excess:
+    label: Minimum gap above peers for modifier use
+    meaning: How far above similar providers' average a provider's adjusted rate of using billing modifiers
+      must be before it is flagged, measured in percentage points.
+    raise: Only providers far above their peers are flagged, so fewer flags and less reviewer work, but
+      some real issues may be missed.
+    lower: Providers only slightly above peers can be flagged, even where peers almost never use the modifier,
+      so more flags and more false alarms.
+  pay05_migration_window_days:
+    label: Bundling-edit before/after comparison period
+    meaning: The length of the periods, before and after a bundling rule change takes effect, used to
+      measure whether a provider's billing pattern shifted to escape it.
+    raise: Extending the comparison periods gives more claims to measure from, making the comparison steadier
+      but slower to react.
+    lower: Shortening the periods reacts faster to a change but with fewer claims, making the comparison
+      noisier.
+  pay05_education_period_days:
+    label: Rule-change transition period
+    meaning: The number of days after a bundling rule change takes effect that are ignored, to allow providers
+      time to adjust their billing.
+    raise: Extending the transition period excuses more early post-change billing, so fewer providers
+      are flagged for migrating away from the rule.
+    lower: Shortening the transition period starts measuring behaviour sooner, which can flag more providers
+      but also normal early adjustment.
+  pay05_migration_min_post_claims:
+    label: Minimum post-change claims for migration check
+    meaning: The number of claims for the edited procedure a provider must bill after the transition period
+      before a change in its behaviour can be assessed.
+    raise: Raising it means only higher-volume providers can be assessed after the change, reducing flags
+      among lower-volume ones.
+    lower: Lowering it allows lower-volume providers to be assessed too, from thinner, less certain data.
+  pay05_migration_min_rate_increase:
+    label: Minimum rise in edit-avoiding billing
+    meaning: The rise, in percentage points, of a provider's edited-procedure claims that escape a bundling
+      rule, comparing before and after the rule changed, needed to flag migration.
+    raise: Raising the required rise flags only large, clear shifts in behaviour, so fewer providers are
+      flagged.
+    lower: Lowering it flags smaller shifts, catching more real cases but also ordinary billing drift.
+  pay06_price_rounding_tolerance_pct:
+    label: Contracted price rounding allowance (percentage)
+    meaning: The percentage by which a submitted unit price may exceed the contracted allowed price before
+      the line is repriced down.
+    raise: Raising the percentage excuses larger overcharges as rounding, so fewer lines are repriced.
+    lower: Lowering the percentage reprices smaller overcharges, recovering more but also catching genuine
+      rounding of discounts and conversions.
+  pay06_price_rounding_tolerance_aed:
+    label: Contracted price rounding allowance (amount)
+    meaning: The extra amount, in AED, added on top of the percentage allowance, so very small overcharges
+      on low-priced items are not repriced.
+    raise: Raising the amount excuses larger flat overcharges on cheap items, so fewer of them are repriced.
+    lower: Lowering the amount reprices smaller flat overcharges, recovering more but catching more sub-dirham
+      rounding differences too.
+  doc01r01_document_sla_days:
+    label: Document submission deadline
+    meaning: The number of days after a claim is submitted within which a required supporting document
+      must arrive before the claim is flagged for being late or missing it.
+    raise: Extending the deadline gives more time for documents to arrive, so fewer claims are flagged
+      as late.
+    lower: Shortening the deadline flags claims sooner, catching more real gaps but also documents that
+      were simply still in transit.
+  doc01r03_span_display_max_chars:
+    label: Evidence text display length
+    meaning: The maximum length of quoted text shown in the evidence panel for a matched passage; it only
+      affects how much is displayed, not what is detected.
+    raise: Raising it shows longer quoted passages to reviewers, giving more context on screen.
+    lower: Lowering it shows shorter quoted passages, keeping the evidence panel more compact but showing
+      less context at a glance.
+  doc02r02_age_tolerance_years:
+    label: Age mismatch allowance in notes
+    meaning: How many years an age written in a clinical note can differ from the member's registered
+      age before it is treated as belonging to the wrong patient.
+    raise: Allowing a bigger difference excuses more age mismatches as rounding or a recent birthday,
+      so fewer are flagged.
+    lower: Allowing only a small difference flags more mismatches, catching more real wrong-patient notes
+      but also ordinary rounding or birthdays.
+  doc02r04_min_notes_per_provider:
+    label: Minimum notes for generic-note checks
+    meaning: The number of high-complexity service notes a provider needs before how many of them look
+      generic (template-like) is assessed.
+    raise: Raising it excludes lower-volume providers from this check, reducing flags among them.
+    lower: Lowering it includes lower-volume providers, where the generic-note share is based on fewer
+      notes and less reliable.
+  doc02r04_generic_length_ratio:
+    label: Generic note detection threshold
+    meaning: How short a note's patient-specific wording can be, compared with similar notes from other
+      providers, before it counts as generic rather than individually written.
+    raise: Raising the threshold treats more notes as sufficiently detailed, so fewer notes are counted
+      as generic.
+    lower: Lowering the threshold treats fewer notes as detailed enough, so more notes are counted as
+      generic, catching more real cases but also some genuinely brief but adequate notes.
+  doc02r04_min_generic_share:
+    label: Minimum share of generic notes to flag a provider
+    meaning: The share of a provider's high-complexity notes that must be generic before the provider
+      itself is flagged as a pattern rather than a one-off.
+    raise: Raising the share needed flags only providers where generic notes are the clear majority, so
+      fewer providers are flagged.
+    lower: Lowering the share flags providers with fewer generic notes overall, catching more real patterns
+      but also occasional thin notes.
+  net01r02_min_reciprocal_referrals:
+    label: Minimum referrals for a referral loop
+    meaning: The number of referrals needed in each direction between two providers before their back-and-forth
+      referring is considered a possible loop.
+    raise: Raising it requires a stronger two-way pattern before flagging, so fewer loops are found.
+    lower: Lowering it flags thinner two-way patterns as possible loops, catching more real cases but
+      also occasional mutual referrals.
+  net01r02_min_lift:
+    label: Referral loop unexpectedness multiple
+    meaning: How many times more referrals must flow in each direction between two providers than would
+      be expected from the recipient's overall popularity, before it is a loop.
+    raise: Raising the multiple flags only pairs whose referral flow is far beyond what popularity would
+      predict, so fewer loops are found.
+    lower: Lowering the multiple flags pairs that are only somewhat above expectation, catching more real
+      loops but also popular providers receiving many referrals normally.
+  net01r02_min_direction_share:
+    label: Minimum share of referrals in a loop direction
+    meaning: The share of a provider's own referrals, in one direction, that must go to the same partner
+      before that direction counts as part of a loop.
+    raise: Raising the share needed means only a provider's most dominant referral partner can count,
+      so fewer loops are found.
+    lower: Lowering it lets a smaller part of a provider's referrals count towards a loop, catching more
+      real cases but also a large provider's occasional referrals to a partner.
+  net01r03_high_cost_line_percentile:
+    label: High-cost service line threshold
+    meaning: The percentile of all billed line amounts in the file above which a claim's line is treated
+      as a high-cost service resulting from a referral.
+    raise: Raising the percentile counts only the very highest-value lines as high-cost, so fewer referrals
+      are seen as converting to expensive care.
+    lower: Lowering the percentile counts more lines as high-cost, which can flag more referral-conversion
+      patterns but also moderately priced services.
+  net01r03_conversion_window_days:
+    label: Referral outcome matching window
+    meaning: When a referral does not say which claim it led to, the number of days after the referral
+      within which the member's first claim at the recipient is taken as its result.
+    raise: Widening the window links more later claims to an earlier referral, so more outcomes can be
+      assessed.
+    lower: Narrowing the window only links very prompt follow-up claims, so fewer outcomes can be assessed,
+      some of which are genuinely delayed.
+  net01r03_min_referrals:
+    label: Minimum referrals for conversion-rate comparison
+    meaning: The number of referrals a recipient provider must have received before its rate of converting
+      them to high-cost services is compared with what would be expected.
+    raise: Raising it means only providers receiving many referrals can be assessed, reducing flags among
+      lower-volume recipients.
+    lower: Lowering it allows lower-volume recipients to be assessed too, from a rate that is less statistically
+      reliable.
+  net01r03_min_observed_to_expected:
+    label: Minimum excess over expected referral conversions
+    meaning: How many times more high-cost conversions a provider must show than expected for their specialty
+      and referral reason before it is flagged.
+    raise: Raising the multiple flags only providers whose excess is very large compared with expectation,
+      so fewer are flagged.
+    lower: Lowering the multiple flags smaller excesses, catching more real cases but also ordinary case-mix
+      variation.
+  net01r03_max_tail_probability:
+    label: Chance threshold for referral conversion excess
+    meaning: How unlikely, by chance alone, the observed number of high-cost conversions must be, given
+      what was expected, before it is flagged alongside the excess multiple.
+    raise: Raising this threshold makes the chance test easier to pass, so more providers are flagged,
+      including some where the excess could plausibly be chance.
+    lower: Lowering this threshold requires the excess to be even less likely by chance, so fewer providers
+      are flagged, but those flagged are more clearly unusual.
+  net01r04_min_downstream_referrals:
+    label: Minimum referrals for network self-dealing check
+    meaning: The number of laboratory, imaging or pharmacy referrals a referring provider needs before
+      how much of that business stays within their own linked providers is assessed.
+    raise: Raising it means only providers making many such referrals are assessed, reducing flags among
+      lower-volume referrers.
+    lower: Lowering it includes lower-volume referrers in the check, which can flag more cases but from
+      a smaller, less reliable sample.
+  net01r04_min_retained_share:
+    label: Minimum retained referral share for a closed loop
+    meaning: Sets the share of a referrer's onward referrals that must go to covertly linked providers
+      before the chain is called closed.
+    raise: Fewer referral chains reach the required share, so fewer closed-loop referral chains are flagged.
+    lower: More referral chains reach the required share, so more chains are flagged, with more false
+      alarms.
+  net02r01_shared_service_max_providers:
+    label: Maximum providers sharing an identifier before it is a shared service
+    meaning: Sets how many providers can share one bank, phone or address before that is treated as a
+      shared bureau or building, not a covert link.
+    raise: More shared identifiers are excused as shared services, so fewer covert-link flags, but some
+      real links may be missed.
+    lower: Fewer shared identifiers are excused, so more covert-link flags, including genuine shared offices.
+  net02r04_window_months:
+    label: Months averaged around a network change point
+    meaning: Sets how many months of activity before and after a suspected change are averaged when checking
+      a provider's role in a network.
+    raise: Averaging over more months smooths out one-off busy months, giving steadier but slower-to-react
+      change detection.
+    lower: Averaging over fewer months reacts faster but a single unusual month can look like a lasting
+      structural change.
+  net02r04_peripheral_percentile:
+    label: Peripheral-provider percentile before a network change
+    meaning: Sets how low a provider's ranking by patients served must be, before the change, to count
+      as peripheral.
+    raise: More providers count as peripheral beforehand, so more of them can qualify for the rising-centrality
+      flag.
+    lower: Fewer providers count as peripheral beforehand, so fewer qualify, missing some genuine rises.
+  net02r04_central_percentile:
+    label: Central-provider percentile after a network change
+    meaning: Sets how high a provider's ranking by patients served must be, after the change, to count
+      as central.
+    raise: Fewer providers reach the required ranking afterwards, so fewer rising-centrality flags, but
+      smaller rises are missed.
+    lower: More providers reach the required ranking afterwards, so more rising-centrality flags, with
+      more false alarms.
+  net02r04_min_post_value_aed:
+    label: Minimum billing after a network change to matter
+    meaning: Sets the minimum amount a provider must bill after becoming more central before the rise
+      is worth a network review.
+    raise: Only providers with larger post-change billing are flagged, so fewer but more material network
+      review flags.
+    lower: Providers with smaller post-change billing are also flagged, so more network review flags,
+      some less significant.
+  net03r02_min_members:
+    label: Minimum patients before checking employer concentration
+    meaning: Sets the minimum number of distinct patients a provider must serve before its employer mix
+      is examined at all.
+    raise: Fewer small providers are checked for employer concentration, reducing flags from providers
+      with little evidence.
+    lower: More small providers are checked, which can raise flags based on very few patients.
+  net03r02_min_employer_share:
+    label: Minimum employer share to call activity concentrated
+    meaning: Sets the share of a provider's patients from one employer needed to call the activity concentrated
+      on that employer.
+    raise: Fewer providers reach the required concentration, so fewer employer-concentration flags.
+    lower: More providers reach the required concentration, so more employer-concentration flags, some
+      incidental.
+  net03r02_min_lift:
+    label: Minimum employer over-representation versus the local area
+    meaning: Sets how many times higher an employer's share of a provider's patients must be than its
+      share locally, adjusting for clinic location.
+    raise: Only stronger over-representation qualifies, so fewer employer-concentration flags, but genuine
+      but modest patterns are missed.
+    lower: Weaker over-representation also qualifies, so more employer-concentration flags, with more
+      false alarms.
+  net03r02_max_group_providers:
+    label: Providers counted as an employer group's usual few
+    meaning: Sets how many of an employer group's most-used providers are counted when measuring whether
+      the group is steered to a closed set.
+    raise: Widening the count to more providers makes it easier for a group's claims to appear concentrated,
+      raising more flags.
+    lower: Narrowing the count to fewer providers makes concentration harder to reach, lowering flags,
+      missing wider steering patterns.
+  net03r02_min_closure_share:
+    label: Minimum share of claims kept within the usual few providers
+    meaning: Sets the share of an employer group's claims that must stay with its usual few providers
+      to be called a closed group.
+    raise: Fewer employer groups reach the required share, so fewer closed-group flags.
+    lower: More employer groups reach the required share, so more closed-group flags, some coincidental.
+  net03r03_min_claims:
+    label: Minimum claims before checking inducement patterns
+    meaning: Sets the minimum number of claims a provider must have before its zero-patient-share and
+      high-value repeat rates are compared with others.
+    raise: Fewer providers with little claim history are checked, reducing flags built on weak evidence.
+    lower: More providers with little claim history are checked, which can raise flags on thin evidence.
+  net03r03_rate_multiple:
+    label: Minimum multiple over the norm for inducement signals
+    meaning: Sets how many times above the typical rate both the zero-patient-share and high-value-repeat
+      patterns must be before either counts.
+    raise: Only much higher rates qualify, so fewer inducement flags, but moderate patterns are missed.
+    lower: Rates closer to typical also qualify, so more inducement flags, with more false alarms.
+  net03r03_high_value_line_percentile:
+    label: Percentile that defines a high-value claim line
+    meaning: Sets how high a single claim line's value must rank among all lines in the file to count
+      as high-value.
+    raise: Fewer claim lines qualify as high-value, so fewer claims feed into the inducement check.
+    lower: More claim lines qualify as high-value, so more claims feed into the inducement check, widening
+      it.
+  net03r03_min_members_with_both:
+    label: Minimum patients showing both inducement signals
+    meaning: Sets the minimum number of distinct patients who must show both the zero-patient-share and
+      high-value-repeat patterns at a provider.
+    raise: More corroborating patients are required, so fewer inducement flags, but smaller genuine patterns
+      are missed.
+    lower: Fewer corroborating patients are required, so more inducement flags, some based on a single
+      patient's pattern.
+  net03r04_min_distinct_members:
+    label: Minimum patients corroborating a network complaint
+    meaning: Sets the minimum number of distinct patients whose confirmed accounts or complaints must
+      agree before a provider is escalated.
+    raise: More agreeing patients are required, so fewer providers are escalated, but genuine issues reported
+      by few patients are missed.
+    lower: Fewer agreeing patients are required, so more providers are escalated, including from single,
+      uncorroborated accounts.
+  cln_changepoint_min_segment_periods:
+    label: Minimum months either side of a billing change point
+    meaning: Sets the minimum number of monthly periods required both before and after a suspected change
+      before it is measured.
+    raise: Requiring more months on each side makes change detection steadier but slower, reducing flags
+      from short series.
+    lower: Allowing fewer months makes change detection faster but more sensitive to noise from just one
+      or two months.
+  cln_changepoint_min_z:
+    label: Minimum statistical strength for a billing change point
+    meaning: Sets how far from typical, in standardised terms, an upward shift in a provider's billing
+      must be before it counts as a real change.
+    raise: Only stronger, clearer shifts are flagged, so fewer change-point flags, but smaller genuine
+      shifts are missed.
+    lower: Weaker shifts are also flagged, so more change-point flags, with more false alarms from normal
+      month-to-month noise.
+  cln_casemix_max_shift:
+    label: Maximum patient-mix change allowed for a coding explanation
+    meaning: Sets how much a provider's mix of patient diagnoses can shift across a change point before
+      the shift is no longer excused as a coding change.
+    raise: More cases of a changed patient mix are still excused as coding changes, so fewer flags, some
+      real coding shifts missed.
+    lower: Fewer cases are excused as a changed patient mix, so more billing-change flags are raised instead
+      of being explained away.
+  cln_structural_change_window_days:
+    label: Days around a known structural change that suppress a flag
+    meaning: Sets the window around a documented ownership change or new contract within which a detected
+      billing change is treated as explained, not suspicious.
+    raise: A wider window excuses more detected changes as known structural events, reducing flags, including
+      some that are unrelated.
+    lower: A narrower window excuses fewer detected changes, increasing flags, some of which have an innocent
+      structural cause.
+  cln01_level_min_lines_per_month:
+    label: Minimum service lines per month for level-shift checks
+    meaning: Sets the minimum number of graded service lines a provider must bill in a month before that
+      month counts in the level-migration check.
+    raise: Fewer quiet months are counted, reducing flags built on very small monthly volumes.
+    lower: More quiet months are counted, which can let a handful of visits swing the detected pattern.
+  cln01_level_shift_min_increase:
+    label: Minimum rise in top-level coding share to matter
+    meaning: Sets the minimum rise in the share of services billed at the top code level before a level-migration
+      change is reported.
+    raise: Only larger rises are reported, so fewer level-migration flags, but smaller genuine shifts
+      upward are missed.
+    lower: Smaller rises are also reported, so more level-migration flags, some of limited practical significance.
+  cln02_comorbidity_min_claims:
+    label: Minimum inpatient stays before comparing complication rates
+    meaning: Sets the minimum number of inpatient stays a provider must have before its complication-code
+      rate is compared with similar providers.
+    raise: Fewer providers with little inpatient history are compared, reducing flags built on weak evidence.
+    lower: More providers with little inpatient history are compared, which can raise flags on thin evidence.
+  cln02_comorbidity_oe_ratio:
+    label: Minimum excess over expected complication rate
+    meaning: Sets how many times higher than expected, given the patient mix, a provider's complication-code
+      rate must be before it is material.
+    raise: Only larger excesses over the expected rate are treated as material, so fewer flags, but moderate
+      excesses are missed.
+    lower: Smaller excesses are also treated as material, so more flags, some within normal clinical variation.
+  cln02_comorbidity_max_pvalue:
+    label: Chance threshold for an unusual complication rate
+    meaning: Sets how unlikely, by chance alone, a provider's complication-code count must be before the
+      excess is treated as more than chance.
+    raise: Loosening this threshold lets more borderline cases count as unlikely by chance, raising more
+      complication-rate flags.
+    lower: Tightening this threshold requires stronger statistical evidence, lowering the number of complication-rate
+      flags.
+  cln02_chronic_recurrence_min_share:
+    label: Minimum recurrence share to call a diagnosis long-standing
+    meaning: Sets the share of patients with a diagnosis who must have it recorded more than once before
+      that diagnosis counts as long-standing.
+    raise: Fewer diagnosis categories qualify as long-standing, which narrows which absent-history checks
+      can apply.
+    lower: More diagnosis categories qualify as long-standing, widening which absent-history checks can
+      apply.
+  cln02_min_history_claims:
+    label: Minimum patient claims before using history absence
+    meaning: Sets the minimum number of a patient's past claims required before the absence of a condition
+      from their history is used as evidence at all.
+    raise: Requiring more past claims makes the absence-of-history signal more reliable, but usable for
+      fewer patients.
+    lower: Requiring fewer past claims makes the signal usable for more patients, but on weaker, thinner
+      histories.
+  cln02_history_lookback_days:
+    label: Lookback window for a patient's condition history
+    meaning: Sets how many days before and after a claim are searched in a patient's other claims for
+      a long-standing condition.
+    raise: A wider lookback window finds more supporting history, reducing false long-standing-condition
+      flags but slowing detection of new ones.
+    lower: A narrower lookback window finds less supporting history, which can raise more flags where
+      the condition existed but fell outside the window.
+  cln02_severity_min_claims_per_month:
+    label: Minimum stays per month for severity trend checks
+    meaning: Sets the minimum number of inpatient stays a provider must have in a month before that month
+      enters the case-severity trend.
+    raise: Fewer quiet months are counted, reducing flags built on very small monthly stay volumes.
+    lower: More quiet months are counted, which can let a handful of stays swing the detected severity
+      trend.
+  cln02_severity_shift_min_ratio:
+    label: Minimum rise in average case severity to matter
+    meaning: Sets how many times higher the average severity of cases must be after a change point compared
+      with before, to count as material.
+    raise: Only larger rises in severity are treated as material, so fewer severity-shift flags, but smaller
+      genuine rises are missed.
+    lower: Smaller rises in severity are also treated as material, so more severity-shift flags, some
+      of limited significance.
+  cln02_severity_explained_by_ratio:
+    label: Corroboration threshold for a severity rise
+    meaning: Sets how much length of stay or services per stay must also rise across a change point before
+      a severity rise is treated as corroborated by real care changes.
+    raise: Requiring a bigger rise in care intensity to corroborate makes fewer severity rises count as
+      explained, so more are flagged as suspicious instead.
+    lower: Requiring a smaller rise in care intensity makes more severity rises count as explained by
+      genuine care changes, lowering flags.
+  cln03_indication_lookback_days:
+    label: Lookback window for an accepted clinical indication
+    meaning: Sets how many days before a service a supporting diagnosis on the patient's other claims
+      still counts as an accepted reason for that service.
+    raise: A wider lookback window accepts more prior diagnoses as valid indications, reducing flags for
+      services lacking justification.
+    lower: A narrower lookback window accepts fewer prior diagnoses, which can raise more flags for services
+      that were, in fact, justified earlier.
+  cln03_default_pathway_days:
+    label: Default window for a required earlier care step
+    meaning: Sets the fallback number of days allowed for an earlier step in a care pathway, when a specific
+      policy does not state its own window.
+    raise: A longer default window accepts more delayed earlier steps as satisfying the pathway, reducing
+      flags.
+    lower: A shorter default window accepts fewer delayed earlier steps, increasing flags for pathways
+      missing a timely earlier step.
+  cln03_rare_code_max_prevalence:
+    label: Maximum prevalence for a code to count as rare
+    meaning: Sets how small a service code's share of other providers' billing in the same specialty must
+      be before that code counts as rare for the specialty.
+    raise: More codes qualify as rare for the specialty, widening what feeds into the rare-code usage
+      check.
+    lower: Fewer codes qualify as rare for the specialty, narrowing what feeds into the rare-code usage
+      check.
+  cln03_min_provider_lines:
+    label: Minimum service lines before checking rare-code use
+    meaning: Sets the minimum number of service lines a provider must bill before its use of rare codes
+      is compared with its specialty.
+    raise: Fewer providers with little billing history are checked, reducing flags built on weak evidence.
+    lower: More providers with little billing history are checked, which can raise flags on thin evidence.
+  cln03_min_specialty_peers:
+    label: Minimum peers before any specialty comparison is made
+    meaning: Sets the minimum number of comparable providers required in a specialty before any peer comparison
+      in that specialty is made.
+    raise: Requiring more peers means comparisons are only made for well-populated specialties, reducing
+      flags from thin peer groups.
+    lower: Requiring fewer peers allows comparisons in sparser specialties, which can raise flags built
+      on a small, unreliable comparison group.
+  cln03_rare_share_min:
+    label: Minimum rare-code share for monitoring
+    meaning: Sets the minimum share of a provider's services that must be rare-for-specialty codes before
+      the provider is reported for monitoring.
+    raise: Fewer providers reach the required rare-code share, so fewer providers are reported for monitoring.
+    lower: More providers reach the required rare-code share, so more providers are reported for monitoring,
+      some marginally.
+  cln03_rare_share_peer_multiple:
+    label: Minimum multiple over peers for rare-code use
+    meaning: Sets how many times higher than the specialty's typical rare-code share a provider's own
+      share must be before it is reported.
+    raise: Only much higher rare-code use than peers is reported, so fewer flags, but moderately unusual
+      providers are missed.
+    lower: Rare-code use closer to peers is also reported, so more flags, with more false alarms.
+  cln04_repeat_window_days:
+    label: Window for counting a diagnostic test as repeated
+    meaning: Sets how close together two of the same diagnostic test for a patient must be before the
+      second counts as a repeat needing justification.
+    raise: A wider window catches more repeats, including tests spaced further apart, raising more repeat-testing
+      flags.
+    lower: A narrower window catches fewer repeats, only very close together, lowering repeat-testing
+      flags but missing slower repeats.
+  cln04_result_latency_days:
+    label: Allowed delay before a missing test result is flagged
+    meaning: Sets how many days after a repeat test a first result can still arrive and be treated as
+      a reporting delay, not a genuinely missing result.
+    raise: A longer allowed delay excuses more late results as reporting delays, reducing missing-result
+      flags.
+    lower: A shorter allowed delay excuses fewer late results, increasing missing-result flags, some of
+      which were only delayed in reporting.
+  cln04_cascade_window_days:
+    label: Window for linking a referral to downstream claims
+    meaning: Sets how many days after a referral a patient's claims at the recipient provider count as
+      that referral's downstream services.
+    raise: A wider window links more downstream claims to a referral, increasing the measured downstream
+      spend per referral.
+    lower: A narrower window links fewer downstream claims to a referral, potentially understating the
+      true downstream spend.
+  cln04_cascade_min_referrals:
+    label: Minimum referrals before comparing downstream spend
+    meaning: Sets the minimum number of referrals a provider must send before its downstream spend per
+      referral is compared with other referrers.
+    raise: Fewer referrers with only a handful of referrals are checked, reducing flags built on weak
+      evidence.
+    lower: More referrers with only a handful of referrals are checked, which can raise flags on thin
+      evidence.
+  cln04_cascade_peer_multiple:
+    label: Minimum multiple over peers for downstream spend
+    meaning: Sets how many times higher than the typical referrer's downstream spend per referral a provider's
+      own spend must be before it is material.
+    raise: Only much higher downstream spend than peers is treated as material, so fewer flags, but moderate
+      excess spend is missed.
+    lower: Downstream spend closer to peers is also treated as material, so more flags, with more false
+      alarms.
+  cln05_min_presentations:
+    label: Minimum emergency presentations before comparing admission rates
+    meaning: Sets the minimum number of emergency presentations a hospital must have before its admission
+      rate is compared with what its diagnosis mix predicts.
+    raise: Fewer hospitals with little emergency volume are checked, reducing flags built on weak evidence.
+    lower: More hospitals with little emergency volume are checked, which can raise flags on thin evidence.
+  cln05_admission_oe_ratio:
+    label: Minimum excess over expected admission rate
+    meaning: Sets how many times higher than expected, given its patient mix, a hospital's admission rate
+      must be before it counts as materially higher.
+    raise: Only larger excesses over the expected admission rate are treated as material, so fewer flags,
+      but moderate excesses are missed.
+    lower: Smaller excesses are also treated as material, so more flags, some within normal clinical variation.
+  cln06_artifact_latency_days:
+    label: Days before a missing result or report is expected
+    meaning: Sets how many days must pass after a service before a missing result or report is treated
+      as genuinely overdue rather than simply not yet due.
+    raise: Allowing more time before expecting a result reduces flags, but real gaps take longer to surface.
+    lower: Expecting a result sooner increases flags, some of which are results that were simply not due
+      yet.
+  cln06_confirmation_recall_max_days:
+    label: Maximum recall window for a member's denial
+    meaning: Sets how long after a service a member's denial that a service happened can still be relied
+      on as evidence.
+    raise: A longer recall window relies on more, older denials, increasing flags but on less reliable
+      recollection.
+    lower: A shorter recall window relies only on more recent denials, reducing flags but discarding some
+      genuine older ones.
+  cln06_footprint_min_claims:
+    label: Minimum claims before checking a missing treatment footprint
+    meaning: Sets the minimum number of claims for a condition, across at least two months, before the
+      absence of any related medicine or result is examined.
+    raise: Fewer conditions with little claim history are checked, reducing flags built on weak evidence.
+    lower: More conditions with little claim history are checked, which can raise flags on thin evidence.
+  cln06_footprint_peer_min_rate:
+    label: Minimum peer rate for expecting a treatment footprint
+    meaning: Sets the share of other patients with the same repeated condition who must show medicine
+      or results before an absent footprint is reported for a condition.
+    raise: Only conditions where peers very commonly show a footprint are checked, so fewer missing-footprint
+      flags.
+    lower: Conditions where peers less commonly show a footprint are also checked, so more missing-footprint
+      flags, some less meaningful.
+  cln07_clinician_day_capacity_minutes:
+    label: Assumed working minutes in a clinician's day
+    meaning: Sets the working minutes assumed available to one clinician per day, before the capacity
+      tolerance margin is applied, for the overwork check.
+    raise: A higher assumed daily capacity makes a breach harder to reach, lowering overwork flags, missing
+      some genuine overload.
+    lower: A lower assumed daily capacity makes a breach easier to reach, raising overwork flags, some
+      within a longer but plausible working day.
+  cln08_min_results_for_fingerprint:
+    label: Minimum numeric results before comparing patient results
+    meaning: Sets the minimum number of numeric results a claim must have before its values are compared
+      with other patients' claims for copied results.
+    raise: Requiring more numeric results per claim reduces false matches from a single shared common
+      value, but checks fewer claims.
+    lower: Requiring fewer numeric results checks more claims, but a single shared normal value can make
+      unrelated patients look copied.
+  cln08_passthrough_min_lines:
+    label: Minimum outsourced tests before comparing mark-ups
+    meaning: Sets the minimum number of tests a provider must bill but have performed elsewhere before
+      its mark-up is compared with other billing providers.
+    raise: Fewer providers with little outsourced-test volume are checked, reducing flags built on weak
+      evidence.
+    lower: More providers with little outsourced-test volume are checked, which can raise flags on thin
+      evidence.
+  cln08_passthrough_peer_multiple:
+    label: Minimum multiple over peers for pass-through mark-up
+    meaning: Sets how many times higher than other pass-through billers' typical mark-up a provider's
+      own mark-up must be before it is compared further.
+    raise: Only much higher mark-ups than peers are checked further, so fewer flags, but moderately high
+      mark-ups are missed.
+    lower: Mark-ups closer to peers are also checked further, so more flags, with more false alarms.
+  cln08_passthrough_min_markup:
+    label: Minimum absolute mark-up over the outsourced price
+    meaning: Sets the smallest mark-up over the performing laboratory's own price that can ever be reported,
+      regardless of how it compares with peers.
+    raise: Only larger absolute mark-ups can ever be reported, so fewer flags, even where the peer comparison
+      alone would qualify.
+    lower: Smaller absolute mark-ups can also be reported, so more flags, including modest handling margins.
+  cln08_complexity_min_tests:
+    label: Minimum laboratory tests before ranking test complexity
+    meaning: Sets the minimum number of laboratory tests a provider must run before its share of high-complexity
+      tests is ranked against peers.
+    raise: Fewer providers with little test volume are ranked, reducing flags built on weak evidence.
+    lower: More providers with little test volume are ranked, which can raise flags on thin evidence.
+  cln08_complexity_peer_multiple:
+    label: Minimum multiple over peers for complex-test share
+    meaning: Sets how many times higher than the typical provider's rate of high-complexity tests a provider's
+      own adjusted rate must be before it is flagged.
+    raise: Only much higher complex-test rates than peers are flagged, so fewer flags, but moderately
+      elevated rates are missed.
+    lower: Complex-test rates closer to peers are also flagged, so more flags, with more false alarms.
+  pay07_share_abs_tolerance_aed:
+    label: Absolute rounding tolerance for patient share mismatches
+    meaning: Sets how many dirhams a patient's share can differ from the expected benefit calculation
+      before it is treated as a genuine mismatch rather than rounding.
+    raise: A larger tolerance excuses more differences as rounding, reducing patient-share mismatch flags.
+    lower: A smaller tolerance excuses fewer differences, increasing patient-share mismatch flags, some
+      of which were only rounding.
+  pay07_share_rel_tolerance:
+    label: Relative rounding tolerance for patient share mismatches
+    meaning: Sets the share of the expected patient amount, relative to the fixed tolerance, that must
+      be exceeded before a mismatch is raised.
+    raise: A larger relative tolerance excuses more proportional differences as rounding, reducing patient-share
+      mismatch flags.
+    lower: A smaller relative tolerance excuses fewer differences, increasing patient-share mismatch flags.
+  pay07_share_exemption_terms:
+    label: Words that mark a benefit rule as share-exempt
+    meaning: Lists the words in a benefit rule's exceptions text that mark it as an exemption, so its
+      claims are skipped in the co-payment mismatch check.
+    raise: Adding words excuses more benefit rules from the mismatch check, reducing flags, including
+      some genuine mismatches.
+    lower: Removing words excuses fewer benefit rules, increasing flags, including some that were legitimately
+      exempt.
+  pay07_net_equation_tolerance_aed:
+    label: Tolerance for the claimed-amount arithmetic check
+    meaning: Sets how many dirhams the amount claimed from the insurer can exceed billed less discount
+      less patient share before the claim is repriced.
+    raise: A larger tolerance excuses more arithmetic differences as rounding, reducing repricing flags.
+    lower: A smaller tolerance excuses fewer differences, increasing repricing flags, some of which were
+      only rounding.
+  pay07_rounding_unit_aed:
+    label: Unit used to detect a rounded-down patient share
+    meaning: Sets the dirham unit that a patient share below the expected amount must be an exact multiple
+      of, to count as a rounded-down share.
+    raise: A larger unit lets more values count as an exact multiple, raising the rounded-down share rate
+      and related flags.
+    lower: A smaller unit lets fewer values count as an exact multiple, lowering the rounded-down share
+      rate and related flags.
+  pay07_zero_share_min_claims:
+    label: Minimum claims before comparing zero-share rates
+    meaning: Sets the minimum number of claims with an expected patient share a provider must have before
+      its zero-share rate is compared with peers.
+    raise: Fewer providers with little relevant claim history are checked, reducing flags built on weak
+      evidence.
+    lower: More providers with little relevant claim history are checked, which can raise flags on thin
+      evidence.
+  pay07_zero_share_rate_ratio:
+    label: Minimum multiple over peers for zero-share rate
+    meaning: Sets how many times higher than the typical peer rate a provider's zero-or-rounded share
+      rate must be before it is raised.
+    raise: Only much higher zero-share rates than peers are raised, so fewer flags, but moderately elevated
+      rates are missed.
+    lower: Zero-share rates closer to peers are also raised, so more flags, with more false alarms.
+  pay07_zero_share_min_excess:
+    label: Minimum absolute gap over peers for zero-share rate
+    meaning: Sets the minimum absolute gap above the peer rate that a provider's zero-share rate must
+      also clear before it is raised.
+    raise: Requiring a bigger absolute gap over peers means fewer providers are raised, even where the
+      peer ratio alone would qualify.
+    lower: Requiring a smaller absolute gap means more providers are raised, including those with only
+      a marginal excess.
+  pay07_zero_share_programmes:
+    label: Regulator programme names excluded from zero-share checks
+    meaning: Lists product name fragments for regulator programmes with a zero or fixed co-payment by
+      design, which are left out of the zero-share comparison.
+    raise: Adding programme names excludes more products from the check, reducing flags, some of which
+      may have been genuine issues.
+    lower: Removing programme names includes more products in the check, increasing flags, including some
+      regulated zero-share products.
+  pay07_balance_bill_tolerance_aed:
+    label: Tolerance for member overpayment before balance-billing is raised
+    meaning: Sets how many dirhams a member's receipted payment can exceed the approved patient share
+      before a balance-billing case is raised.
+    raise: A larger tolerance excuses more overpayments as rounding or card fees, reducing balance-billing
+      flags.
+    lower: A smaller tolerance excuses fewer overpayments, increasing balance-billing flags, some of which
+      were minor fees.
+  pay07_consented_item_terms:
+    label: Words that mark a receipt item as consented and non-covered
+    meaning: Lists the words on a receipt that mark a non-covered elective item as bought with documented
+      patient consent, excluding it from the patient-share check.
+    raise: Adding words excuses more receipt items from the check, reducing balance-billing flags, some
+      genuinely due.
+    lower: Removing words excuses fewer receipt items, increasing balance-billing flags, including some
+      properly consented purchases.
+  pay07_overcharge_complaint_terms:
+    label: Words that mark a complaint as an overcharge complaint
+    meaning: Lists the words in a member complaint's type or text that mark it as an overcharge complaint
+      linked to a claim.
+    raise: Adding words means more complaints are treated as overcharge complaints, increasing balance-billing
+      flags.
+    lower: Removing words means fewer complaints are treated as overcharge complaints, decreasing balance-billing
+      flags, some genuine.
+  pay08_legacy_route_types:
+    label: Resubmission route names exempt from prior-claim checks
+    meaning: Lists resubmission route names that are permitted legacy routes, whose resubmissions are
+      not checked for a reference to the prior claim.
+    raise: Adding route names excuses more resubmissions from the check, reducing flags, including some
+      without a proper reference.
+    lower: Removing route names includes more resubmissions in the check, increasing flags, including
+      some using a legitimate legacy route.
+  pay08_reimbursement_field_tokens:
+    label: Field-name words that count as reimbursement-enabling
+    meaning: Lists words in a changed field's name that mark the change as reimbursement-enabling, such
+      as diagnosis, code, units or provider fields.
+    raise: Adding words widens what counts as a reimbursement-enabling change, increasing resubmission-correction
+      flags.
+    lower: Removing words narrows what counts as a reimbursement-enabling change, decreasing resubmission-correction
+      flags.
+  pay08_accepted_correction_matrix:
+    label: Which field changes are accepted corrections per refusal reason
+    meaning: Maps each refusal reason to the field changes that are an expected correction and so are
+      not pended for review.
+    raise: Adding accepted field changes for a refusal reason excuses more resubmissions, reducing pended-resubmission
+      flags.
+    lower: Removing accepted field changes means more resubmissions are pended for review, increasing
+      flags, including routine corrections.
+  pay08_max_attempts:
+    label: Maximum resubmission attempts before a loop is flagged
+    meaning: Sets how many times one underlying service can be resubmitted, excluding formal appeals,
+      before it is raised as a resubmission loop.
+    raise: Allowing more attempts before flagging means fewer resubmission-loop flags, letting longer
+      chains of retries pass unnoticed.
+    lower: Allowing fewer attempts before flagging means more resubmission-loop flags, including some
+      claims still being legitimately corrected.
+  pay08_variants_until_paid_min:
+    label: Minimum resubmission variants before flagging trial-and-error billing
+    meaning: Sets the minimum number of differently changed resubmissions, ending in payment, before a
+      chain is raised as trying variants until paid.
+    raise: Requiring more distinct variants means fewer chains are flagged, missing shorter trial-and-error
+      patterns.
+    lower: Requiring fewer distinct variants means more chains are flagged, including some that changed
+      little between attempts.
+  pay08_appeal_route_types:
+    label: Resubmission route names excluded from the attempt limit
+    meaning: Lists resubmission route names for internal complaint or appeal routes, whose attempts are
+      not counted towards the resubmission-attempt limit.
+    raise: Adding route names excludes more attempts from the limit, reducing resubmission-loop flags
+      on legitimate appeals.
+    lower: Removing route names includes more attempts in the limit, increasing resubmission-loop flags,
+      including genuine appeals.
+  pay08_success_min_resubmissions:
+    label: Minimum changed resubmissions before comparing success rates
+    meaning: Sets the minimum number of changed resubmissions after a refusal a provider must have before
+      its success rate is compared with others.
+    raise: Fewer providers with little resubmission history are checked, reducing flags built on weak
+      evidence.
+    lower: More providers with little resubmission history are checked, which can raise flags on thin
+      evidence.
+  pay08_success_uplift:
+    label: Minimum success-rate gap over other providers
+    meaning: Sets the minimum gap by which a provider's success rate on changed resubmissions must exceed
+      other providers' rate to be material.
+    raise: Requiring a bigger gap means fewer providers are flagged, missing moderately higher success
+      rates.
+    lower: Requiring a smaller gap means more providers are flagged, including those only slightly above
+      others.
+  pay08_denial_concentration_min:
+    label: Minimum share of successes on one refusal reason
+    meaning: Sets the share of a provider's successful changed resubmissions that must follow one refusal
+      reason to count as concentrated on specific denial edits.
+    raise: Requiring a higher concentration on one reason means fewer providers are flagged, missing broader
+      but still uneven patterns.
+    lower: Requiring a lower concentration means more providers are flagged, including those with a more
+      varied mix of successes.
+  pay09_noncovered_terms:
+    label: Words describing a non-covered service
+    meaning: Lists the words or phrases in an attached note that describe a service the standard UAE benefit
+      excludes, such as cosmetic procedures.
+    raise: Adding words widens what is detected as a non-covered service, increasing disguised-exclusion
+      flags.
+    lower: Removing words narrows what is detected, decreasing disguised-exclusion flags, some genuinely
+      non-covered.
+  pay09_negation_terms:
+    label: Words that negate a non-covered service mention
+    meaning: Lists the words, such as not or without, that mean a non-covered term nearby is being ruled
+      out rather than described as performed.
+    raise: Adding negation words means more mentions are read as ruled out, decreasing disguised-exclusion
+      flags.
+    lower: Removing negation words means fewer mentions are read as ruled out, increasing disguised-exclusion
+      flags, some incorrectly.
+  pay09_negation_window_chars:
+    label: Distance searched for a negation word
+    meaning: Sets how many characters before a matched non-covered term are searched for a negation word
+      like not or without.
+    raise: A wider search distance catches more negations, reducing disguised-exclusion flags, including
+      some genuinely correct ones.
+    lower: A narrower search distance catches fewer negations, increasing disguised-exclusion flags, some
+      of which were actually ruled out.
+  pay09_min_ocr_confidence:
+    label: Minimum document scan quality used
+    meaning: Sets how clearly a scanned document must be read before its text can be used to challenge
+      a payment.
+    raise: Fewer poorly-scanned documents are used as evidence, so fewer conflicts are flagged from text
+      that may be misread.
+    lower: More poorly-scanned documents are used as evidence, which risks flags based on unreliable text.
+  pay09_substitution_window_days:
+    label: Substitution look-forward window
+    meaning: Sets how many days after a refused service a different paid service for the same patient
+      still counts as a possible swap.
+    raise: A longer window is checked, so more later services are considered possible substitutions, adding
+      reviewer work.
+    lower: A shorter window is checked, so only quick substitutions are caught and some slower swaps may
+      be missed.
+  pay09_substitution_min_events:
+    label: Minimum substitution events required
+    meaning: Sets how many refused-then-substituted service pairs a provider needs before its pattern
+      is compared with others.
+    raise: Providers need more such events before being compared, so fewer small providers are flagged.
+    lower: Providers need fewer such events before being compared, which flags more providers but with
+      less certainty.
+  pay09_substitution_uplift:
+    label: Substitution rate gap versus peers
+    meaning: Sets how much higher a provider's substitution rate must be than others before it is flagged
+      as unusual.
+    raise: The provider's rate must stand out by a wider margin, so fewer providers are flagged, only
+      the clearest cases.
+    lower: A smaller gap is enough to flag, so more providers are flagged, including borderline cases.
+  pay09_disguise_risk_settings:
+    label: Visit settings checked for disguised cosmetic work
+    meaning: Lists the visit settings, such as outpatient or day-case, where elective cosmetic work disguised
+      as medical care is checked for.
+    raise: Adding a visit setting means claims recorded that way are also checked for disguised cosmetic
+      billing.
+    lower: Removing a visit setting means claims recorded that way are no longer checked, so some disguised
+      billing there may be missed.
+  pay09_reconstructive_dx_prefixes:
+    label: Diagnoses treated as reconstructive, not cosmetic
+    meaning: Lists diagnosis codes, such as cancer or facial trauma, that mean a procedure is reconstructive
+      rather than elective cosmetic work.
+    raise: Adding diagnosis codes here excuses more claims from the cosmetic-disguise check, reducing
+      flags but risking missed cases.
+    lower: Removing diagnosis codes here means fewer claims are excused, so more procedures are checked
+      for disguised cosmetic billing.
+  pay09_receipt_similarity_min:
+    label: Minimum wording match for receipts
+    meaning: Sets how much the words in a member's receipt must overlap with a billed service before they
+      are treated as matching.
+    raise: Receipts need closer wording to count as matching, so more mismatched receipts are flagged
+      as describing something else.
+    lower: Receipts need less wording overlap to count as matching, so fewer mismatches are flagged, some
+      real ones may be missed.
+  pay09_generic_receipt_terms:
+    label: Generic words ignored in receipt wording
+    meaning: Lists everyday payment words, such as invoice or copayment, ignored when comparing a receipt's
+      wording with billed services.
+    raise: Adding words here means more everyday wording is ignored, sharpening the comparison to the
+      actual item described.
+    lower: Removing words here means more everyday wording is used in the comparison, which can weaken
+      the match test.
+  pay09_unreliable_confirmation_channels:
+    label: Confirmation channels treated as unreliable
+    meaning: Lists the ways a service confirmation was received, such as unverified or via a third party,
+      that get less weight as evidence.
+    raise: Adding a channel here means confirmations received that way count for less, so more claims
+      may be flagged.
+    lower: Removing a channel here means confirmations received that way are trusted more, so fewer claims
+      may be flagged.
+  pay10_multi_payer_tolerance_aed:
+    label: Overpayment allowance across multiple payers
+    meaning: Sets how many dirhams the combined payments from all payers plus the patient's share may
+      exceed the allowed charge before it is flagged as an overpayment.
+    raise: A larger combined overpayment is allowed before flagging, so fewer minor rounding differences
+      are flagged.
+    lower: A smaller combined overpayment is allowed before flagging, so more claims, including minor
+      differences, are flagged.
+  pay10_accident_dx_prefixes:
+    label: Diagnoses treated as possible accidents
+    meaning: Lists diagnosis codes pointing to a road-traffic or work-related event where another party
+      might be liable for the cost.
+    raise: Adding codes here means more claims are checked for a possible other party liable, increasing
+      reviewer work.
+    lower: Removing codes here means fewer claims are checked for other-party liability, and some may
+      be missed.
+  pay10_accident_false_positive_dx_prefixes:
+    label: Accident-looking diagnoses excluded from the check
+    meaning: Lists diagnosis codes that look like accidents but rarely involve another liable party, such
+      as leisure injuries.
+    raise: Adding codes here excuses more claims from the accident-liability check, reducing false alarms
+      but risking missed cases.
+    lower: Removing codes here means fewer claims are excused, so more of these low-risk cases are flagged
+      unnecessarily.
+  pay10_settlement_tolerance_aed:
+    label: Settlement payment allowance
+    meaning: Sets how many dirhams a payment made after a third-party settlement may exceed the amount
+      still owed before it is flagged.
+    raise: A larger difference is allowed before flagging, so fewer minor settlement discrepancies are
+      flagged.
+    lower: A smaller difference is allowed before flagging, so more settlement payments, including minor
+      ones, are flagged.
+  pay11_authorised_override_roles:
+    label: Roles allowed to override a payment refusal
+    meaning: Lists the job roles, such as supervisor or medical director, allowed to overturn a refusal
+      without it being flagged.
+    raise: Adding roles here means overrides by those people are no longer flagged, reducing reviewer
+      work but relying on more staff being trusted.
+    lower: Removing roles here means overrides by those people are now flagged, increasing scrutiny of
+      their decisions.
+  pay11_override_exemption_terms:
+    label: Accepted reasons for an override
+    meaning: Lists wording, such as emergency or delegated authority, that excuses an override from being
+      flagged.
+    raise: Adding accepted reasons means more overrides citing them are excused from flagging.
+    lower: Removing accepted reasons means more overrides are flagged even if they cite those reasons.
+  pay11_edit_fail_results:
+    label: Results counted as a failed automated check
+    meaning: Lists the words in a system result, such as fail or reject, that mean an automated payment
+      check did not pass.
+    raise: Adding result words here means more outcomes count as a failed check, so more later approvals
+      count as overrides.
+    lower: Removing result words here means fewer outcomes count as a failed check, so fewer later approvals
+      count as overrides.
+  pay11_edit_hit_results:
+    label: Results counted as a flagged payment check
+    meaning: Lists the words in a system result that mean a claim was flagged by an automated payment
+      check, used to build a fair comparison group.
+    raise: Adding result words here widens the group of flagged claims used for comparison, changing which
+      claims count as comparable.
+    lower: Removing result words here narrows the comparison group, so fewer claims are treated as flagged
+      for this purpose.
+  pay11_concentration_min_overrides:
+    label: Minimum overrides before checking one adjudicator
+    meaning: Sets how many overrides an adjudicator needs on one provider's claims before that pairing
+      is compared with colleagues.
+    raise: An adjudicator needs more overrides before being compared, so fewer pairings are flagged, only
+      the clearest patterns.
+    lower: An adjudicator needs fewer overrides before being compared, so more pairings are flagged, some
+      with limited evidence.
+  pay11_concentration_ratio:
+    label: Override rate gap versus colleagues
+    meaning: Sets how many times higher an adjudicator's override rate on one provider must be than colleagues'
+      rates before it is flagged.
+    raise: The gap must be wider before flagging, so fewer adjudicator-provider pairings are flagged,
+      only extreme cases.
+    lower: A smaller gap is enough to flag, so more pairings are flagged, including less extreme patterns.
+  pay11_upward_adjustment_tolerance_aed:
+    label: Small upward adjustment allowance
+    meaning: Sets how many dirhams an upward adjustment after settlement may be without being flagged,
+      to allow for rounding corrections.
+    raise: Larger upward adjustments are excused as rounding, so fewer such adjustments are flagged.
+    lower: Smaller upward adjustments are excused as rounding, so more such adjustments are flagged.
+  pay11_valid_adjustment_terms:
+    label: Accepted reasons for an upward adjustment
+    meaning: Lists wording, such as appeal or contract true-up, that justifies an upward adjustment without
+      it being flagged.
+    raise: Adding accepted reasons means more upward adjustments citing them are excused from flagging.
+    lower: Removing accepted reasons means more upward adjustments are flagged even if they cite those
+      reasons.
+  pay11_fullpay_min_events:
+    label: Minimum decisions before checking full-payment rate
+    meaning: Sets how many decisions on flagged claims an adjudicator-provider pairing needs before its
+      full-payment rate is compared.
+    raise: A pairing needs more decisions before being compared, so fewer pairings are flagged, only well-evidenced
+      ones.
+    lower: A pairing needs fewer decisions before being compared, so more pairings are flagged, some with
+      limited evidence.
+  pay11_fullpay_rate_uplift:
+    label: Full-payment rate gap versus others
+    meaning: Sets how much higher a pairing's rate of paying flagged claims in full must be than elsewhere
+      before it is flagged.
+    raise: The gap must be wider before flagging, so fewer pairings are flagged, only the clearest cases.
+    lower: A smaller gap is enough to flag, so more pairings are flagged, including borderline ones.
+  pay11_fullpay_max_ratio_std:
+    label: Consistency ceiling for full-payment pattern
+    meaning: Sets the most variation allowed in how much of the requested amount is paid, so a pairing
+      that sometimes trims claims is not flagged.
+    raise: More variation is allowed, so pairings with a mix of full payments and trims can still be flagged.
+    lower: Less variation is allowed, so only pairings that consistently pay in full, with almost no exceptions,
+      are flagged.
+  pay11_fullpay_ratio_tolerance:
+    label: Rounding allowance for payment in full
+    meaning: Sets how far below the requested amount a payment can be and still count as paid in full.
+    raise: A larger shortfall still counts as paid in full, so more decisions are treated as full payments,
+      which can increase flags.
+    lower: Only payments very close to the full requested amount count as paid in full, which can reduce
+      flags.
+  pay12_cancellation_timing_tolerance_days:
+    label: Grace period for reversing a cancelled claim
+    meaning: Sets how many days after a claim is cancelled its payment can remain unreversed before it
+      is flagged, allowing for the next payment cycle.
+    raise: A longer grace period is allowed, so fewer cancelled claims are flagged while reversal is still
+      pending.
+    lower: A shorter grace period is allowed, so more cancelled claims with an unreversed payment are
+      flagged sooner.
+  pay12_duplicate_payment_tolerance_aed:
+    label: Rounding allowance for payment amounts
+    meaning: Sets how many dirhams a payment can differ from the expected amount and still be treated
+      as rounding, used across several duplicate and refund checks.
+    raise: A larger difference is treated as rounding, so fewer minor differences are flagged.
+    lower: A smaller difference is treated as rounding, so more differences, including minor ones, are
+      flagged.
+  pay12_refund_application_sla_days:
+    label: Days allowed to apply a provider refund
+    meaning: Sets how many days a provider refund or credit has to be matched to the recovery it settles
+      before it is flagged as unapplied.
+    raise: Refunds have longer to be matched before being flagged, so fewer are flagged as overdue.
+    lower: Refunds have less time to be matched before being flagged, so more are flagged as overdue.
+  pay12_refund_hold_terms:
+    label: Accepted reasons a credit is on hold
+    meaning: Lists statuses, such as dispute or unapplied-cash queue, that excuse a credit from being
+      flagged as unmatched.
+    raise: Adding accepted statuses means more credits citing them are excused from flagging.
+    lower: Removing accepted statuses means more credits are flagged even if they cite those statuses.
+  pay12_offset_min_events:
+    label: Minimum offset events before checking a provider
+    meaning: Sets how many credits taken against unrelated claims, or claims with negative lines, a provider
+      needs before this is compared with peers.
+    raise: Providers need more such events before being compared, so fewer providers are flagged.
+    lower: Providers need fewer such events before being compared, so more providers are flagged, some
+      with limited evidence.
+  pay12_offset_rate_ratio:
+    label: Offset rate gap versus peers
+    meaning: Sets how many times higher a provider's rate of unrelated credit offsets must be than peers
+      before it is flagged.
+    raise: The gap must be wider before flagging, so fewer providers are flagged, only the clearest cases.
+    lower: A smaller gap is enough to flag, so more providers are flagged, including borderline cases.
+  pay12_reversal_delay_ratio:
+    label: Reversal delay gap versus peers
+    meaning: Sets how many times slower than peers a provider's typical time to reverse a cancelled claim's
+      payment must be before it is flagged.
+    raise: The provider must be slower by a wider margin before flagging, so fewer providers are flagged.
+    lower: A smaller delay gap is enough to flag, so more providers are flagged for slow reversals.
+  ent01_coverage_grace_days:
+    label: Grace period around cover end dates
+    meaning: Sets how many days after a member's cover period ends a service is still treated as covered,
+      to allow for late-posted renewals.
+    raise: A longer grace period is allowed, so fewer services just after cover ends are flagged as uncovered.
+    lower: A shorter grace period is allowed, so more services just after cover ends are flagged as uncovered.
+  ent_newborn_days:
+    label: Newborn automatic-cover period
+    meaning: Sets how many days old a baby can be while still treated as covered under a parent's policy
+      without its own record.
+    raise: A longer period is allowed, so fewer young babies are flagged for missing cover or identity
+      records.
+    lower: A shorter period is allowed, so more young babies are flagged for missing cover or identity
+      records.
+  ent01_referral_lookback_days:
+    label: How far back a referral can be dated
+    meaning: Sets how many days before a service a referral to the treating provider can be dated and
+      still satisfy a referral requirement.
+    raise: Older referrals are still accepted, so fewer services are flagged for missing a valid referral.
+    lower: Only more recent referrals are accepted, so more services are flagged for missing a valid referral.
+  ent02_placeholder_token_max_members:
+    label: Maximum members sharing an ID before it is ignored
+    meaning: Sets how many member records can share the same national-ID value before it is treated as
+      a placeholder, not a real shared identity.
+    raise: IDs shared by more members are still ignored as placeholders, so fewer identity conflicts are
+      flagged.
+    lower: IDs shared by fewer members are treated as placeholders, so more shared-ID cases are flagged
+      as possible identity conflicts.
+  ent02_death_source_min_confidence:
+    label: Minimum reliability of a death record
+    meaning: Sets how reliable a recorded death source must be before a service billed after that date
+      is flagged as post-mortem.
+    raise: Only more reliable death records trigger a flag, so fewer post-mortem services are flagged,
+      some real cases may be missed.
+    lower: Less reliable death records can trigger a flag, so more post-mortem services are flagged, some
+      may be data errors.
+  ent02_card_sharing_min_evidence:
+    label: Minimum evidence before flagging card sharing
+    meaning: Sets how many independent signs, such as same-day use in two emirates or a mismatched age
+      or sex, are needed before card sharing is flagged.
+    raise: More independent signs are required, so fewer members are flagged, only the clearest card-sharing
+      cases.
+    lower: Fewer independent signs are required, so more members are flagged, including weaker evidence
+      of card sharing.
+  ent03_licence_grace_days:
+    label: Grace period around licence dates
+    meaning: Sets how many days around a provider licence's start or end date are allowed for late-recorded
+      renewals before a gap is flagged.
+    raise: A longer grace period is allowed, so fewer licence gaps caused by late paperwork are flagged.
+    lower: A shorter grace period is allowed, so more licence gaps, including minor paperwork delays,
+      are flagged.
+  ent03_specialty_map:
+    label: Which specialties normally perform each procedure
+    meaning: Maps each procedure group to the treating-clinician specialties that would normally perform
+      it, used to flag mismatches.
+    raise: Adding a specialty to a procedure group means clinicians of that specialty are no longer flagged
+      for performing it.
+    lower: Removing a specialty from a procedure group means clinicians of that specialty are now flagged
+      for performing it.
+  ent03_new_provider_window_days:
+    label: Early-activity window for new providers
+    meaning: Sets how many days after a provider is newly credentialed, reactivated, or resumes billing
+      that its activity is compared with established peers.
+    raise: A longer window is treated as early activity, so more of a new provider's claims are checked
+      for an unusual burst.
+    lower: A shorter window is treated as early activity, so fewer of a new provider's claims are checked
+      for an unusual burst.
+  ent03_dormant_gap_days:
+    label: Inactivity period counted as dormant
+    meaning: Sets how many days without any claims mean a provider is treated as having gone dormant before
+      resuming billing.
+    raise: A longer gap is required before a provider counts as reactivated, so fewer resumptions are
+      checked for a burst in activity.
+    lower: A shorter gap is required before a provider counts as reactivated, so more resumptions are
+      checked for a burst in activity.
+  ent03_burst_peer_percentile:
+    label: Peer comparison point for activity bursts
+    meaning: Sets how high a new or reactivated provider's early volume or value must rank against peers
+      of the same type before it is flagged.
+    raise: The provider must rank higher than more peers before flagging, so fewer providers are flagged,
+      only extreme bursts.
+    lower: The provider needs to rank higher than fewer peers before flagging, so more providers are flagged,
+      including smaller bursts.
+  ent03_burst_min_claims:
+    label: Minimum claims before checking for a burst
+    meaning: Sets how many claims a new or reactivated provider needs in its early window before its activity
+      rate is compared with peers.
+    raise: Providers need more claims before being compared, so fewer providers with only a handful of
+      claims are flagged.
+    lower: Providers need fewer claims before being compared, so more providers are flagged, some on a
+      small number of claims.
+  ent04_max_concurrency:
+    label: Maximum overlapping timed services allowed
+    meaning: Sets the most timed services one clinician can be billed for at the same moment before that
+      day is flagged.
+    raise: More overlapping services are allowed at once, so fewer scheduling clashes are flagged.
+    lower: Fewer overlapping services are allowed at once, so more scheduling clashes are flagged, some
+      may be brief handovers.
+  ent04_min_travel_minutes:
+    label: Minimum travel time between emirates
+    meaning: Sets the fewest minutes allowed between a clinician finishing a service in one emirate and
+      starting another in a different emirate.
+    raise: More travel time is required, so more short gaps between locations are flagged as impossible
+      journeys.
+    lower: Less travel time is required, so fewer short gaps between locations are flagged as impossible
+      journeys.
+  ent05_admission_data_latency_days:
+    label: Days excused for late admission records
+    meaning: Sets how many days before the end of the data file an inpatient claim is skipped for the
+      admission-evidence check, since records can arrive late.
+    raise: More recent inpatient claims are skipped from the check, so fewer are flagged, but some real
+      gaps may be missed.
+    lower: Fewer recent inpatient claims are skipped from the check, so more are flagged, some may be
+      flagged only because records have not yet arrived.
+  ent05_setting_shift_min_delta:
+    label: Minimum rise in inpatient share to flag a shift
+    meaning: Sets how much a provider's share of inpatient and day-case claims must rise at its clearest
+      turning point before a shift is considered.
+    raise: A bigger rise is required, so fewer providers are flagged for shifting towards costlier settings.
+    lower: A smaller rise is enough, so more providers are flagged for shifting towards costlier settings.
+  ent05_setting_shift_min_months:
+    label: Minimum history either side of a shift
+    meaning: Sets how many months of claims are needed before and after a possible turning point before
+      a setting shift is considered real.
+    raise: More history is required either side, so fewer short-lived changes are flagged as a genuine
+      shift.
+    lower: Less history is required either side, so more changes, including short-lived ones, are flagged
+      as a shift.
+  ent05_setting_shift_min_claims:
+    label: Minimum claims either side of a shift
+    meaning: Sets how many claims are needed on each side of a possible turning point before a provider's
+      setting mix is compared.
+    raise: More claims are required on each side, so fewer providers with limited history are flagged.
+    lower: Fewer claims are required on each side, so more providers, including those with limited history,
+      are flagged.
+  ent05_setting_shift_peer_percentile:
+    label: Peer comparison point for inpatient share
+    meaning: Sets how high a provider's inpatient share must rank against peers, after its shift, before
+      it is flagged.
+    raise: The provider must rank higher than more peers before flagging, so fewer genuinely busy hospitals
+      are wrongly flagged.
+    lower: The provider needs to rank higher than fewer peers before flagging, so more providers are flagged,
+      some may be genuinely busy hospitals.
+  ent06_min_interaction_minutes:
+    label: Minimum length for a meaningful telehealth visit
+    meaning: Sets the shortest telehealth consultation length that still counts as a real clinical interaction
+      when it leads to an order.
+    raise: Longer consultations are required to count as meaningful, so more short consultations that
+      produce an order are flagged.
+    lower: Shorter consultations are still accepted as meaningful, so fewer short consultations that produce
+      an order are flagged.
+  ent06_order_window_days:
+    label: Days linking a consultation to its order
+    meaning: Sets how many days after a telehealth consultation a prescription or referral is still linked
+      to that same visit.
+    raise: A longer window is linked, so more later prescriptions or referrals are attributed to the consultation,
+      widening the checks.
+    lower: A shorter window is linked, so fewer later prescriptions or referrals are attributed to the
+      consultation.
+  ent06_note_expected_coverage:
+    label: Expected note-taking rate for telehealth
+    meaning: Sets how often a provider must normally record a consultation note before a missing note
+      is treated as meaningful, not just a data gap.
+    raise: Providers must have a higher normal note-taking rate before a missing note is flagged, so fewer
+      providers are flagged.
+    lower: Providers need a lower normal note-taking rate before a missing note is flagged, so more providers
+      are flagged.
+  ent06_referral_concentration_min_orders:
+    label: Minimum orders before checking supplier concentration
+    meaning: Sets how many prescriptions and referrals a provider needs before its concentration on one
+      supplier is measured.
+    raise: Providers need more orders before being measured, so fewer providers are flagged, only those
+      with a clear pattern.
+    lower: Providers need fewer orders before being measured, so more providers are flagged, some with
+      limited evidence.
+  ent06_referral_peer_percentile:
+    label: Peer comparison point for supplier concentration
+    meaning: Sets how high a provider's share of orders sent to one supplier must rank against other prescribing
+      providers before it is flagged.
+    raise: The provider must rank higher than more peers before flagging, so fewer providers are flagged,
+      only extreme concentration.
+    lower: The provider needs to rank higher than fewer peers before flagging, so more providers are flagged,
+      including moderate concentration.
+  ent06_telehealth_provider_min_share:
+    label: Minimum remote-visit share to count as telehealth
+    meaning: Sets how much of a provider's visits must be remote before it is treated as a telehealth
+      provider for these checks.
+    raise: A provider needs a higher share of remote visits to count as telehealth, so fewer providers
+      are covered by these checks.
+    lower: A provider needs a lower share of remote visits to count as telehealth, so more providers are
+      covered by these checks.
+  ent06_narrow_network_min_suppliers:
+    label: Minimum suppliers before concentration is expected
+    meaning: Sets how many suppliers of the same type must operate in an area before high concentration
+      on one supplier is treated as suspicious rather than a narrow local market.
+    raise: More local suppliers must exist before concentration is questioned, so fewer providers in thin
+      markets are flagged.
+    lower: Fewer local suppliers need exist before concentration is questioned, so more providers in thin
+      markets are flagged.
+  ent06_high_cost_order_aed:
+    label: Amount counted as a high-cost order
+    meaning: Sets the amount at or above which a prescription, test, or device order counts as a high-cost
+      conversion of a consultation.
+    raise: Only larger orders count as high-cost, so fewer orders are counted, reducing the conversions
+      being tracked.
+    lower: Smaller orders also count as high-cost, so more orders are counted, widening the conversions
+      being tracked.
+  ent06_conversion_min_encounters:
+    label: Minimum consultations before checking conversion rate
+    meaning: Sets how many consultations a provider needs before its rate of converting them into high-cost
+      orders is compared with peers.
+    raise: Providers need more consultations before being compared, so fewer providers are flagged.
+    lower: Providers need fewer consultations before being compared, so more providers are flagged, some
+      with limited evidence.
+  ent06_conversion_ratio_to_peer:
+    label: Conversion rate gap versus peer median
+    meaning: Sets how many times higher a provider's rate of converting consultations into high-cost orders
+      must be than the typical peer rate before it is flagged.
+    raise: The gap must be wider before flagging, so fewer providers are flagged, only the clearest cases.
+    lower: A smaller gap is enough to flag, so more providers are flagged, including borderline cases.
+  ent06_conversion_peer_percentile:
+    label: Peer comparison point for conversion rate
+    meaning: Sets how high a provider's conversion rate into high-cost orders must rank against peers
+      before it is flagged.
+    raise: The provider must rank higher than more peers before flagging, so fewer providers are flagged.
+    lower: The provider needs to rank higher than fewer peers before flagging, so more providers are flagged.
+  pol01_retro_sla_days:
+    label: Allowed backdating period for enrolment changes
+    meaning: Sets how many days an enrolment add or change can be backdated within the normal processing
+      timeframe before longer backdating over a costly service is flagged.
+    raise: More backdating is treated as normal, so fewer late enrolment changes ahead of a costly service
+      are flagged.
+    lower: Less backdating is treated as normal, so more late enrolment changes ahead of a costly service
+      are flagged.
+  pol01_high_cost_quantile:
+    label: Threshold for a high-cost service
+    meaning: Sets the point in the overall spread of claim amounts, in the file, above which a service
+      counts as high-cost for the backdating check.
+    raise: Only the very largest claims count as high-cost, so fewer backdated enrolments ahead of a service
+      are flagged.
+    lower: More claims count as high-cost, so more backdated enrolments ahead of a service are flagged.
+  pol01_contestability_days:
+    label: Period for comparing application declarations
+    meaning: Sets how many days after an application declarations can still be checked against a member's
+      prior claims history.
+    raise: A longer period is checked, so more claims history is compared against declarations, potentially
+      flagging more mismatches.
+    lower: A shorter period is checked, so less claims history is compared against declarations, potentially
+      missing some mismatches.
+  pol01_prior_history_lookback_days:
+    label: How far back prior cover is considered relevant
+    meaning: Sets how many days before an application a member's earlier cover must have ended to still
+      be treated as relevant to the declaration.
+    raise: Older prior cover is still treated as relevant, so more declarations are checked against it.
+    lower: Older prior cover is treated as no longer relevant, so fewer declarations are checked against
+      it.
+  pol01_cluster_window_days:
+    label: Enrolment window for grouping new members
+    meaning: Sets how many days apart new members added by one employer or broker can be while still being
+      assessed together as one group.
+    raise: A wider window groups more new members together, potentially flagging larger, less tightly-timed
+      cohorts.
+    lower: A narrower window groups only closely-timed new members together, focusing on the tightest
+      enrolment bursts.
+  pol01_cluster_min_members:
+    label: Minimum group size before checking a cohort
+    meaning: Sets how many members an employer's or broker's enrolment group needs before its early-claim
+      rate is compared with others.
+    raise: Groups need more members before being compared, so fewer, only larger, cohorts are flagged.
+    lower: Groups need fewer members before being compared, so more, including smaller, cohorts are flagged.
+  pol01_cluster_linked_share:
+    label: Share of claims needed at linked providers
+    meaning: Sets how much of a cohort's early claims must go to one group of providers sharing an owner,
+      bank account, phone, or address before it is flagged.
+    raise: A higher share is required, so fewer cohorts are flagged, only those very concentrated on linked
+      providers.
+    lower: A lower share is required, so more cohorts are flagged, including looser links to shared providers.
+  pol01_cluster_peer_percentile:
+    label: Peer comparison point for cohort claim rate
+    meaning: Sets how high a cohort's early-claim rate must rank against other employers' or brokers'
+      cohorts before it is flagged.
+    raise: The cohort must rank higher than more peers before flagging, so fewer cohorts are flagged.
+    lower: The cohort needs to rank higher than fewer peers before flagging, so more cohorts are flagged.
+  phr02_chronic_therapeutic_classes:
+    label: Drug classes treated as long-term maintenance
+    meaning: Lists drug classes, such as statins or blood-pressure medicines, that are expected to be
+      taken continuously and are excused from duration limit checks.
+    raise: Adding a drug class here means continuous fills of it are no longer flagged for exceeding a
+      treatment-duration limit.
+    lower: Removing a drug class here means continuous fills of it can again be flagged for exceeding
+      a treatment-duration limit.

@@ -92,9 +92,10 @@ class ModelLayer:
 
     # ------------------------------------------------------------ messaging
 
-    def _say(self, plain: str | None = None, technical: str | None = None) -> None:
+    def _say(self, plain: str | None = None, technical: str | None = None, *, log: bool = True) -> None:
         if technical:
-            _log.warning(technical)
+            if log:
+                _log.warning(technical)
             if technical not in self.notes:
                 self.notes.append(technical)
         if plain and plain not in self.messages:
@@ -127,7 +128,7 @@ class ModelLayer:
         for plain in layer.anomaly.messages:
             layer._say(plain)
         for name, reason in layer.anomaly.skipped.items():
-            layer._say(technical=f"{name} not trained: {reason}")
+            layer._say(technical=f"{name} not trained: {reason}", log=False)  # logged by _skip
         if not models:
             layer.notes.append(
                 "No model could be trained: the temporal + entity-isolated split left an empty "

@@ -304,6 +304,26 @@ def _emergency_claims(ctx) -> set[str]:
     return out
 
 
+def _inactive_lines(ctx) -> set[str]:
+    """Lines that no longer stand: on a claim cancelled or replaced by a later version,
+    or refused outright or reversed at remittance."""
+    out: set[str] = set()
+    lines = _lines(ctx)
+    if lines.empty:
+        return out
+    cv = _table(ctx, "claim_version")
+    dropped: set[str] = set()
+    if not cv.empty and "claim_sk" in cv.columns:
+        canc = _norm(_col(cv, "relationship")).str.contains("cancel|void|revers", regex=True)
+        dropped = set(cv.loc[canc, "claim_sk"].astype(str)) | set(_col(cv, "prior_claim_sk").dropna().astype(str))
+    out |= set(lines.loc[lines["claim_sk"].isin(dropped), "line_sk"])
+    paid = _paid_by_line(ctx)
+    if not paid.empty:
+        gone = paid["reversed"].astype(bool) | (paid["denied"].astype(bool) & (paid["paid"] <= 0))
+        out |= set(paid.loc[gone, "line_sk"])
+    return out
+
+
 def _paid_by_line(ctx) -> pd.DataFrame:
     """Remittance summed per line: payment, whether denied, whether reversed."""
     rem = _table(ctx, "remittance")
@@ -1094,7 +1114,8 @@ def pay_03_r03_unit_maximum(ctx, control) -> list[Signal]:
     pol["activity_code"] = pol["activity_code"].map(_str_id)
     pol["max_units"] = _num(_col(pol, "max_units_per_day"))
     pol = pol[pol["max_units"] > 0].drop_duplicates("activity_code")
-    ln = lines.merge(pol[["activity_code", "max_units"]], on="activity_code", how="inner")
+    ln = lines[~lines["line_sk"].isin(_inactive_lines(ctx))]  # declared exclusion: repeat / resubmission
+    ln = ln.merge(pol[["activity_code", "max_units"]], on="activity_code", how="inner")
     if ln.empty:
         return []
     ln = ln[~_is_drug(ln)]
@@ -1516,19 +1537,9 @@ def pay_04_r04_quantity_exhaustion(ctx, control) -> list[Signal]:
         a.rename(columns={"authorization_sk": "auth_key"}), on=["auth_key", "activity_code"], how="inner")
     if m.empty:
         return []
-    paid = _paid_by_line(ctx)
-    if not paid.empty:
-        # declared exclusion: cancelled / reversed claims. A line refused outright consumed
-        # nothing of the approval either, so it does not count toward the running total.
-        gone = paid["reversed"].astype(bool) | (paid["denied"].astype(bool) & (paid["paid"] <= 0))
-        m = m[~m["line_sk"].isin(set(paid.loc[gone, "line_sk"]))]
-    cv = _table(ctx, "claim_version")
-    if not cv.empty and "relationship" in cv.columns and "claim_sk" in cv.columns:
-        canc = _norm(cv["relationship"]).str.contains("cancel|void|revers", regex=True)
-        dropped = set(cv.loc[canc, "claim_sk"].astype(str))
-        # a claim replaced by a resubmission or correction is superseded, not consumed twice
-        dropped |= set(_col(cv, "prior_claim_sk").dropna().astype(str))
-        m = m[~m["claim_sk"].isin(dropped)]
+    # declared exclusion: cancelled / reversed claims. A claim replaced by a resubmission is
+    # superseded rather than consumed twice, and a line refused outright consumed nothing.
+    m = m[~m["line_sk"].isin(_inactive_lines(ctx))]
     m = m.sort_values(["auth_key", "activity_code", "line_date", "claim_sk", "line_sk"])
     g = m.groupby(["auth_key", "activity_code"])
     m["cum_units"] = g["units_n"].cumsum()

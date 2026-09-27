@@ -343,6 +343,22 @@ def _claims(result, layer, models, state, capacity) -> None:
                             "Flagged"],
                    empty_title="No scored claims", empty_body="This model scored no claims on this file.")
 
+    with st.expander("Providers with the most unusual claims (fair-test scores only)", expanded=False):
+        provider_scores = layer.provider_scores().get(name)
+        if provider_scores is None or provider_scores.empty:
+            st.markdown("No provider scores are available for this model.")
+        else:
+            top_p = provider_scores.nlargest(10)
+            prank = provider_scores.rank(pct=True)
+            friendly_table(pd.DataFrame([{
+                "Provider": mask(p, state),
+                "Most unusual claim": f"top {max(1, round((1 - float(prank[p])) * 100))}% of providers",
+                "Highest raw score": round(float(s), 4),
+            } for p, s in top_p.items()]), key=f"models_prov_{name}",
+                columns=["Provider", "Most unusual claim"])
+            st.caption("A provider's score is the score of its most unusual claim in the fair test. "
+                       "This is the ranking the promotion checklist compares with the scorecard.")
+
     # ---- reasons behind one score ---------------------------------------------
     st.markdown("#### Reasons behind a score", help=help_text("shap"))
     candidates = [str(c) for c in (top.index if exploratory else list(scores.flagged_index)[:25])]

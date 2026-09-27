@@ -82,10 +82,14 @@ def _col(frame: pd.DataFrame, name: str) -> pd.Series:
 
 
 def _str(series: pd.Series) -> pd.Series:
-    """Strings with blanks and missing values as None."""
-    out = series.astype(object).where(series.notna(), None)
-    out = out.map(lambda v: None if v is None else (str(v).strip() or None))
-    return out
+    """Strings with blanks and missing values as None, as plain Python objects.
+
+    Object dtype on purpose: row-wise access to arrow-backed strings is an order
+    of magnitude slower, and several controls walk small groups row by row.
+    """
+    mask = series.isna().tolist()
+    vals = [None if m else (str(v).strip() or None) for v, m in zip(series.tolist(), mask)]
+    return pd.Series(vals, index=series.index, dtype=object)
 
 
 def _num(series: pd.Series) -> pd.Series:

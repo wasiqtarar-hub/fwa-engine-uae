@@ -240,11 +240,12 @@ class AnomalyModels:
 
         if not plan.train_providers or not plan.score_providers:
             n = len(plan.train_providers) + len(plan.score_providers)
+            which = "both" if n == 2 else f"all {n}"
             self._skip(
                 "all",
                 f"Provider hold-out produced train_providers={len(plan.train_providers)}, "
                 f"score_providers={len(plan.score_providers)}.",
-                f"Not enough hospitals in this file to train the model fairly: all {n} fell into "
+                f"Not enough hospitals in this file to train the model fairly: {which} fell into "
                 f"the same group of the fair hold-out, so there is no separate group to check "
                 f"the model on. At least 1 hospital is needed in each group (this file has "
                 f"{len(plan.train_providers)} to learn from and {len(plan.score_providers)} to "
@@ -336,7 +337,7 @@ class AnomalyModels:
                 f"{len(Xtr)} training row(s) < {ISOLATION_FOREST_MIN_TRAIN}.",
                 f"Not enough claims to train the Isolation Forest model. It isolates a claim by "
                 f"splitting it away from others, so at least {ISOLATION_FOREST_MIN_TRAIN} "
-                f"training claims are needed (this file has {len(Xtr)}).",
+                f"training claims are needed (this file leaves {len(Xtr)} after the fair split).",
             )
         else:
             try:
@@ -378,7 +379,8 @@ class AnomalyModels:
                 f"{len(Xtr)} training row(s) < lof_n_neighbors + 1 = {lof_min}.",
                 f"Not enough claims to train the Local Outlier Factor model. It compares each "
                 f"claim with its {configured_k} nearest neighbours (lof_n_neighbors), so at "
-                f"least {lof_min} training claims are needed (this file has {len(Xtr)}).",
+                f"least {lof_min} training claims are needed (this file leaves {len(Xtr)} after "
+                f"the fair split).",
             )
         else:
             try:
