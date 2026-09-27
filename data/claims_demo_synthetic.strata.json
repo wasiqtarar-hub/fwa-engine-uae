@@ -1,0 +1,22 @@
+{
+  "generator": "tools/make_demo_dataset.py",
+  "seed": 20260920,
+  "rows": 20893,
+  "providers": 1340,
+  "claim_level_fraud_rate": 0.0069,
+  "strata": {
+    "base": 16813,
+    "ANL-01-R02 / CLN-07-R04 step change": 1751,
+    "CLN-06-R03 / DOC-02-R01 cloned encounter": 900,
+    "CLN-07-R02 capacity breach": 496,
+    "ring": 399,
+    "NET-04-R02 originator concentration": 150,
+    "NET-04-R03 early-tenure cluster": 120,
+    "PAY-01-R03 / CLN-05-R03 episode repeat": 90,
+    "PAY-01-R02 near duplicate": 56,
+    "PAY-01-R01 exact duplicate": 48,
+    "CLN-05-R01 length-of-stay outlier": 40,
+    "PAY-06-R02 amount arithmetic": 30
+  },
+  "warning": "SYNTHETIC. Generated to exercise the engine. No figure computed from this file is evidence about detection performance."
+}
