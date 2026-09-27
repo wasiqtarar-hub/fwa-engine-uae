@@ -256,8 +256,8 @@ ACUTE: list[dict[str, Any]] = [
     dict(key="URTI", dx="J06.9", w=14, levels={2: .35, 3: .5, 4: .12, 1: .03}, rx=[(.5, ["RX1033"]), (.35, ["RX1041", "RX1042"])], tele=.08, season=1.8),
     dict(key="PHARYNGITIS", dx="J02.9", w=5, levels={2: .3, 3: .55, 4: .15}, office=[(.5, "87880")], rx=[(.7, ["RX1001", "RX1002"]), (.4, ["RX1035"])], season=1.5),
     dict(key="TONSILLITIS", dx="J03.90", w=3, levels={2: .2, 3: .6, 4: .2}, rx=[(.8, ["RX1004", "RX1005", "RX1001"]), (.5, ["RX1035"])], season=1.4),
-    dict(key="BRONCHITIS", dx="J20.9", w=3, levels={3: .6, 4: .4}, imaging=[(.15, ["71046"])], rx=[(.3, ["RX1038"]), (.3, ["RX1006"])], season=1.6),
-    dict(key="COUGH", dx="R05.9", w=2, levels={2: .4, 3: .6}, imaging=[(.1, ["71046"])], rx=[(.2, ["RX1041"])], season=1.5),
+    dict(key="BRONCHITIS", dx="J20.9", w=3, levels={3: .6, 4: .4}, imaging=[(.4, ["71046"])], rx=[(.3, ["RX1038"]), (.3, ["RX1006"])], season=1.6),
+    dict(key="COUGH", dx="R05.9", w=2, levels={2: .4, 3: .6}, imaging=[(.3, ["71046"])], rx=[(.2, ["RX1041"])], season=1.5),
     dict(key="OTITIS", dx="H66.90", w=3, age=(0, 12), levels={2: .3, 3: .6, 4: .1}, rx=[(.8, ["RX1001"]), (.5, ["RX1033"])], season=1.3),
     dict(key="CONJUNCTIVITIS", dx="H10.9", w=2, levels={2: .6, 3: .4}),
     dict(key="RHINITIS", dx="J30.9", w=3, levels={2: .4, 3: .5, 4: .1}, rx=[(.7, ["RX1041", "RX1042"]), (.2, ["RX1040"])], tele=.08),
@@ -265,8 +265,8 @@ ACUTE: list[dict[str, Any]] = [
     dict(key="GASTRITIS", dx="K29.70", w=2, age=(16, 90), levels={3: .6, 4: .4}, rx=[(.9, ["RX1029", "RX1030", "RX1032"])], refer=("GASTROENTEROLOGY", .05)),
     dict(key="CONSTIPATION", dx="K59.00", w=1, levels={2: .5, 3: .5}),
     dict(key="UTI", dx="N39.0", w=3, sexw={"F": 4, "M": 1}, age=(12, 90), levels={3: .7, 4: .3}, office=[(.6, "81002")], labs=[(.35, ["81001", "87086"])], rx=[(.9, ["RX1008", "RX1009"])]),
-    dict(key="BACKPAIN", dx="M54.50", w=4, age=(18, 80), levels={3: .6, 4: .4}, imaging=[(.2, ["72100"])], rx=[(.8, ["RX1035", "RX1037"])], physio=.15),
-    dict(key="KNEEPAIN", dx="M25.561", w=2, age=(20, 80), levels={3: .6, 4: .4}, imaging=[(.4, ["73562"])], rx=[(.7, ["RX1035", "RX1037"])], physio=.12, refer=("ORTHOPAEDICS", .12)),
+    dict(key="BACKPAIN", dx="M54.50", w=4, age=(18, 80), levels={3: .6, 4: .4}, imaging=[(.45, ["72100"])], rx=[(.8, ["RX1035", "RX1037"])], physio=.15),
+    dict(key="KNEEPAIN", dx="M25.561", w=2, age=(20, 80), levels={3: .6, 4: .4}, imaging=[(.6, ["73562"])], rx=[(.7, ["RX1035", "RX1037"])], physio=.12, refer=("ORTHOPAEDICS", .12)),
     dict(key="SPRAIN", dx="S93.401A", w=2, age=(8, 70), levels={3: .6, 4: .4}, imaging=[(.6, ["73610"])], rx=[(.7, ["RX1035"])], dme=[(.15, "E0114")], ed=.5, injury=True),
     dict(key="LACERATION", dx="S61.411A", w=1, age=(3, 80), levels={3: .6, 4: .4}, office=[(1.0, "12001")], rx=[(.5, ["RX1056"])], ed=.7, injury=True),
     dict(key="ABSCESS", dx="L02.91", w=1, age=(5, 85), levels={3: .6, 4: .4}, office=[(1.0, "10060")], rx=[(.8, ["RX1004", "RX1005"])]),
@@ -275,11 +275,11 @@ ACUTE: list[dict[str, Any]] = [
     dict(key="WART", dx="B07.9", w=1, age=(5, 60), levels={2: .5, 3: .5}, office=[(1.0, "17110")], spec="DERMATOLOGY", specp=.5),
     dict(key="SKINTAG", dx="L91.8", w=.3, age=(25, 80), levels={2: .5, 3: .5}, office=[(1.0, "11200")], spec="DERMATOLOGY", specp=.8),
     dict(key="CERUMEN", dx="H61.23", w=1, levels={2: .6, 3: .4}, office=[(1.0, "69210")], spec="ENT", specp=.2),
-    dict(key="HEADACHE", dx="R51.9", w=2, age=(10, 90), levels={3: .6, 4: .4}, rx=[(.8, ["RX1033", "RX1035"])], imaging=[(.02, ["70450"])]),
+    dict(key="HEADACHE", dx="R51.9", w=2, age=(10, 90), levels={3: .6, 4: .4}, rx=[(.8, ["RX1033", "RX1035"])], imaging=[(.05, ["70450"])]),
     dict(key="MIGRAINE", dx="G43.909", w=1, age=(12, 70), levels={3: .5, 4: .5}, rx=[(.8, ["RX1035"])], imaging=[(.04, ["70551"])], refer=("NEUROLOGY", .08)),
     dict(key="FEVER", dx="R50.9", w=2, levels={2: .3, 3: .5, 4: .2}, labs=[(.3, ["85025", "86140"])], rx=[(.8, ["RX1033"])], season=1.4),
     dict(key="COVID", dx="U07.1", w=1, levels={3: .7, 4: .3}, labs=[(.8, ["87635"])], rx=[(.7, ["RX1033"])], season=1.5),
-    dict(key="CHESTPAIN", dx="R07.9", w=1, age=(30, 90), levels={3: .3, 4: .5, 5: .2}, office=[(.9, "93000")], labs=[(.3, ["84484"])], ed=.4, refer=("CARDIOLOGY", .2)),
+    dict(key="CHESTPAIN", dx="R07.9", w=1, age=(30, 90), levels={3: .3, 4: .5, 5: .2}, office=[(.9, "93000")], labs=[(.3, ["84484"])], imaging=[(.5, ["71046"])], ed=.4, refer=("CARDIOLOGY", .2)),
     dict(key="VITD", dx="E55.9", w=2, age=(12, 90), levels={2: .4, 3: .6}, labs=[(.9, ["82306"])], rx=[(.9, ["RX1044"])]),
     dict(key="IRONDEF", dx="D50.9", w=1, sexw={"F": 5, "M": 1}, age=(12, 90), levels={3: .7, 4: .3}, labs=[(.9, ["85025", "83540", "82728"])], rx=[(.9, ["RX1045"])]),
     dict(key="CHECKUP", dx="Z00.00", w=1.5, age=(18, 90), levels={3: .6, 4: .4}, labs=[(.8, ["85025", "80061"])]),
@@ -290,6 +290,11 @@ ACUTE: list[dict[str, Any]] = [
     dict(key="RADICULOPATHY", dx="M54.16", w=1, age=(25, 80), levels={3: .5, 4: .5}, rx=[(.3, ["RX1048"]), (.6, ["RX1035"])], physio=.3, refer=("ORTHOPAEDICS", .15), chain="LUMBAR"),
     dict(key="ROTATOR", dx="M75.101", w=.6, age=(30, 80), levels={3: .5, 4: .5}, rx=[(.6, ["RX1037"])], physio=.5, refer=("ORTHOPAEDICS", .3), chain="SHOULDER"),
     dict(key="MENORRHAGIA", dx="N92.0", w=1, sexw={"F": 1, "M": 0}, age=(15, 50), levels={3: .6, 4: .4}, imaging=[(.6, ["76856"])], labs=[(.5, ["85025"])], rx=[(.5, ["RX1035"])], spec="OBSTETRICS_GYNAECOLOGY", specp=.6),
+    dict(key="ABDPAIN", dx="R10.9", w=2, age=(8, 90), levels={3: .5, 4: .5}, imaging=[(.6, ["76700"])], labs=[(.3, ["85025", "80053"])], rx=[(.4, ["RX1058"])]),
+    dict(key="KIDNEYSTONE", dx="N20.0", w=.8, age=(20, 80), levels={3: .4, 4: .6}, imaging=[(.5, ["74176"]), (.4, ["76705"])], labs=[(.5, ["81001"])], rx=[(.8, ["RX1035"])], ed=.35),
+    dict(key="THYROIDNODULE", dx="E04.1", w=.5, age=(20, 80), sexw={"F": 3, "M": 1}, levels={3: .6, 4: .4}, imaging=[(.9, ["76536"])], labs=[(.8, ["84443"])], spec="ENDOCRINOLOGY", specp=.4),
+    dict(key="PNEUMONIA_OP", dx="J18.9", w=.8, age=(5, 80), levels={3: .3, 4: .6, 5: .1}, imaging=[(1.0, ["71046"])], labs=[(.3, ["85025", "86140"])], rx=[(.9, ["RX1004", "RX1005", "RX1006"])], season=1.8),
+    dict(key="SCREENMAMMO", dx="Z12.31", w=1.2, sexw={"F": 1, "M": 0}, age=(40, 75), levels={2: .5, 3: .5}, imaging=[(1.0, ["77067"])]),
     dict(key="SEPTUM", dx="J34.2", w=.2, age=(16, 70), levels={3: .6, 4: .4}, spec="ENT", specp=.9),
 ]
 ACUTE_BY_KEY = {s["key"]: s for s in ACUTE}
@@ -1055,13 +1060,22 @@ class _Sched:
     def __init__(self, ctx: _Ctx) -> None:
         self.ctx = ctx
         self.events: list[dict] = []
+        self.by_eid: dict[int, dict] = {}
         self.n = 0
 
-    def add(self, **ev) -> dict:
+    def add(self, rtype: str | None = None, root: Any = None, **ev) -> dict:
+        """Schedule one event. Events sharing a ``root`` are kept or dropped together."""
         self.n += 1
         ev["eid"] = self.n
         ev.setdefault("parent", None)
         ev.setdefault("prio", 5)
+        if ev["parent"] is not None and ev["parent"] in self.by_eid:
+            p = self.by_eid[ev["parent"]]
+            ev["root"], ev["rtype"] = p["root"], p["rtype"]
+        else:
+            ev["root"] = root if root is not None else ("EV", self.n)
+            ev["rtype"] = rtype or "ACUTE"
+        self.by_eid[self.n] = ev
         self.events.append(ev)
         return ev
 
@@ -1131,7 +1145,7 @@ def _schedule(ctx: _Ctx, mult: dict[str, float]) -> _Sched:
                 age = _age(m["dob"], d)
                 if not cdef["age"][0] <= age <= cdef["age"][1]:
                     continue
-                s.add(kind="IP", member=m["sk"], date=d, cr=cr, prio=1)
+                s.add(kind="IP", member=m["sk"], date=d, cr=cr, prio=1, rtype="IP")
         for cr, bands in ELECTIVE_IP.items():
             r = _band(bands, mid_age) * mult["ip"]
             for _ in range(int(rng.poisson(r * span / 365.0))):
@@ -1220,7 +1234,7 @@ def _acute_episode(ctx: _Ctx, s: _Sched, m: dict, sc: dict, d: D) -> None:
                           setting="REFERRAL", specialty=ref_spec[0], level=_level_from(rng, {3: .4, 4: .5, 5: .1}),
                           parent=ev["eid"])
             _specialist_workup(ctx, s, m, sc, child, dd)
-    elif sc.get("chain") and rng.random() < 0.25:
+    elif sc.get("chain") and rng.random() < 0.6:
         _imaging_chain(ctx, s, m, sc["chain"], ev, d)
     if sc.get("physio") and rng.random() < sc["physio"]:
         _physio_course(ctx, s, m, ev, d, dx[:1])
@@ -1336,11 +1350,12 @@ def _chronic_visit(ctx: _Ctx, s: _Sched, m: dict, cond: str, d: D) -> dict | Non
         if not hosp:
             return None
         return s.add(kind="OP", member=m["sk"], date=d, provider=hosp, scenario="INFUSION", dx=dx, setting="INFUSION",
-                     specialty="GASTROENTEROLOGY", level=3, infusion=spec["infusion"], chronic=cond)
+                     specialty="GASTROENTEROLOGY", level=3, infusion=spec["infusion"], chronic=cond,
+                     rtype="CHRONIC", root=("CHR", m["sk"]))
     tele = spec.get("psych") and rng.random() < 0.2
     ev = s.add(kind="OP", member=m["sk"], date=d, provider=prov, scenario=f"CHRONIC:{cond}", dx=dx,
                setting="TELE" if tele else "CLINIC", specialty=want, level=_level_from(rng, {3: .45, 4: .5, 5: .05}),
-               chronic=cond, psych=bool(spec.get("psych")))
+               chronic=cond, psych=bool(spec.get("psych")), rtype="CHRONIC", root=("CHR", m["sk"]))
     if tele:
         return ev
     ev["office"] = [code for p, code in spec.get("office", []) if rng.random() < p]
@@ -1379,15 +1394,17 @@ def _refill_stream(ctx: _Ctx, s: _Sched, m: dict, visits: dict[str, list[dict]])
     first = min(v[0]["date"] for v in drug_visits.values())
     d = first + TD(days=int(rng.integers(0, 3)))
     a, b = m["window"]
+    cycle = m.setdefault("refill_cycle", 90 if rng.random() < 0.65 else 30)
     while d <= b:
         items = []
         for cond, vs in drug_visits.items():
-            prior = [v for v in vs if v["date"] <= d and (d - v["date"]).days <= 120]
+            prior = [v for v in vs if v["date"] <= d and (d - v["date"]).days <= cycle + 90]
             if prior:
                 items.append((cond, prior[-1]["eid"]))
         if items:
-            s.add(kind="REFILL", member=m["sk"], date=d, provider=pharm, items=items, prio=7)
-        d += TD(days=30 + int(rng.integers(0, 4)))
+            s.add(kind="REFILL", member=m["sk"], date=d, provider=pharm, items=items, prio=7, cycle=cycle,
+                  rtype="CHRONIC", root=("CHR", m["sk"]))
+        d += TD(days=cycle + int(rng.integers(0, 4)))
 
 
 def _chemo_stream(ctx: _Ctx, s: _Sched, m: dict, cond: str) -> None:
@@ -1399,14 +1416,15 @@ def _chemo_stream(ctx: _Ctx, s: _Sched, m: dict, cond: str) -> None:
     start = a + TD(days=int(rng.integers(0, max((b - a).days - 60, 1))))
     # surgery first for about half of them (mastectomy with histology), then cycles
     if rng.random() < 0.5:
-        s.add(kind="IP", member=m["sk"], date=start, cr="CR120", prio=1, provider_hint=hosp)
+        s.add(kind="IP", member=m["sk"], date=start, cr="CR120", prio=1, provider_hint=hosp,
+              rtype="CHRONIC", root=("CHR", m["sk"]))
         start += TD(days=int(rng.integers(21, 42)))
     for k in range(int(rng.integers(6, 13))):
         d = start + TD(days=21 * k)
         if d > b:
             break
         s.add(kind="OP", member=m["sk"], date=d, provider=hosp, scenario="CHEMO", dx=["C50.911"], setting="CHEMO",
-              specialty="ONCOLOGY", level=4, chronic=cond, first=k == 0)
+              specialty="ONCOLOGY", level=4, chronic=cond, first=k == 0, rtype="CHRONIC", root=("CHR", m["sk"]))
 
 
 def _elective_chain(ctx: _Ctx, s: _Sched, m: dict, cr: str, d: D) -> None:
@@ -1428,7 +1446,7 @@ def _elective_chain(ctx: _Ctx, s: _Sched, m: dict, cr: str, d: D) -> None:
         return
     dx = cdef["dx"][int(rng.integers(len(cdef["dx"])))]
     consult = s.add(kind="OP", member=m["sk"], date=consult_d, provider=hosp, scenario=f"PREOP:{cr}", dx=[dx],
-                    setting="HOSPITAL_OP", specialty=spec, level=_level_from(rng, {3: .3, 4: .6, 5: .1}))
+                    setting="HOSPITAL_OP", specialty=spec, level=_level_from(rng, {3: .3, 4: .6, 5: .1}), rtype="IP")
     if cr in ("CR107",):
         consult["imaging"] = ["73562"]
     if cr == "CR102":
@@ -1485,7 +1503,8 @@ def _pregnancy(ctx: _Ctx, s: _Sched, m: dict) -> None:
         if d < a:
             continue
         ev = s.add(kind="OP", member=m["sk"], date=d, provider=ob, scenario="ANTENATAL", dx=["Z34.90"],
-                   setting="CLINIC", specialty="OBSTETRICS_GYNAECOLOGY", level=3 if week > 8 else 4)
+                   setting="CLINIC", specialty="OBSTETRICS_GYNAECOLOGY", level=3 if week > 8 else 4,
+                   rtype="IP", root=("PREG", m["sk"], conception))
         if extra and "ULTRASOUND" in ctx.providers[ob]["equipment"]:
             ev["office"] = extra
         labs = ["85025"] + (["84702"] if week == 8 else [])
@@ -1502,7 +1521,7 @@ def _pregnancy(ctx: _Ctx, s: _Sched, m: dict) -> None:
     hosp = _hospital_for(ctx, m, cr)
     if hosp:
         s.add(kind="IP", member=m["sk"], date=delivery, cr=cr, prio=1, provider_hint=hosp,
-              parent=prev["eid"] if prev else None)
+              parent=prev["eid"] if prev else None, rtype="IP", root=("PREG", m["sk"], conception))
 
 
 # =============================================================================
@@ -2182,8 +2201,9 @@ def _drug_item(ctx: _Ctx, hist: _History, m: dict, product: str, d: D, prescribe
         last = hist.group_fill.get((m["sk"], product))
         if last is not None and (d - last[0]).days < 0.85 * last[1]:
             return None
-        hist.group_fill[(m["sk"], product)] = (d, 30.0)
-        return {"code": product, "units": 1.0, "ordering": prescriber}
+        days = float(course_days or 30)
+        hist.group_fill[(m["sk"], product)] = (d, days)
+        return {"code": product, "units": float(max(1, round(days / 30))), "ordering": prescriber}
     drug = ctx.drugs[product]
     step = ctx.world.context["step_therapy"].get(product)
     if step:
@@ -2219,17 +2239,11 @@ def _ip_blocked(hist: _History, member: str, d: D, pad_after: int = 0) -> bool:
 def _build_claims(ctx: _Ctx, sched: _Sched, target: int) -> None:
     rng = ctx.rng
     events = sched.events
-    # subsample episodes to the target (keep families of events together)
-    roots: dict[int, int] = {}
-    for ev in events:
-        p = ev.get("parent")
-        roots[ev["eid"]] = roots.get(p, p) if p else ev["eid"]
-    # refills belong to the member's first chronic visit root — keep them independent
-    n_root = len(set(roots.values()))
-    expected = len(events) * 1.035
-    keep_p = min(1.0, target / max(expected, 1))
-    kept_roots = {r for r in sorted(set(roots.values())) if rng.random() < keep_p}
-    events = [e for e in events if roots[e["eid"]] in kept_roots]
+    keep = _keep_probabilities(events, target)
+    ctx.keep_probabilities = keep
+    roots = sorted({(e["rtype"], str(e["root"])) for e in events})
+    kept_roots = {r for r in roots if rng.random() < keep[r[0]]}
+    events = [e for e in events if (e["rtype"], str(e["root"])) in kept_roots]
     events.sort(key=lambda e: (e["date"], e["prio"], e["member"], e["eid"]))
     hist = _History()
     done: dict[int, dict] = {}
@@ -2273,6 +2287,31 @@ def _build_claims(ctx: _Ctx, sched: _Sched, target: int) -> None:
         # legitimate resubmission after a documentation denial
         if info["decision"] == "PARTIAL" and info["denial"] in RESUBMITTABLE and rng.random() < 0.45:
             _resubmit(ctx, info)
+
+
+#: Target claim mix by claim type (task specification).
+TARGET_MIX = {"OUTPATIENT": 0.55, "PHARMACY": 0.20, "LAB": 0.10, "RADIOLOGY": 0.07, "INPATIENT": 0.08}
+_KIND_TYPE = {"OP": "OUTPATIENT", "PHYSIO": "OUTPATIENT", "RX": "PHARMACY", "REFILL": "PHARMACY", "LAB": "LAB",
+              "RAD": "RADIOLOGY", "IP": "INPATIENT"}
+#: Expected share of scheduled events that become claims, by kind (refills lose a few to overlaps).
+_YIELD = {"OP": 0.95, "PHYSIO": 0.9, "RX": 0.9, "REFILL": 0.85, "LAB": 0.93, "RAD": 0.95, "IP": 0.9}
+
+
+def _keep_probabilities(events: list[dict], target: int) -> dict[str, float]:
+    """Keep-probability per root type so the kept events approximate ``target`` claims in TARGET_MIX."""
+    from scipy.optimize import lsq_linear
+
+    rtypes = sorted({e["rtype"] for e in events})
+    ctypes = list(TARGET_MIX)
+    A = np.zeros((len(ctypes), len(rtypes)))
+    for e in events:
+        A[ctypes.index(_KIND_TYPE[e["kind"]]), rtypes.index(e["rtype"])] += _YIELD[e["kind"]]
+    T = np.array([target * TARGET_MIX[c] for c in ctypes])
+    W = 1.0 / np.maximum(T, 1.0)
+    A_w = np.vstack([A * W[:, None], 3.0 * A.sum(axis=0)[None, :] / max(target, 1)])
+    T_w = np.concatenate([T * W, [3.0]])
+    sol = lsq_linear(A_w, T_w, bounds=(0.0, 1.0))
+    return {r: float(np.clip(p, 0.0, 1.0)) for r, p in zip(rtypes, sol.x)}
 
 
 def _resubmit(ctx: _Ctx, info: dict) -> None:
@@ -2367,7 +2406,7 @@ def _spec_for_event(ctx: _Ctx, hist: _History, ev: dict, m: dict, done: dict) ->
                 if visit is None:
                     continue
                 for p in m["drugs"].get(cond, []):
-                    course = 30
+                    course = int(ev.get("cycle", 30))
                     it = _drug_item(ctx, hist, m, p, d, visit["clin"], visit["date"], course)
                     if it:
                         items.append(it)
@@ -2839,7 +2878,7 @@ def build(world: World, n_claims: int = DEFAULT_CLAIMS, *, verbose: bool = False
     n_members = max(400, int(round(9000 * n_claims / DEFAULT_CLAIMS)))
     _build_providers(ctx, prov_scale)
     _build_people(ctx, n_members, prov_scale)
-    mult = {"acute": 1.0, "chronic": 1.0, "ip": 3.2}
+    mult = {"acute": 1.0, "chronic": 1.0, "ip": 8.0}
     sched = _schedule(ctx, mult)
     ctx.rows = _new_rows()
     _build_claims(ctx, sched, int(n_claims / 1.03))

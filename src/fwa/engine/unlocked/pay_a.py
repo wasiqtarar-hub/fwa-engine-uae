@@ -329,6 +329,10 @@ def _paid_by_line(ctx) -> pd.DataFrame:
     rem = _table(ctx, "remittance")
     if rem.empty or "line_sk" not in rem.columns:
         return pd.DataFrame(columns=["line_sk", "paid", "denied", "reversed", "denial_code"])
+    cache = getattr(ctx, "_pay_a_cache", None)
+    key = (id(rem), len(rem))
+    if isinstance(cache, dict) and cache.get("paid_key") == key:
+        return cache["paid"]
     r = rem[_has(rem["line_sk"])].copy()
     r["line_sk"] = r["line_sk"].astype(str)
     r["pay"] = _num(_col(r, "payment_amount")).fillna(0.0)
@@ -337,8 +341,12 @@ def _paid_by_line(ctx) -> pd.DataFrame:
     r["is_reversed"] = dec.isin(_REVERSAL_DECISIONS)
     r["dcode"] = _col(r, "denial_code").map(_str_id)
     g = r.groupby("line_sk").agg(paid=("pay", "sum"), denied=("is_denied", "any"),
-                                 reversed=("is_reversed", "any"), denial_code=("dcode", "max"))
-    return g.reset_index()
+                                 reversed=("is_reversed", "any")).reset_index()
+    codes = r[r["dcode"] != ""].drop_duplicates("line_sk").set_index("line_sk")["dcode"]
+    g["denial_code"] = g["line_sk"].map(codes).fillna("")
+    if isinstance(cache, dict):
+        cache["paid_key"], cache["paid"] = key, g
+    return g
 
 
 def _peer_group(ctx) -> dict[str, str]:
@@ -1128,12 +1136,17 @@ def pay_03_r03_unit_maximum(ctx, control) -> list[Signal]:
         allowed_factor=np.where(inpatient, los, 1.0))
     g = ln.groupby(["grp", "activity_code"]).agg(
         units=("units_n", "sum"), max_units=("max_units", "first"), factor=("allowed_factor", "max"),
-        exempt=("exempt", "any"), claims=("claim_sk", lambda s: sorted(set(s))),
-        billed=("billed", "sum"), payable=("payable", "sum"), member_sk=("member_sk", "first"),
-        provider_sk=("provider_sk", "first"), line_date=("line_date", "min"),
-        lines=("line_sk", lambda s: sorted(set(s)))).reset_index()
+        exempt=("exempt", "any"), billed=("billed", "sum"), payable=("payable", "sum"),
+        member_sk=("member_sk", "first"), provider_sk=("provider_sk", "first"),
+        line_date=("line_date", "min")).reset_index()
     g["allowed"] = g["max_units"] * g["factor"]
     g = g[(g["units"] > g["allowed"]) & ~g["exempt"]]
+    if g.empty:
+        return []
+    hit = ln.merge(g[["grp", "activity_code"]], on=["grp", "activity_code"], how="inner")
+    lists = hit.groupby(["grp", "activity_code"]).agg(
+        claims=("claim_sk", lambda s: sorted(set(s))), lines=("line_sk", lambda s: sorted(set(s)))).reset_index()
+    g = g.merge(lists, on=["grp", "activity_code"], how="left")
     desc = _describer(ctx)
     out: list[Signal] = []
     for r in g.itertuples(index=False):

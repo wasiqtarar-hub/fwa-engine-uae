@@ -1,0 +1,201 @@
+# =============================================================================
+# Plain-language wording for the four governance pages:
+#   Checks library (Rule Registry), Governance, Settings and thresholds
+#   (Parameters & Models) and Users and access (User Management).
+#
+# Presentation only. Nothing here renames an internal identifier: every key on
+# the left is the exact value the engine or the access-control layer uses
+# (owner names, permission names, scenario family prefixes, support bases),
+# and the words on the right are what a reader sees.
+#
+# The `governance_pages:` section is ignored by the shared loader and read
+# directly by app/components/governance_pages.py. Only NEW keys are added to
+# the shared sections (`fields:`), never redefinitions.
+# =============================================================================
+
+fields:
+  check_title:
+    label: "Check"
+    meaning: "The check's plain name."
+  check_what:
+    label: "What it looks for"
+    meaning: "In one sentence, the pattern this check looks for."
+  check_why:
+    label: "Why it matters"
+    meaning: "Why this pattern costs money or harms patients."
+  family_words:
+    label: "Area"
+    meaning: "The group of checks this one belongs to."
+  missing_words:
+    label: "What the file is missing"
+    meaning: "The information this file would need for the check to run in full. Blank when nothing is missing."
+  basis_words:
+    label: "Why it could run"
+    meaning: "Whether the check ran as classified in the catalogue, or because this file carries extra tables."
+  owner_words:
+    label: "Owner"
+    meaning: "The team accountable for this check or setting."
+  setting_words:
+    label: "Setting"
+    meaning: "The setting's plain name."
+  value_words:
+    label: "Current value"
+    meaning: "The value in force for this run."
+  meaning_words:
+    label: "What it controls"
+    meaning: "What this setting controls, in one sentence."
+  raise_words:
+    label: "If you raise it"
+    meaning: "What would happen if this value were raised."
+  lower_words:
+    label: "If you lower it"
+    meaning: "What would happen if this value were lowered."
+  approver_words:
+    label: "Approved by"
+    meaning: "Who signed off the current value."
+  kind_words:
+    label: "Where the number comes from"
+    meaning: "Chosen by policy (a governed setting with an owner) or measured from your data (changes when the file changes)."
+
+governance_pages:
+
+  # ---- who owns a setting or a check (config/parameters.yaml `owner`) -------
+  owners:
+    administrator: "System administrator"
+    claims_operations: "Claims operations"
+    finance: "Finance"
+    policy_owner: "Policy owner"
+    siu: "Special investigations unit"
+    analytics: "Analytics team"
+    coding_policy: "Coding policy team"
+    underwriting: "Underwriting"
+    provider_network: "Provider network team"
+    clinical_policy: "Clinical policy team"
+    claims_policy: "Claims policy team"
+    pharmacy_policy: "Pharmacy policy team"
+    qa: "Quality assurance"
+    platform_engineering: "Platform engineering"
+    UNAPPROVED: "Nobody yet (not approved)"
+    catalogue: "The published catalogue"
+
+  # ---- permission names (fwa.auth.Permission) -------------------------------
+  permissions:
+    VIEW_OVERVIEW: "See the overview"
+    VIEW_QUEUE: "See the review queue"
+    VIEW_CASE_EVIDENCE: "See case evidence"
+    VIEW_PROVIDER_ANALYTICS: "See hospital comparisons"
+    VIEW_NETWORK: "See connections between providers, agents and patients"
+    VIEW_MODELS: "See the pattern-finding models"
+    VIEW_RULE_REGISTRY: "See the checks library"
+    VIEW_GOVERNANCE: "See the governance page"
+    VIEW_VALIDATION_REPORT: "See the validation report"
+    VIEW_AUDIT_LOG: "Read the audit log"
+    VIEW_TEST_EVIDENCE: "See test evidence"
+    VIEW_HELP: "See help"
+    VIEW_PARAMETERS: "See settings and thresholds"
+    LOAD_DATASET: "Choose or load a claim file"
+    VIEW_UNMASKED_IDENTITY: "See real patient and provider identities"
+    RECORD_DISPOSITION: "Record a reviewer decision"
+    RECORD_CLINICAL_DISPOSITION: "Record a clinical decision"
+    CAPTURE_APPEAL: "Record an appeal"
+    ESCALATE_TO_SIU: "Refer a case to investigations"
+    INVESTIGATE_CASE: "Investigate a case"
+    LINK_CASES: "Link related cases"
+    MANUAL_OVERRIDE: "Manually override a payment decision"
+    AUTHOR_RULE: "Draft a new check"
+    AUTHOR_EXPERT_RULE: "Draft a new clinical or coding check"
+    APPROVE_RULE_ACTIVATION: "Approve a check for real use"
+    RETIRE_RULE: "Retire a check"
+    SET_PARAMETER: "Change a setting"
+    PROPOSE_MODEL_PROMOTION: "Propose a model for real use"
+    APPROVE_MODEL_PROMOTION: "Approve a model for real use"
+    RUN_PIPELINE: "Run the engine"
+    RECALIBRATE_MODEL: "Re-tune a model"
+    KILL_SWITCH: "Switch a check off or on"
+    ROLLBACK: "Roll a check back to an earlier version"
+    CONFIRM_ENTITY_MERGE: "Confirm that two records are the same person or provider"
+    RECORD_GATE_EVIDENCE: "Record release-check evidence"
+    MANAGE_USERS: "Manage users and access"
+    EXPORT_EVIDENCE: "Export evidence"
+
+  # ---- what a grantable permission means, for the grant form ----------------
+  permission_meanings:
+    MANUAL_OVERRIDE: "Lets this person override an automated payment decision. It is never part of any role; every override they make is logged with the decision before and after."
+    VIEW_UNMASKED_IDENTITY: "Lets this person see real patient and provider names and IDs instead of pseudonyms. Each reveal still needs a reason and is logged."
+    EXPORT_EVIDENCE: "Lets this person download evidence packs and reports."
+    CONFIRM_ENTITY_MERGE: "Lets this person confirm that two records belong to the same patient or provider. The engine never merges records on its own."
+
+  # ---- what each role may do, in words --------------------------------------
+  role_can_do:
+    ADMIN: "Manages users, roles and organisations; puts checks into use; switches checks off and rolls them back; reads the audit log."
+    POLICY_OWNER: "Drafts, edits and retires checks; changes settings; approves a check for real use (never one they drafted); signs off."
+    CLAIMS_REVIEWER: "Records a decision with its reasons; records appeals; refers cases to investigations."
+    CLINICAL_REVIEWER: "Records clinical decisions; drafts clinical and coding checks; confirms coding findings."
+    SIU_INVESTIGATOR: "Investigates referred cases; links related cases; records the outcome of an investigation."
+    ANALYST: "Loads data and runs the engine; re-tunes models; can propose a model for use but never approve one."
+    QA: "Attaches and confirms the test suite for each check; records release-check evidence."
+    AUDITOR: "Changes nothing. Can read everything, including the audit log, and export evidence."
+
+  # ---- scenario families (the prefix of a rule id) --------------------------
+  scenario_families:
+    ANL: "Overall unusual patterns"
+    CLN: "Clinical care and coding"
+    DOC: "Documents and records"
+    ENT: "Cover, identity and licences"
+    NET: "Connections and referrals"
+    PAY: "Payment accuracy"
+    PHR: "Medicines and supplies"
+    POL: "Policies and enrolment"
+
+  # ---- why a check could run on this file (ControlRunRecord.support_basis) --
+  support_basis:
+    catalogue: "As classified in the catalogue"
+    unlocked: "Unlocked: this file carries the extra tables the check needs"
+    upgraded: "Upgraded to the full check: this file carries what the simplified version lacked"
+
+  # ---- peer-group hierarchy availability ------------------------------------
+  peer_availability:
+    POPULATED: "Present in this file"
+    PROXY: "Stand-in used"
+    WEAK_PROXY: "Weak stand-in used"
+    NOT_POPULATED: "Not in this file (skipped)"
+    DERIVED: "Worked out from the data"
+    SOURCED: "Present in this file"
+
+  # ---- peer-group levels ----------------------------------------------------
+  peer_levels:
+    GLOBAL: "All providers together"
+    activity_code_family: "Type of service billed"
+    specialty: "Specialty"
+    encounter_facility_type: "Type of visit or facility"
+    payment_method_contract_family: "Contract or payment arrangement"
+    geography: "Location"
+    provider_volume_band: "Provider size (claim volume)"
+
+  # ---- how a spread was measured (composite scale_source) -------------------
+  scale_sources:
+    mad: "Median spread (preferred)"
+    iqr: "Middle-half range (first fallback)"
+    std: "Standard deviation (last resort)"
+    sd: "Standard deviation (last resort)"
+
+  # ---- model settings as reported by dataset.model_parameters ---------------
+  model_parameters:
+    contamination: {label: "Starting guess of the share of unusual claims", kind: policy}
+    n_estimators: {label: "Number of trees in the model", kind: policy}
+    random_state: {label: "Fixed randomness seed", kind: policy}
+    "decision_threshold (fitted)": {label: "Score above which a claim is flagged", kind: measured}
+    feature_count: {label: "Number of measures the model looks at", kind: measured}
+    training_rows: {label: "Claims the model learned from", kind: measured}
+    n_neighbors: {label: "Number of nearest neighbours compared", kind: policy}
+    novelty: {label: "Can score claims it did not learn from", kind: policy}
+
+  # ---- who did something in the audit log, when it was not a person --------
+  actor_roles:
+    ENGINE: "The engine (automatic)"
+    SYSTEM: "The system (automatic)"
+
+  # ---- the explanation methods for a model's reasons ------------------------
+  explainers:
+    TreeExplainer: "Exact method for tree models"
+    KernelExplainer: "Approximation (works for any model)"

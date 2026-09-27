@@ -182,9 +182,26 @@ def _rx(ctx) -> pd.DataFrame:
     for c in ("provider_sk", "payer_id", "diagnosis_primary"):
         if c not in rx.columns:
             rx[c] = None
-    rx = rx[rx["rx_sk"].notna()]
+    rx = rx[rx["rx_sk"].notna() & ~rx["claim_sk"].isin(_superseded_claims(ctx))]
     rx["billed_amount"] = rx["billed_amount"].fillna(0.0)
     return rx.reset_index(drop=True)
+
+
+def _superseded_claims(ctx) -> set[str]:
+    """Claims replaced by a later version (resubmission, correction) or cancelled.
+
+    Only the latest version of a claim describes what was dispensed; counting the
+    original as well would make every resubmitted fill look like a second fill.
+    """
+    versions = _table(ctx, "claim_version")
+    out: set[str] = set()
+    if not versions.empty and {"relationship", "prior_claim_sk"} <= set(versions.columns):
+        rel = _str(versions["relationship"]).map(lambda r: (r or "").upper())
+        later = versions[rel != "ORIGINAL"]
+        out |= set(_str(later["prior_claim_sk"]).dropna())
+        cancelled = versions[rel.str.contains("CANCEL|VOID|REVERS", regex=True)]
+        out |= set(_str(cancelled["claim_sk"]).dropna())
+    return out
 
 
 def _drugs(ctx) -> pd.DataFrame:
@@ -322,31 +339,6 @@ def _inpatient_discharges(ctx) -> dict[str, list[pd.Timestamp]]:
     for member, d in zip(sub["member_sk"].astype(str), _date(sub["discharge_date"])):
         if not pd.isna(d):
             out.setdefault(member, []).append(d)
-    return out
-
-
-def _supply_walk(frame: pd.DataFrame) -> pd.DataFrame:
-    """Per fill, the supply left over from earlier fills (stacked) at the time of this fill.
-
-    ``frame`` must be one member's fills of one equivalence group, sorted by date.
-    """
-    remaining, prev_rx = [], []
-    supply_end = None
-    last_rx = None
-    for fill, days, rx_sk in zip(frame["fill_date"], frame["days_supply"], frame["rx_sk"]):
-        if supply_end is None or pd.isna(fill):
-            remaining.append(np.nan)
-        else:
-            remaining.append(float((supply_end - fill).days))
-        prev_rx.append(last_rx)
-        if not pd.isna(fill):
-            days_i = 0.0 if pd.isna(days) else float(days)
-            start = fill if supply_end is None or supply_end < fill else supply_end
-            supply_end = start + pd.Timedelta(days=days_i)
-            last_rx = rx_sk
-    out = frame.copy()
-    out["remaining_days"] = remaining
-    out["previous_rx_sk"] = prev_rx
     return out
 
 
@@ -787,62 +779,89 @@ def _override_auth_ids(ctx) -> set[str]:
     return set(lines.loc[flag, "authorization_sk"].dropna())
 
 
+def _inpatient_claims(ctx) -> set[str]:
+    """Claims that are inpatient stays (a night or more, or typed INPATIENT)."""
+    df = ctx.claims if ctx.claims is not None else pd.DataFrame()
+    if df.empty or "claim_sk" not in df.columns:
+        return set()
+    los = _num(_col(df, "length_of_stay_days")).fillna(0)
+    typ = _col(df, "claim_type").astype(object).map(lambda t: str(t).upper() if t is not None else "")
+    return set(df.loc[(los >= 1) | typ.isin(["INPATIENT"]), "claim_sk"].astype(str))
+
+
+def _with_previous(rx: pd.DataFrame, keys: list[str]) -> pd.DataFrame:
+    """Attach the previous fill of the same member and equivalence group (rx sorted by date)."""
+    g = rx.groupby(keys, sort=False)
+    out = rx.copy()
+    for col in ("fill_date", "days_supply", "rx_sk", "claim_sk", "dose_mg_per_day", "pharmacy_id"):
+        out[f"prev_{col}"] = g[col].shift(1)
+    out["prev_end"] = out["prev_fill_date"] + pd.to_timedelta(out["prev_days_supply"].fillna(0), unit="D")
+    out["remaining_days"] = (out["prev_end"] - out["fill_date"]).dt.days
+    return out
+
+
 @_safe
 def phr_02_r01_refill_overlap(ctx, control) -> list[Signal]:
-    """PHR-02-R01 — remaining supply at the next fill exceeds the allowed overlap."""
+    """PHR-02-R01 — remaining supply at the next fill exceeds the allowed overlap.
+
+    The allowed overlap is the larger of a fixed number of days and a fraction of
+    the previous fill's days' supply (a long injectable interval earns a
+    proportionate window). Administrations during an inpatient stay are not
+    refills and are left out (the catalogue's inpatient-days exclusion).
+    """
     rx, drugs = _rx_grouped(ctx)
     if rx.empty:
         return []
     allowed = float(ctx.cfg("phr02_allowed_overlap_days"))
+    frac = float(ctx.cfg("phr02_allowed_overlap_fraction"))
     dose_tol = float(ctx.cfg("phr_dose_change_tolerance"))
     grace = int(ctx.cfg("phr02_discharge_grace_days"))
     overrides = _override_auth_ids(ctx)
     discharges = _inpatient_discharges(ctx)
-    walked = pd.concat([_supply_walk(g) for _, g in rx.groupby(["member_sk", "group"], sort=False)],
-                       ignore_index=True)
-    prev_dose = walked.groupby(["member_sk", "group"])["dose_mg_per_day"].shift(1)
+    rx = rx[~rx["claim_sk"].isin(_inpatient_claims(ctx))]
+    walked = _with_previous(rx, ["member_sk", "group"])
+    walked["allowed"] = np.maximum(allowed, frac * walked["prev_days_supply"].fillna(0))
     walked["dose_changed"] = (
-        prev_dose.notna() & walked["dose_mg_per_day"].notna()
-        & ((walked["dose_mg_per_day"] - prev_dose).abs() > dose_tol * prev_dose.abs())
+        walked["prev_dose_mg_per_day"].notna() & walked["dose_mg_per_day"].notna()
+        & ((walked["dose_mg_per_day"] - walked["prev_dose_mg_per_day"]).abs()
+           > dose_tol * walked["prev_dose_mg_per_day"].abs())
     )
-    cand = walked[(walked["remaining_days"] > allowed) & ~walked["dose_changed"]
+    cand = walked[(walked["remaining_days"] > walked["allowed"]) & ~walked["dose_changed"]
                   & ~walked["authorization_id"].isin(overrides)]
-    by_rx = rx.set_index("rx_sk")
     out: list[Signal] = []
     for row in cand.itertuples(index=False):
         dis = discharges.get(str(row.member_sk), [])
         if any(pd.Timedelta(0) <= (row.fill_date - d) <= pd.Timedelta(days=grace) for d in dis):
             continue  # declared exclusion: inpatient days / discharge medication
-        prev = by_rx.loc[row.previous_rx_sk] if row.previous_rx_sk in by_rx.index else None
-        if isinstance(prev, pd.DataFrame):
-            prev = prev.iloc[0]
         days = _f(row.days_supply)
         billed = _f(row.billed_amount)
-        excess = float(row.remaining_days) - allowed
+        excess = float(row.remaining_days) - float(row.allowed)
         share = min(1.0, excess / days) if days > 0 else 0.0
-        prev_date = None if prev is None else prev["fill_date"]
+        same_day = not pd.isna(row.prev_fill_date) and row.prev_fill_date == row.fill_date
+        when = "on the same day as the previous fill" if same_day else f"(last filled {plain_date(row.prev_fill_date)})"
         out.append(_sig(
             ctx, control, subject_type="member", subject_id=row.member_sk,
             fact_key=f"refill:{row.rx_sk}",
-            claim_ids=[c for c in {row.claim_sk, None if prev is None else prev["claim_sk"]} if c],
+            claim_ids=sorted(c for c in {row.claim_sk, row.prev_claim_sk} if c),
             event_time=row.fill_date, period=period_bucket(row.fill_date),
             evidence={
                 "plain_language": (
-                    f"{_describe(row.billed_product, drugs)} was refilled on {plain_date(row.fill_date)} "
-                    f"with about {plain_number(row.remaining_days)} days of earlier supply still left "
-                    f"(last filled {plain_date(prev_date)}); the policy allows {plain_number(allowed)} days "
-                    f"of overlap."
+                    f"{_describe(row.billed_product, drugs)} was refilled on {plain_date(row.fill_date)} {when}, "
+                    f"with about {plain_number(row.remaining_days)} of the previous "
+                    f"{plain_number(row.prev_days_supply)} days' supply still left; the policy allows "
+                    f"{plain_number(row.allowed)} days of overlap."
                 ),
                 "what_the_reviewer_must_verify": (
                     "Check for a dose change, a lost-medicine or travel override, or a recent hospital stay."
                 ),
                 "member_sk": row.member_sk, "rx_sk": row.rx_sk, "claim_sk": row.claim_sk,
-                "previous_rx_sk": row.previous_rx_sk, "previous_fill_date": _iso(prev_date),
+                "previous_rx_sk": row.prev_rx_sk, "previous_fill_date": _iso(row.prev_fill_date),
+                "previous_days_supply": _r(row.prev_days_supply),
                 "fill_date": _iso(row.fill_date), "equivalence_group": row.group,
                 "billed_product": row.billed_product, "days_supply": _r(days),
-                "remaining_supply_days": _r(row.remaining_days), "allowed_overlap_days": allowed,
+                "remaining_supply_days": _r(row.remaining_days), "allowed_overlap_days": _r(row.allowed),
                 "billed_amount_aed": _r(billed), "pharmacy_id": row.pharmacy_id,
-                "clinician_id": row.prescriber_id,
+                "previous_pharmacy_id": row.prev_pharmacy_id, "clinician_id": row.prescriber_id,
             },
             exposure=_exp.line_edit_exposure(billed, billed * (1.0 - share)),
         ))
@@ -851,83 +870,76 @@ def phr_02_r01_refill_overlap(ctx, control) -> list[Signal]:
 
 @_safe
 def phr_02_r02_therapy_duration_excess(ctx, control) -> list[Signal]:
-    """PHR-02-R02 — continuous fills run longer than the drug policy's maximum duration."""
+    """PHR-02-R02 — continuous fills run longer than the drug policy's maximum duration without review.
+
+    A course is a run of fills of one equivalent medicine where each fill arrives
+    within the continuity gap of the supply running out. It is "without review"
+    when no approval covers it and every fill in it rests on the same prescription
+    (no new prescription was written during the course).
+    """
     rx, drugs = _rx_grouped(ctx)
     if rx.empty or "max_duration_days" not in drugs.columns:
         return []
     gap_allow = float(ctx.cfg("phr02_continuity_gap_days"))
+    tol = float(ctx.cfg("phr02_duration_tolerance"))
     chronic = {c.upper() for c in _cfg_list(ctx, "phr02_chronic_therapeutic_classes")}
     # declared exclusion: chronic maintenance therapy is expected to run past a course limit
-    acute = drugs[~drugs["therapeutic_class"].fillna("").str.upper().isin(chronic)]
+    acute = drugs[~drugs["therapeutic_class"].fillna("").astype(str).str.upper().isin(chronic)]
     limits = acute.groupby("group")["max_duration_days"].min().dropna()
     limits = limits[limits > 0]
-    rx = rx[rx["group"].isin(set(limits.index))]
+    rx = rx[rx["group"].isin(set(limits.index)) & ~rx["claim_sk"].isin(_inpatient_claims(ctx))].copy()
     if rx.empty:
         return []
     auth, _lines = _authorizations(ctx)
     approved = _approved_auth_ids(auth)
+    keys = ["member_sk", "group"]
+    rx["end"] = rx["fill_date"] + pd.to_timedelta(rx["days_supply"].fillna(0), unit="D")
+    rx["cum_end"] = rx.groupby(keys, sort=False)["end"].cummax()
+    prev_end = rx.groupby(keys, sort=False)["cum_end"].shift(1)
+    new_course = prev_end.isna() | (rx["fill_date"] > prev_end + pd.Timedelta(days=gap_allow))
+    rx["course"] = new_course.cumsum()
+    rx["approved"] = rx["authorization_id"].isin(approved)
+    courses = rx.groupby("course").agg(
+        member_sk=("member_sk", "first"), group=("group", "first"), start=("fill_date", "min"),
+        end=("end", "max"), fills=("rx_sk", "count"), approved=("approved", "any"),
+        prescriptions=("prescribed_date", "nunique"), product=("billed_product", "first"))
+    courses["limit"] = courses["group"].map(limits).astype(float)
+    courses["span"] = (courses["end"] - courses["start"]).dt.days
+    flagged = courses[(courses["span"] > courses["limit"] * (1.0 + tol)) & ~courses["approved"]
+                      & (courses["prescriptions"] <= 1)]
     out: list[Signal] = []
-    for (member, group), g in rx.groupby(["member_sk", "group"], sort=False):
-        limit = float(limits[group])
-        episodes: list[list[int]] = []
-        end = None
-        for i, (fill, days) in enumerate(zip(g["fill_date"], g["days_supply"])):
-            d = 0.0 if pd.isna(days) else float(days)
-            if end is None or fill > end + pd.Timedelta(days=gap_allow):
-                episodes.append([i])
-                end = fill + pd.Timedelta(days=d)
-            else:
-                episodes[-1].append(i)
-                end = max(end, fill) + pd.Timedelta(days=d)
-        for idx in episodes:
-            ep = g.iloc[idx]
-            ep_start = ep["fill_date"].min()
-            ep_end = _episode_end(ep)
-            span = float((ep_end - ep_start).days)
-            if span <= limit:
-                continue
-            if ep["authorization_id"].isin(approved).any():
-                continue  # declared exclusion: specialist approval on file
-            limit_date = ep_start + pd.Timedelta(days=limit)
-            beyond = ep[ep["fill_date"] >= limit_date]
-            beyond_amount = float(beyond["billed_amount"].sum())
-            first = ep.iloc[0]
-            out.append(_sig(
-                ctx, control, subject_type="member", subject_id=member,
-                fact_key=f"duration:{member}:{group}:{ep_start.date().isoformat()}",
-                claim_ids=sorted({c for c in ep["claim_sk"] if c}),
-                event_time=ep["fill_date"].max(), period=period_bucket(ep["fill_date"].max()),
-                confidence=0.8,
-                evidence={
-                    "plain_language": (
-                        f"{_describe(first['billed_product'], drugs)} has been supplied continuously for "
-                        f"{plain_number(span)} days ({count_phrase(len(ep), 'fill')} from "
-                        f"{plain_date(ep_start)}), against a policy maximum of {plain_number(limit)} days, "
-                        f"with no approval on file."
-                    ),
-                    "what_the_reviewer_must_verify": (
-                        "Check whether the condition is chronic or a specialist approved continuation."
-                    ),
-                    "member_sk": member, "equivalence_group": group,
-                    "therapy_start": _iso(ep_start), "supply_end": _iso(ep_end),
-                    "continuous_days": _r(span, 0), "max_duration_days": _r(limit, 0),
-                    "fills": int(len(ep)), "fills_after_limit": int(len(beyond)),
-                    "amount_after_limit_aed": _r(beyond_amount),
-                    "continuity_gap_days": gap_allow,
-                    "rx_sks": list(ep["rx_sk"]),
-                },
-                exposure=_unestablished(beyond_amount, "fills supplied after the policy's duration limit."),
-            ))
+    for course_id, c in flagged.iterrows():
+        ep = rx[rx["course"] == course_id]
+        limit = float(c["limit"])
+        limit_date = c["start"] + pd.Timedelta(days=limit)
+        beyond = ep[ep["fill_date"] >= limit_date]
+        beyond_amount = float(beyond["billed_amount"].sum())
+        last = ep["fill_date"].max()
+        out.append(_sig(
+            ctx, control, subject_type="member", subject_id=c["member_sk"],
+            fact_key=f"duration:{c['member_sk']}:{c['group']}:{c['start'].date().isoformat()}",
+            claim_ids=sorted({x for x in ep["claim_sk"] if x}),
+            event_time=last, period=period_bucket(last), confidence=0.8,
+            evidence={
+                "plain_language": (
+                    f"{_describe(c['product'], drugs)} has been supplied continuously for "
+                    f"{plain_number(c['span'])} days ({count_phrase(c['fills'], 'fill')} on one prescription from "
+                    f"{plain_date(c['start'])}), against a policy maximum of {plain_number(limit)} days, "
+                    f"with no approval on file."
+                ),
+                "what_the_reviewer_must_verify": (
+                    "Check whether the condition is chronic or a specialist approved continuation."
+                ),
+                "member_sk": c["member_sk"], "equivalence_group": c["group"],
+                "therapy_start": _iso(c["start"]), "supply_end": _iso(c["end"]),
+                "continuous_days": _r(c["span"], 0), "max_duration_days": _r(limit, 0),
+                "duration_tolerance": tol, "fills": int(c["fills"]), "fills_after_limit": int(len(beyond)),
+                "amount_after_limit_aed": _r(beyond_amount), "continuity_gap_days": gap_allow,
+                "rx_sks": list(ep["rx_sk"]),
+            },
+            exposure=_unestablished(beyond_amount, "fills supplied after the policy's duration limit."),
+        ))
     return out
-
-
-def _episode_end(ep: pd.DataFrame) -> pd.Timestamp:
-    end = None
-    for fill, days in zip(ep["fill_date"], ep["days_supply"]):
-        d = 0.0 if pd.isna(days) else float(days)
-        base = fill if end is None or end < fill else end
-        end = base + pd.Timedelta(days=d)
-    return end
 
 
 @_safe
@@ -950,6 +962,7 @@ def phr_02_r03_multi_prescriber(ctx, control) -> list[Signal]:
         return f"owner:{owner}" if owner else (f"facility:{fac}" if fac else f"clinician:{clinician}")
 
     rx["unit"] = rx["prescriber_id"].map(unit)
+    rx = rx[rx.groupby(["member_sk", "group"])["unit"].transform("nunique") >= min(threshold, threshold_ctl)]
     controlled = drugs.groupby("group")["is_controlled"].any().to_dict() if "is_controlled" in drugs.columns else {}
     out: list[Signal] = []
     for (member, group), g in rx.groupby(["member_sk", "group"], sort=False):
@@ -1011,6 +1024,10 @@ def phr_02_r04_multi_pharmacy(ctx, control) -> list[Signal]:
     # declared exclusion: partial fills are split legitimately between pharmacies
     partial = rx["dispensed_qty"].notna() & rx["prescribed_qty"].notna() & (rx["dispensed_qty"] < rx["prescribed_qty"])
     rx = rx[~partial]
+    rx = rx[~rx["claim_sk"].isin(_inpatient_claims(ctx))]
+    rx = rx[rx.groupby(["member_sk", "group"])["pharmacy_id"].transform("nunique") >= need].copy()
+    if rx.empty:
+        return []
     rx["end"] = rx["fill_date"] + pd.to_timedelta(rx["days_supply"].fillna(0), unit="D")
     out_of_stock = _out_of_stock(ctx)
     out: list[Signal] = []

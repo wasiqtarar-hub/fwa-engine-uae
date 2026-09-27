@@ -122,6 +122,7 @@ ICD10: dict[str, str] = {
     "D23.9": "Other benign neoplasm of skin, unspecified",
     # blood
     "D50.9": "Iron deficiency anaemia, unspecified",
+    "E04.1": "Nontoxic single thyroid nodule",
     "D62": "Acute posthaemorrhagic anaemia",
     # endocrine
     "E03.9": "Hypothyroidism, unspecified",
@@ -198,6 +199,7 @@ ICD10: dict[str, str] = {
     "N17.9": "Acute kidney failure, unspecified",
     "N18.30": "Chronic kidney disease, stage 3 unspecified",
     "N39.0": "Urinary tract infection, site not specified",
+    "N20.0": "Calculus of kidney",
     "N40.0": "Benign prostatic hyperplasia without lower urinary tract symptoms",
     "N92.0": "Excessive and frequent menstruation with regular cycle",
     # pregnancy
@@ -220,6 +222,7 @@ ICD10: dict[str, str] = {
     # health status
     "Z00.00": "Encounter for general adult medical examination without abnormal findings",
     "Z23": "Encounter for immunisation",
+    "Z12.31": "Encounter for screening mammogram for malignant neoplasm of breast",
     "Z34.90": "Encounter for supervision of normal pregnancy, unspecified trimester",
     "Z79.4": "Long term (current) use of insulin",
     "Z87.891": "Personal history of nicotine dependence",
@@ -757,7 +760,7 @@ _INDICATIONS = {
     "94010": "J44;J45;R06;R05", "94640": "J45;J44;J20;J21", "95816": "G40;R56;R40", "96413": "C;Z51",
     "96415": "C;Z51", "78815": "C;R91", "88305": "K;C;D;N;L", "73562": "M17;M23;M25.56;S83;S89",
     "72100": "M54;M51;M48;S32", "73030": "M75;M25.51;S43;S42", "74177": "R10;K35;K57;C;N20;K80",
-    "76700": "R10;K80;K76;N10;K35;R74", "76705": "R10;K35;K80;N10", "93000": "R07;I10;I20;I21;I25;I48;I50;R00;Z01.8",
+    "76700": "R10;K80;K76;N10;K35;R74;N20", "76705": "R10;K35;K80;N10;N20", "93000": "R07;I10;I20;I21;I25;I48;I50;R00;Z01.8",
 }
 
 _PROHIBITED = [

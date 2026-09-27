@@ -280,9 +280,20 @@ def doc_01_r01_required_document_absent(ctx, control) -> list:
     if pol.empty:
         return []
 
-    work = lines[["claim_sk", "activity_code", "net_amount"]].copy()
+    work = lines[["claim_sk", "activity_code", "net_amount", "gross_amount"]].copy()
+    # A zero-priced line is a package component already paid inside another
+    # code; it is not separately billed, so it carries no document requirement
+    # of its own (its package's requirement applies instead).
+    work = work[(work["gross_amount"].fillna(work["net_amount"]).fillna(0) > 0)]
     work["service_family"] = work["activity_code"].map(
         lambda c: _norm(ref_index.get(c, {}).get("service_family")))
+    # On an admission billed as a case rate every line is billed under the case
+    # rate's benefit family, so the family-level requirement is the admission's
+    # (a discharge summary), not one per component line.
+    work["code_family"] = work["activity_code"].map(lambda c: _norm(ref_index.get(c, {}).get("code_family")))
+    case_family = work[work["code_family"] == "case_rate"].groupby("claim_sk")["service_family"].first()
+    in_case = work["claim_sk"].isin(case_family.index)
+    work.loc[in_case, "service_family"] = work.loc[in_case, "claim_sk"].map(case_family)
     by_code = pol[pol["activity_code"] != ""][["activity_code", "doc_type_norm"]]
     by_family = pol[(pol["activity_code"] == "") & (pol["service_family"] != "")][
         ["service_family", "doc_type_norm"]]

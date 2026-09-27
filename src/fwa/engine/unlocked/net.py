@@ -797,16 +797,37 @@ def net_03_r03_inducement_signature(ctx, control) -> list:
     if df.empty:
         return []
 
-    # Approved programmes: products whose benefit rules never charge a share.
+    # Approved programmes: a claim is only EXPECTED to carry a patient share when
+    # the member's product charges one for the benefit family of at least one of
+    # its billed lines (a case-rate admission bills every line under the case
+    # rate's family). A product that waives the share for that family is an
+    # approved programme, and its zero-share claims are not counted.
     eligible_products = None
     benefit = _table(ctx, "benefit_rule_version")
     cover = _table(ctx, "coverage_period")
-    if not benefit.empty and not cover.empty and {"product", "patient_share_pct"} <= set(benefit.columns):
+    ref = _table(ctx, "activity_code_reference")
+    if not benefit.empty and not cover.empty and {"product", "patient_share_pct", "service_family"} <= set(benefit.columns):
         pct_share = pd.to_numeric(benefit["patient_share_pct"], errors="coerce").fillna(0)
-        eligible_products = set(benefit.loc[pct_share > 0, "product"].map(_s))
+        charging = {(a, b) for a, b, v in zip(benefit["product"].map(_s), benefit["service_family"].map(_norm), pct_share) if v > 0}
+        eligible_products = {a for a, _ in charging}
         prod = cover.assign(_m=cover["member_sk"].map(_s), _p=cover["product"].map(_s)).drop_duplicates("_m", keep="last")
-        df["_product"] = df["member_sk"].map(dict(zip(prod["_m"], prod["_p"]))).fillna("")
-        df = df[df["_product"].isin(eligible_products)]
+        product_of = dict(zip(prod["_m"], prod["_p"]))
+        fam = {}
+        cfam = {}
+        if not ref.empty and {"activity_code", "service_family"} <= set(ref.columns):
+            fam = dict(zip(ref["activity_code"].map(_s), ref["service_family"].map(_norm)))
+            if "code_family" in ref.columns:
+                cfam = dict(zip(ref["activity_code"].map(_s), ref["code_family"].map(_norm)))
+        billed = lines[lines["net_amount"].fillna(0) > 0].assign(_code=lambda f: f["activity_code"].map(_s))
+        billed = billed.assign(_fam=billed["_code"].map(fam).fillna(""),
+                               _case=billed["_code"].map(cfam).fillna("") == "case_rate")
+        case_fam = billed[billed["_case"]].groupby("claim_sk")["_fam"].first()
+        in_case = billed["claim_sk"].isin(case_fam.index)
+        billed.loc[in_case, "_fam"] = billed.loc[in_case, "claim_sk"].map(case_fam)
+        billed = billed.assign(_prod=billed["claim_sk"].map(dict(zip(df["claim_sk"], df["member_sk"]))).map(product_of))
+        billed["_charges"] = [(p, f) in charging for p, f in zip(billed["_prod"], billed["_fam"])]
+        expects = billed.groupby("claim_sk")["_charges"].any()
+        df = df[df["claim_sk"].map(expects).fillna(False).astype(bool)]
         if df.empty:
             return []
     df["_zero"] = df["_share"] <= 0
