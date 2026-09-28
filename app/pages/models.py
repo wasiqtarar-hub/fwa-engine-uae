@@ -145,17 +145,46 @@ def _summary(result, layer, models, messages, capacity, per_day, reviewers) -> N
     total = int(coverage.get("total_claims", 0) or 0)
     excluded = int(coverage.get("excluded_claims", max(total - train - scored_total, 0)) or 0)
     split = plain_date(coverage.get("split_date"), missing="the split date")
-    for name, scores in models.items():
-        flagged = len(scores.flagged_index)
-        st.markdown(f"**{model_label(name)}**")
+    # Both models use the same fair split and the same review capacity, so these
+    # three numbers are the same for both by design. Shown once.
+    first = next(iter(models.values()))
+    headline_cards([
+        (f"{int(getattr(first, 'training_rows', 0) or train):,}",
+         "claims each model learned from: earlier claims from one half of the providers"),
+        (f"{len(first.scores):,}",
+         "claims each model scored: later claims from the other half of the providers"),
+        (f"{len(first.flagged_index):,}",
+         "claims each model flagged: its most unusual ones, as many as the review team can handle"),
+    ])
+    st.caption("These numbers are the same for both models on purpose: both learn from and are "
+               "tested on exactly the same claims, and the number flagged is set by the size of "
+               "the review team, not by the model. What differs is which claims each one picks.")
+
+    # What actually differs: which claims each model picked.
+    names = list(models)
+    if len(names) >= 2:
+        a, b = names[0], names[1]
+        set_a = {str(c) for c in models[a].flagged_index}
+        set_b = {str(c) for c in models[b].flagged_index}
+        both = len(set_a & set_b)
+        st.markdown("### Which claims each model picked")
         headline_cards([
-            (f"{int(getattr(scores, 'training_rows', 0) or train):,}",
-             "claims it learned from: earlier claims from one half of the providers"),
-            (f"{len(scores.scores):,}",
-             "claims it scored: later claims from the other half of the providers"),
-            (f"{flagged:,}",
-             "claims it flagged: the most unusual ones, as many as the review team can handle"),
+            (f"{both:,}", f"claims picked by both models: the strongest candidates to look at"),
+            (f"{len(set_a - set_b):,}",
+             f"claims only {html.escape(model_label(a))} picked: easy to separate from the crowd"),
+            (f"{len(set_b - set_a):,}",
+             f"claims only {html.escape(model_label(b))} picked: unusual next to their "
+             f"nearest neighbours"),
         ])
+        share = both / max(len(set_a | set_b), 1)
+        agreement = ("mostly agree" if share >= 0.6 else
+                     "partly agree" if share >= 0.25 else "mostly pick different claims")
+        st.markdown(
+            f"The two models **{agreement}**: {both:,} of the {len(set_a | set_b):,} claims "
+            f"flagged by either model were picked by both. A claim both models pick is a stronger "
+            f"lead than one only a single model picks, but neither is proof of anything: a model "
+            f"only says a claim is unusual."
+        )
 
     if total:
         st.markdown(

@@ -96,7 +96,7 @@ def _summary(result) -> None:
     established, not_established, n_est, n_not = exposure_split(result)
     adapter = adapter_labels().get(spec.adapter, spec.adapter)
 
-    st.markdown("## Summary in plain English")
+    st.markdown("## Summary")
     headline_cards([
         (f"{claims:,}", "claims in the file this report describes."),
         (f"{cov.full + cov.simplified:,} of {cov.total:,}",
