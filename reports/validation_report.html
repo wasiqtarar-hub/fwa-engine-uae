@@ -2,14 +2,25 @@
 
 &gt; **THIS REPORT DESCRIBES ONE DATASET**
 &gt;
-&gt; Source `claims_demo_synthetic.csv` · 20,893 claim rows · `GENERIC_INDIA_TPA` adapter · run 2026-09-27 22:24 UTC.
+&gt; Source `claims_demo_synthetic.csv` · 20,893 claim rows · `GENERIC_INDIA_TPA` adapter · run 2026-09-28 21:18 UTC.
 &gt;
 &gt; Every figure below is a measured property of that file. None of it transfers to another population without being re-measured there.
 &gt;
 &gt; **SAFETY BOUNDARY.** A signal is not a fraud finding. This system can establish non-payability, inconsistency or statistical abnormality. It cannot establish intent, and intent is what distinguishes fraud from waste, abuse or honest error. Only a human reviewer, on evidence, may reach a conclusion about conduct.
 
 
-Generated 2026-09-27T22:24:26.272885+00:00 · parameter-registry fingerprint `9dd1afee3e5cccad` · seed `20260920`.
+Generated 2026-09-28T21:18:39.587796+00:00 · parameter-registry fingerprint `9dd1afee3e5cccad` · seed `20260920`.
+
+## In short
+
+- **The file.** `claims_demo_synthetic.csv`, 20,893 claims. Every number in this report describes this file only.
+- **The checks.** Of 164 checks, 9 ran fully, 28 ran in a simplified form because the file lacks some of what they need, and 127 could not run. 37 raised at least one flag.
+- **What they found.** 8,502 cases for people to review. The most common suggestions: 6,283 watch only, 929 hold before paying, 800 pay, but check afterwards.
+- **Money.** AED 61,838,336 is at risk where a clear rule was shown to fail. A further AED 17,028,427 is flagged but not yet established. The two are never added together, and neither is money saved: nothing has been reviewed yet.
+- **Pattern-finding models.** 2 trained and scored claims. 1 passed every test for use and may be proposed, but a separate person must still approve it.
+- **What cannot be measured yet.** How often the flags are right. That needs reviewers to record decisions, and none have been recorded, so no accuracy figure is given in this summary.
+- **What a flag means.** A reason to look, not proof of fraud. Every check runs in watch-only mode; only a reviewer, looking at the evidence, can decide.
+
 
 ## What this report establishes, and what it does not
 
@@ -39,11 +50,11 @@ Every control in this build is in **shadow**. None has been activated, because a
 
 ## 2. Catalogue coverage — what `claims_demo_synthetic.csv` can actually carry
 
-| classification                 |   controls | share   |
-|:-------------------------------|-----------:|:--------|
-| EXECUTABLE                     |          9 | 5.5%    |
-| PARTIAL                        |         28 | 17.1%   |
-| NOT_EXECUTABLE_ON_THIS_DATASET |        127 | 77.4%   |
+| classification                 |   controls on this file | share   |   catalogue classification (claim-header extract) |
+|:-------------------------------|------------------------:|:--------|--------------------------------------------------:|
+| EXECUTABLE                     |                       9 | 5.5%    |                                                 9 |
+| PARTIAL                        |                      28 | 17.1%   |                                                28 |
+| NOT_EXECUTABLE_ON_THIS_DATASET |                     127 | 77.4%   |                                               127 |
 
 
 All 39 scenarios and 164 atomic controls of the catalogue are registered as configuration and validated against the atomic-control contract. 127 of them cannot run here, each with a stated reason and the canonical fields that would unlock it — see `control_coverage_matrix.csv`, which is the concrete answer to *what would real Shafafiya or eClaimLink data unlock?*
@@ -55,43 +66,43 @@ Only **21** controls in the entire catalogue may deny or reprice a claim, and ev
 
 | rule_id    | scenario_id   | type_label   | stage          | data_support   |   signal_count |   elapsed_ms |
 |:-----------|:--------------|:-------------|:---------------|:---------------|---------------:|-------------:|
-| PAY-10-R01 | PAY-10        | H            | PREPAY_SYNC    | PARTIAL        |           2084 |       120.32 |
-| CLN-03-R01 | CLN-03        | H            | PREPAY_SYNC    | PARTIAL        |           1382 |        85.6  |
-| PAY-06-R03 | PAY-06        | S            | POSTPAY_DAILY  | EXECUTABLE     |            640 |       659.95 |
-| CLN-05-R01 | CLN-05        | S            | POSTPAY_DAILY  | EXECUTABLE     |            609 |       572.47 |
-| CLN-04-R01 | CLN-04        | E            | PREPAY_SYNC    | PARTIAL        |            563 |      5534.25 |
-| POL-01-R04 | POL-01        | S            | MODEL_MONTHLY  | PARTIAL        |            535 |       197.72 |
-| CLN-04-R02 | CLN-04        | E/S          | POSTPAY_DAILY  | PARTIAL        |            492 |      5563.62 |
-| ENT-02-R03 | ENT-02        | S            | PREPAY_ASYNC   | PARTIAL        |            388 |      6909.07 |
-| PAY-01-R02 | PAY-01        | H            | PREPAY_ASYNC   | PARTIAL        |            290 |      4005.33 |
-| CLN-01-R02 | CLN-01        | S/M          | POSTPAY_DAILY  | PARTIAL        |            222 |       567.45 |
-| PHR-03-R03 | PHR-03        | S            | MODEL_MONTHLY  | PARTIAL        |            217 |       541.2  |
-| ANL-01-R03 | ANL-01        | M            | MODEL_MONTHLY  | EXECUTABLE     |            162 |      6771.67 |
-| PAY-01-R01 | PAY-01        | H            | PREPAY_SYNC    | PARTIAL        |            160 |      4399.22 |
-| CLN-06-R02 | CLN-06        | H/S          | POSTPAY_DAILY  | PARTIAL        |            158 |       684.49 |
-| NET-03-R01 | NET-03        | S/N          | MODEL_MONTHLY  | EXECUTABLE     |            128 |       292.18 |
-| PAY-06-R04 | PAY-06        | S            | MODEL_MONTHLY  | EXECUTABLE     |            127 |       421.34 |
-| ANL-01-R01 | ANL-01        | S            | MODEL_MONTHLY  | EXECUTABLE     |            125 |       215.97 |
-| CLN-05-R02 | CLN-05        | E/S          | POSTPAY_DAILY  | EXECUTABLE     |             90 |         9.68 |
-| NET-02-R03 | NET-02        | N/S          | POSTPAY_DAILY  | PARTIAL        |             88 |      9820.09 |
-| ENT-03-R02 | ENT-03        | H            | PREPAY_SYNC    | PARTIAL        |             87 |        45.45 |
-| CLN-05-R03 | CLN-05        | H/E          | POSTPAY_DAILY  | PARTIAL        |             61 |       325.77 |
-| DOC-01-R02 | DOC-01        | T/E          | PREPAY_ASYNC   | PARTIAL        |             61 |       144.51 |
-| PAY-01-R03 | PAY-01        | H            | POSTPAY_DAILY  | PARTIAL        |             57 |      4135.83 |
-| NET-04-R03 | NET-04        | S            | MODEL_MONTHLY  | PARTIAL        |             56 |       221.66 |
-| DOC-02-R01 | DOC-02        | T            | POSTPAY_DAILY  | PARTIAL        |             46 |        94.27 |
-| NET-01-R01 | NET-01        | S            | MODEL_MONTHLY  | PARTIAL        |             44 |       655.62 |
-| ANL-01-R02 | ANL-01        | S            | MODEL_MONTHLY  | EXECUTABLE     |             43 |      4953.94 |
-| PAY-06-R02 | PAY-06        | H            | INGEST         | PARTIAL        |             35 |         6.78 |
-| CLN-04-R04 | CLN-04        | S            | MODEL_MONTHLY  | PARTIAL        |             33 |       165.04 |
-| NET-04-R02 | NET-04        | S/N          | MODEL_MONTHLY  | PARTIAL        |             20 |        86.98 |
-| CLN-07-R04 | CLN-07        | S            | MODEL_MONTHLY  | PARTIAL        |             19 |      3192.76 |
-| CLN-07-R02 | CLN-07        | E/S          | POSTPAY_DAILY  | PARTIAL        |             13 |      2317.06 |
-| CLN-01-R03 | CLN-01        | E/T          | PREPAY_ASYNC   | PARTIAL        |             12 |       126.39 |
-| NET-02-R02 | NET-02        | N            | NETWORK_WEEKLY | PARTIAL        |             10 |        60.28 |
-| CLN-01-R01 | CLN-01        | S            | MODEL_MONTHLY  | PARTIAL        |              8 |       220.85 |
-| CLN-06-R03 | CLN-06        | S            | POSTPAY_DAILY  | PARTIAL        |              6 |      5004.96 |
-| ANL-01-R04 | ANL-01        | M            | MODEL_MONTHLY  | EXECUTABLE     |              3 |        11.08 |
+| PAY-10-R01 | PAY-10        | H            | PREPAY_SYNC    | PARTIAL        |           2084 |       235.65 |
+| CLN-03-R01 | CLN-03        | H            | PREPAY_SYNC    | PARTIAL        |           1382 |        83.94 |
+| PAY-06-R03 | PAY-06        | S            | POSTPAY_DAILY  | EXECUTABLE     |            640 |      1302.58 |
+| CLN-05-R01 | CLN-05        | S            | POSTPAY_DAILY  | EXECUTABLE     |            609 |      1274.9  |
+| CLN-04-R01 | CLN-04        | E            | PREPAY_SYNC    | PARTIAL        |            563 |      5984.85 |
+| POL-01-R04 | POL-01        | S            | MODEL_MONTHLY  | PARTIAL        |            535 |       369.82 |
+| CLN-04-R02 | CLN-04        | E/S          | POSTPAY_DAILY  | PARTIAL        |            492 |      8052.87 |
+| ENT-02-R03 | ENT-02        | S            | PREPAY_ASYNC   | PARTIAL        |            388 |     12497.1  |
+| PAY-01-R02 | PAY-01        | H            | PREPAY_ASYNC   | PARTIAL        |            290 |      7266.76 |
+| CLN-01-R02 | CLN-01        | S/M          | POSTPAY_DAILY  | PARTIAL        |            222 |       570.04 |
+| PHR-03-R03 | PHR-03        | S            | MODEL_MONTHLY  | PARTIAL        |            217 |      1107.68 |
+| ANL-01-R03 | ANL-01        | M            | MODEL_MONTHLY  | EXECUTABLE     |            162 |      6705.59 |
+| PAY-01-R01 | PAY-01        | H            | PREPAY_SYNC    | PARTIAL        |            160 |      8069.68 |
+| CLN-06-R02 | CLN-06        | H/S          | POSTPAY_DAILY  | PARTIAL        |            158 |      1244.68 |
+| NET-03-R01 | NET-03        | S/N          | MODEL_MONTHLY  | EXECUTABLE     |            128 |       619.75 |
+| PAY-06-R04 | PAY-06        | S            | MODEL_MONTHLY  | EXECUTABLE     |            127 |       780.8  |
+| ANL-01-R01 | ANL-01        | S            | MODEL_MONTHLY  | EXECUTABLE     |            125 |       218.94 |
+| CLN-05-R02 | CLN-05        | E/S          | POSTPAY_DAILY  | EXECUTABLE     |             90 |        11.59 |
+| NET-02-R03 | NET-02        | N/S          | POSTPAY_DAILY  | PARTIAL        |             88 |     17751.2  |
+| ENT-03-R02 | ENT-03        | H            | PREPAY_SYNC    | PARTIAL        |             87 |        73.76 |
+| CLN-05-R03 | CLN-05        | H/E          | POSTPAY_DAILY  | PARTIAL        |             61 |       568.9  |
+| DOC-01-R02 | DOC-01        | T/E          | PREPAY_ASYNC   | PARTIAL        |             61 |       302.3  |
+| PAY-01-R03 | PAY-01        | H            | POSTPAY_DAILY  | PARTIAL        |             57 |      7788.66 |
+| NET-04-R03 | NET-04        | S            | MODEL_MONTHLY  | PARTIAL        |             56 |       465.68 |
+| DOC-02-R01 | DOC-02        | T            | POSTPAY_DAILY  | PARTIAL        |             46 |       197.02 |
+| NET-01-R01 | NET-01        | S            | MODEL_MONTHLY  | PARTIAL        |             44 |      1386.59 |
+| ANL-01-R02 | ANL-01        | S            | MODEL_MONTHLY  | EXECUTABLE     |             43 |      4986.55 |
+| PAY-06-R02 | PAY-06        | H            | INGEST         | PARTIAL        |             35 |        17.89 |
+| CLN-04-R04 | CLN-04        | S            | MODEL_MONTHLY  | PARTIAL        |             33 |       325.52 |
+| NET-04-R02 | NET-04        | S/N          | MODEL_MONTHLY  | PARTIAL        |             20 |       133.69 |
+| CLN-07-R04 | CLN-07        | S            | MODEL_MONTHLY  | PARTIAL        |             19 |      6454.39 |
+| CLN-07-R02 | CLN-07        | E/S          | POSTPAY_DAILY  | PARTIAL        |             13 |      4703.19 |
+| CLN-01-R03 | CLN-01        | E/T          | PREPAY_ASYNC   | PARTIAL        |             12 |       128.84 |
+| NET-02-R02 | NET-02        | N            | NETWORK_WEEKLY | PARTIAL        |             10 |       150.34 |
+| CLN-01-R01 | CLN-01        | S            | MODEL_MONTHLY  | PARTIAL        |              8 |       221.64 |
+| CLN-06-R03 | CLN-06        | S            | POSTPAY_DAILY  | PARTIAL        |              6 |      9341.14 |
+| ANL-01-R04 | ANL-01        | M            | MODEL_MONTHLY  | EXECUTABLE     |              3 |         7.97 |
 
 
 ### Controls that ran and found nothing — and why that is a result
@@ -314,8 +325,8 @@ Provider: `offline_deterministic` (`template-composer-1.0.0`), deterministic: Tr
 |-----------------:|----------------:|-----------------:|------------------:|-----------------:|------------------------:|
 |               25 |            0.25 |               25 |            0.04   |                1 |             1.49984e+07 |
 |              100 |            1    |              100 |            0.05   |                5 |             2.99273e+07 |
-|              500 |            5    |              500 |            0.032  |               16 |             4.51081e+07 |
-|             2000 |           20    |             2000 |            0.0215 |               43 |             5.86431e+07 |
+|              500 |            5    |              500 |            0.032  |               16 |             4.51304e+07 |
+|             2000 |           20    |             2000 |            0.0215 |               43 |             5.86425e+07 |
 
 
 Precision is evaluated **at the alert volume a review team can actually process**, not at an arbitrary threshold. The capacity basis is `cfg.alerts_per_reviewer_per_day` × `cfg.reviewer_count` = 100 cases per day.
@@ -374,14 +385,14 @@ Base rate among ranked providers: 3.7%. The promotion gate requires a model to d
 
 | bin                        |   cases |   mean_priority |   observed_rate |   predicted_rate |    gap |
 |:---------------------------|--------:|----------------:|----------------:|-----------------:|-------:|
-| (48.599000000000004, 62.6] |    1081 |         61.4439 |          0.0139 |           0.6144 | 0.6006 |
-| (62.6, 65.8]               |    1263 |         65.2693 |          0.0158 |           0.6527 | 0.6369 |
-| (65.8, 67.6]               |     970 |         66.8431 |          0.0155 |           0.6684 | 0.653  |
-| (67.6, 71.1]               |    1167 |         69.9355 |          0.0351 |           0.6994 | 0.6642 |
-| (71.1, 80.5]               |     834 |         77.2808 |          0.0108 |           0.7728 | 0.762  |
-| (80.5, 87.4]               |    1070 |         83.8076 |          0.0093 |           0.8381 | 0.8287 |
-| (87.4, 93.9]               |    1061 |         90.7695 |          0.0151 |           0.9077 | 0.8926 |
-| (93.9, 99.9]               |    1056 |         96.533  |          0.0256 |           0.9653 | 0.9398 |
+| (48.599000000000004, 62.6] |    1082 |         61.4442 |          0.0139 |           0.6144 | 0.6006 |
+| (62.6, 65.8]               |    1265 |         65.2696 |          0.0158 |           0.6527 | 0.6369 |
+| (65.8, 67.6]               |     969 |         66.8424 |          0.0155 |           0.6684 | 0.6529 |
+| (67.6, 71.1]               |    1165 |         69.9353 |          0.0352 |           0.6994 | 0.6642 |
+| (71.1, 80.5]               |     835 |         77.283  |          0.0108 |           0.7728 | 0.7621 |
+| (80.5, 87.4]               |    1069 |         83.8086 |          0.0094 |           0.8381 | 0.8287 |
+| (87.4, 93.9]               |    1061 |         90.7678 |          0.0151 |           0.9077 | 0.8926 |
+| (93.9, 99.9]               |    1056 |         96.5326 |          0.0256 |           0.9653 | 0.9398 |
 
 
 The priority score is a **queue-ordering score, not a probability**. It is rescaled to [0,1] here only so a calibration curve can be drawn; a poor fit is expected and is not evidence the score is broken.
@@ -452,14 +463,14 @@ Expected calibration error between the priority score (rescaled to [0,1]) and th
 
 | bin                        |   cases |   mean_priority |   observed_rate |   predicted_rate |    gap |
 |:---------------------------|--------:|----------------:|----------------:|-----------------:|-------:|
-| (48.599000000000004, 62.6] |    1081 |         61.4439 |          0.0139 |           0.6144 | 0.6006 |
-| (62.6, 65.8]               |    1263 |         65.2693 |          0.0158 |           0.6527 | 0.6369 |
-| (65.8, 67.6]               |     970 |         66.8431 |          0.0155 |           0.6684 | 0.653  |
-| (67.6, 71.1]               |    1167 |         69.9355 |          0.0351 |           0.6994 | 0.6642 |
-| (71.1, 80.5]               |     834 |         77.2808 |          0.0108 |           0.7728 | 0.762  |
-| (80.5, 87.4]               |    1070 |         83.8076 |          0.0093 |           0.8381 | 0.8287 |
-| (87.4, 93.9]               |    1061 |         90.7695 |          0.0151 |           0.9077 | 0.8926 |
-| (93.9, 99.9]               |    1056 |         96.533  |          0.0256 |           0.9653 | 0.9398 |
+| (48.599000000000004, 62.6] |    1082 |         61.4442 |          0.0139 |           0.6144 | 0.6006 |
+| (62.6, 65.8]               |    1265 |         65.2696 |          0.0158 |           0.6527 | 0.6369 |
+| (65.8, 67.6]               |     969 |         66.8424 |          0.0155 |           0.6684 | 0.6529 |
+| (67.6, 71.1]               |    1165 |         69.9353 |          0.0352 |           0.6994 | 0.6642 |
+| (71.1, 80.5]               |     835 |         77.283  |          0.0108 |           0.7728 | 0.7621 |
+| (80.5, 87.4]               |    1069 |         83.8086 |          0.0094 |           0.8381 | 0.8287 |
+| (87.4, 93.9]               |    1061 |         90.7678 |          0.0151 |           0.9077 | 0.8926 |
+| (93.9, 99.9]               |    1056 |         96.5326 |          0.0256 |           0.9653 | 0.9398 |
 
 
 ### Capacity-aware precision — **INFORMATIONAL**
@@ -474,8 +485,8 @@ At one day of team capacity (100 cases), the precision proxy is 5.0%.
 |-----------------:|----------------:|-----------------:|------------------:|-----------------:|------------------------:|
 |               25 |            0.25 |               25 |            0.04   |                1 |             1.49984e+07 |
 |              100 |            1    |              100 |            0.05   |                5 |             2.99273e+07 |
-|              500 |            5    |              500 |            0.032  |               16 |             4.51081e+07 |
-|             2000 |           20    |             2000 |            0.0215 |               43 |             5.86431e+07 |
+|              500 |            5    |              500 |            0.032  |               16 |             4.51304e+07 |
+|             2000 |           20    |             2000 |            0.0215 |               43 |             5.86425e+07 |
 
 
 ### Review-yield tracking — **NOT_MEASURABLE_ON_THIS_DATASET**
@@ -561,27 +572,27 @@ Stage timings for this run:
 
 | stage                                          |   seconds |
 |:-----------------------------------------------|----------:|
-| adapter and canonical model                    |      1.92 |
-| lineage and episodes                           |      0.59 |
-| rule registry                                  |      0.43 |
-| feature store                                  |     10.63 |
-| peers, shrinkage and the transparent composite |      7.84 |
-| graph and entity resolution                    |     93.57 |
-| synthetic document corpus and NLP pipeline     |      0.47 |
-| unsupervised models, SHAP, drift, clusters     |      3.41 |
+| adapter and canonical model                    |      1.91 |
+| lineage and episodes                           |      0.34 |
+| rule registry                                  |      0.45 |
+| feature store                                  |     11.23 |
+| peers, shrinkage and the transparent composite |      7.79 |
+| graph and entity resolution                    |     94.48 |
+| synthetic document corpus and NLP pipeline     |      0.39 |
+| unsupervised models, SHAP, drift, clusters     |      3.71 |
 | AI layer                                       |      0    |
-| control evaluation                             |     69.16 |
-| case correlation and priority                  |      0.48 |
+| control evaluation                             |    111.43 |
+| case correlation and priority                  |      0.93 |
 
 
 ### Stage latency against the stage ceilings
 
 | stage          |   ceiling_ms |   observed_ms | within_ceiling   | note                                                                                                                                                                                                  |
 |:---------------|-------------:|--------------:|:-----------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| INGEST         |         1000 |           6.9 | True             | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
-| PREPAY_SYNC    |          500 |       10187   | False            | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
-| PREPAY_ASYNC   |       600000 |       11185.6 | True             | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
-| POSTPAY_DAILY  |     86400000 |       29757.5 | True             | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
-| NETWORK_WEEKLY |    604800000 |          61.7 | True             | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
-| MODEL_MONTHLY  |   2592000000 |       17949.6 | True             | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| INGEST         |         1000 |          18.1 | True             | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| PREPAY_SYNC    |          500 |       14451.4 | False            | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| PREPAY_ASYNC   |       600000 |       20195.4 | True             | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| POSTPAY_DAILY  |     86400000 |       52810.3 | True             | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| NETWORK_WEEKLY |    604800000 |         152.7 | True             | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| MODEL_MONTHLY  |   2592000000 |       23786.9 | True             | Observed is the BATCH time for this stage across 20,893 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
 </pre></body></html>

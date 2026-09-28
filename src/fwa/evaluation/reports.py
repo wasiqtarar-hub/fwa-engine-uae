@@ -163,6 +163,68 @@ class ReportBuilder:
 
     # --------------------------------------------------- validation report
 
+    def _plain_summary(self, run) -> str:
+        """A short summary in everyday words, before the technical report.
+
+        Every figure is taken from this run; nothing is estimated. It carries
+        the same boundaries as the rest of the report: flags are not findings,
+        amounts not yet established are never added to established ones, and
+        what cannot be measured is said in words.
+        """
+        from ..presentation import aed, status
+
+        r = self.result
+        total = len(run)
+        support = run["data_support"].value_counts() if "data_support" in run else pd.Series(dtype=int)
+        full = int(support.get("EXECUTABLE", 0))
+        simplified = int(support.get("PARTIAL", 0))
+        blocked = int(support.get("NOT_EXECUTABLE_ON_THIS_DATASET", 0))
+        fired = int((run["signal_count"] > 0).sum()) if "signal_count" in run else 0
+        queue = r.queue()
+        out = ["## In short\n"]
+        out.append(
+            f"- **The file.** `{r.source_name or 'this file'}`, {len(r.claims):,} claims. "
+            f"Every number in this report describes this file only."
+        )
+        out.append(
+            f"- **The checks.** Of {total} checks, {full} ran fully, {simplified} ran in a "
+            f"simplified form because the file lacks some of what they need, and {blocked} could "
+            f"not run. {fired} raised at least one flag."
+        )
+        if not queue.empty:
+            by_disp = queue["disposition"].value_counts()
+            top = ", ".join(f"{int(n):,} {status(d).label.lower()}" for d, n in by_disp.head(3).items())
+            est = float(queue.loc[queue["exposure_established"].astype(bool), "exposure_aed"].sum())
+            not_est = float(queue.loc[~queue["exposure_established"].astype(bool), "exposure_aed"].sum())
+            out.append(
+                f"- **What they found.** {len(queue):,} cases for people to review. The most "
+                f"common suggestions: {top}."
+            )
+            out.append(
+                f"- **Money.** {aed(est)} is at risk where a clear rule was shown to fail. A "
+                f"further {aed(not_est)} is flagged but not yet established. The two are never "
+                f"added together, and neither is money saved: nothing has been reviewed yet."
+            )
+        layer = getattr(r, "models", None)
+        if layer is not None and getattr(layer, "anomaly", None) is not None and layer.anomaly.models:
+            promoted = [n for n, v in (layer.gate_verdicts or {}).items() if v.promoted]
+            out.append(
+                f"- **Pattern-finding models.** {len(layer.anomaly.models)} trained and scored claims. "
+                + (f"{len(promoted)} passed every test for use and may be proposed, but a separate "
+                   f"person must still approve it." if promoted else
+                   "None is ready to be trusted for real decisions; they stay in watch-only mode.")
+            )
+        out.append(
+            "- **What cannot be measured yet.** How often the flags are right. That needs "
+            "reviewers to record decisions, and none have been recorded, so no accuracy figure is "
+            "given in this summary."
+        )
+        out.append(
+            "- **What a flag means.** A reason to look, not proof of fraud. Every check runs in "
+            "watch-only mode; only a reviewer, looking at the evidence, can decide.\n"
+        )
+        return "\n".join(out) + "\n"
+
     def _write_validation_report(self, metric_rows, protocol_results, gate_results) -> None:
         r = self.result
         summary = r.summary()
@@ -179,6 +241,8 @@ class ReportBuilder:
             f"parameter-registry fingerprint `{summary['parameters_fingerprint']}` · "
             f"seed `{summary['seed']}`.\n"
         )
+
+        parts.append(self._plain_summary(run))
 
         # ---- what this report does and does not establish -----------------
         parts.append(
@@ -221,11 +285,16 @@ class ReportBuilder:
         # ---- catalogue coverage -------------------------------------------
         parts.append(f"\n## 2. Catalogue coverage — what `{r.source_name or 'this file'}` "
                      f"can actually carry\n")
-        support = registry_summary["by_data_support"]
+        # What THIS file allowed (the evaluator's effective classification per
+        # control), with the catalogue's own claim-header classification beside it.
+        effective = run["data_support"].value_counts().to_dict() if "data_support" in run else {}
+        catalogue = registry_summary["by_data_support"]
+        support = effective or catalogue
         parts.append(_md_table(pd.DataFrame([
-            {"classification": k, "controls": v,
-             "share": f"{v / registry_summary['total_controls']:.1%}"}
-            for k, v in support.items()
+            {"classification": k, "controls on this file": support.get(k, 0),
+             "share": f"{support.get(k, 0) / registry_summary['total_controls']:.1%}",
+             "catalogue classification (claim-header extract)": catalogue.get(k, 0)}
+            for k in ("EXECUTABLE", "PARTIAL", "NOT_EXECUTABLE_ON_THIS_DATASET")
         ])))
         parts.append(
             f"\nAll {registry_summary['total_scenarios']} scenarios and "
