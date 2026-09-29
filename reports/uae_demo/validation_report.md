@@ -2,14 +2,14 @@
 
 > **THIS REPORT DESCRIBES ONE DATASET**
 >
-> Source `uae_demo.zip` · 24,855 claim rows · `UAE_MULTITABLE` adapter · run 2026-09-29 02:01 UTC.
+> Source `uae_demo.zip` · 24,855 claim rows · `UAE_MULTITABLE` adapter · run 2026-09-29 02:27 UTC.
 >
 > Every figure below is a measured property of that file. None of it transfers to another population without being re-measured there.
 >
 > **SAFETY BOUNDARY.** A signal is not a fraud finding. This system can establish non-payability, inconsistency or statistical abnormality. It cannot establish intent, and intent is what distinguishes fraud from waste, abuse or honest error. Only a human reviewer, on evidence, may reach a conclusion about conduct.
 
 
-Generated 2026-09-29T02:01:59.421681+00:00 · parameter-registry fingerprint `9dd1afee3e5cccad` · seed `20260920`.
+Generated 2026-09-29T02:27:40.444084+00:00 · parameter-registry fingerprint `9dd1afee3e5cccad` · seed `20260920`.
 
 ## In short
 
@@ -66,46 +66,46 @@ Only **21** controls in the entire catalogue may deny or reprice a claim, and ev
 
 | rule_id    | scenario_id   | type_label   | stage         | data_support   |   signal_count |   elapsed_ms |
 |:-----------|:--------------|:-------------|:--------------|:---------------|---------------:|-------------:|
-| NET-03-R01 | NET-03        | S/N          | MODEL_MONTHLY | EXECUTABLE     |           1236 |      5428.14 |
-| PAY-06-R03 | PAY-06        | S            | POSTPAY_DAILY | EXECUTABLE     |           1155 |      1714.73 |
-| PAY-10-R01 | PAY-10        | H            | PREPAY_SYNC   | PARTIAL        |            640 |        45.03 |
-| PAY-01-R03 | PAY-01        | H            | POSTPAY_DAILY | PARTIAL        |            434 |     16728    |
-| POL-01-R04 | POL-01        | S            | MODEL_MONTHLY | PARTIAL        |            392 |       742.76 |
-| CLN-05-R03 | CLN-05        | H/E          | POSTPAY_DAILY | PARTIAL        |            278 |      1094.73 |
-| PAY-01-R02 | PAY-01        | H            | PREPAY_ASYNC  | PARTIAL        |            149 |     11582.4  |
-| ANL-01-R03 | ANL-01        | M            | MODEL_MONTHLY | EXECUTABLE     |            136 |      6087.56 |
-| ENT-04-R01 | ENT-04        | H            | PREPAY_SYNC   | EXECUTABLE     |            111 |       564.76 |
-| PAY-07-R01 | PAY-07        | H            | PREPAY_SYNC   | PARTIAL        |            110 |       509.43 |
-| CLN-03-R01 | CLN-03        | H            | PREPAY_SYNC   | PARTIAL        |            103 |        13.77 |
-| PAY-03-R03 | PAY-03        | H/E          | PREPAY_SYNC   | PARTIAL        |            103 |       678.72 |
-| DOC-02-R01 | DOC-02        | T            | POSTPAY_DAILY | PARTIAL        |             99 |       380.79 |
-| CLN-08-R01 | CLN-08        | E            | PREPAY_ASYNC  | PARTIAL        |             98 |        86.68 |
-| DOC-01-R02 | DOC-01        | T/E          | PREPAY_ASYNC  | PARTIAL        |             87 |       180.34 |
-| ANL-01-R01 | ANL-01        | S            | MODEL_MONTHLY | EXECUTABLE     |             64 |       281.74 |
-| ANL-01-R02 | ANL-01        | S            | MODEL_MONTHLY | EXECUTABLE     |             61 |      2950.37 |
-| PAY-06-R01 | PAY-06        | H            | PREPAY_SYNC   | EXECUTABLE     |             59 |       351.4  |
-| NET-02-R03 | NET-02        | N/S          | POSTPAY_DAILY | PARTIAL        |             51 |      6667.37 |
-| PAY-07-R02 | PAY-07        | H            | PREPAY_SYNC   | EXECUTABLE     |             47 |       652.78 |
-| PAY-02-R01 | PAY-02        | H            | PREPAY_SYNC   | EXECUTABLE     |             42 |       199.87 |
-| PAY-03-R01 | PAY-03        | H            | INGEST        | PARTIAL        |             41 |       750.3  |
-| PAY-08-R02 | PAY-08        | H/E          | PREPAY_ASYNC  | EXECUTABLE     |             37 |      1317.29 |
-| PAY-09-R04 | PAY-09        | S            | POSTPAY_DAILY | EXECUTABLE     |             36 |      1377.83 |
-| CLN-03-R02 | CLN-03        | E            | PREPAY_ASYNC  | EXECUTABLE     |             33 |        87.06 |
-| PAY-04-R04 | PAY-04        | H            | PREPAY_SYNC   | EXECUTABLE     |             32 |       671.76 |
-| CLN-03-R03 | CLN-03        | E            | POSTPAY_DAILY | PARTIAL        |             31 |        57.81 |
-| DOC-01-R01 | DOC-01        | H/E          | PREPAY_ASYNC  | EXECUTABLE     |             31 |       807.11 |
-| ENT-03-R01 | ENT-03        | H            | PREPAY_SYNC   | EXECUTABLE     |             31 |       479.91 |
-| PHR-03-R02 | PHR-03        | E            | PREPAY_SYNC   | EXECUTABLE     |             25 |       783.95 |
-| PAY-06-R04 | PAY-06        | S            | MODEL_MONTHLY | EXECUTABLE     |             24 |       155.32 |
-| PHR-02-R01 | PHR-02        | H/E          | PREPAY_SYNC   | EXECUTABLE     |             23 |       126.28 |
-| CLN-06-R05 | CLN-06        | S            | MODEL_MONTHLY | PARTIAL        |             21 |       227.56 |
-| CLN-01-R02 | CLN-01        | S/M          | POSTPAY_DAILY | PARTIAL        |             21 |       113.87 |
-| CLN-06-R04 | CLN-06        | S            | POSTPAY_DAILY | EXECUTABLE     |             20 |        24.92 |
-| CLN-04-R01 | CLN-04        | E            | PREPAY_SYNC   | PARTIAL        |             19 |        95.69 |
-| POL-01-R01 | POL-01        | H            | POSTPAY_DAILY | EXECUTABLE     |             18 |       410.51 |
-| PAY-06-R02 | PAY-06        | H            | INGEST        | PARTIAL        |             18 |         7.55 |
-| PAY-07-R04 | PAY-07        | H/S          | POSTPAY_DAILY | EXECUTABLE     |             16 |       150.64 |
-| ENT-01-R04 | ENT-01        | H            | PREPAY_SYNC   | EXECUTABLE     |             16 |       556.75 |
+| NET-03-R01 | NET-03        | S/N          | MODEL_MONTHLY | EXECUTABLE     |           1236 |      4259.66 |
+| PAY-06-R03 | PAY-06        | S            | POSTPAY_DAILY | EXECUTABLE     |           1155 |      1434.98 |
+| PAY-10-R01 | PAY-10        | H            | PREPAY_SYNC   | PARTIAL        |            640 |        49.7  |
+| PAY-01-R03 | PAY-01        | H            | POSTPAY_DAILY | PARTIAL        |            434 |     25877.8  |
+| POL-01-R04 | POL-01        | S            | MODEL_MONTHLY | PARTIAL        |            392 |       408.67 |
+| CLN-05-R03 | CLN-05        | H/E          | POSTPAY_DAILY | PARTIAL        |            278 |       730.79 |
+| PAY-01-R02 | PAY-01        | H            | PREPAY_ASYNC  | PARTIAL        |            149 |     12589.8  |
+| ANL-01-R03 | ANL-01        | M            | MODEL_MONTHLY | EXECUTABLE     |            136 |      3402.8  |
+| ENT-04-R01 | ENT-04        | H            | PREPAY_SYNC   | EXECUTABLE     |            111 |       467.46 |
+| PAY-07-R01 | PAY-07        | H            | PREPAY_SYNC   | PARTIAL        |            110 |       416.22 |
+| CLN-03-R01 | CLN-03        | H            | PREPAY_SYNC   | PARTIAL        |            103 |        10.18 |
+| PAY-03-R03 | PAY-03        | H/E          | PREPAY_SYNC   | PARTIAL        |            103 |       575.1  |
+| DOC-02-R01 | DOC-02        | T            | POSTPAY_DAILY | PARTIAL        |             99 |       220.03 |
+| CLN-08-R01 | CLN-08        | E            | PREPAY_ASYNC  | PARTIAL        |             98 |        70.54 |
+| DOC-01-R02 | DOC-01        | T/E          | PREPAY_ASYNC  | PARTIAL        |             87 |       157.89 |
+| ANL-01-R01 | ANL-01        | S            | MODEL_MONTHLY | EXECUTABLE     |             64 |       174.73 |
+| ANL-01-R02 | ANL-01        | S            | MODEL_MONTHLY | EXECUTABLE     |             61 |      1746.26 |
+| PAY-06-R01 | PAY-06        | H            | PREPAY_SYNC   | EXECUTABLE     |             59 |       307.43 |
+| NET-02-R03 | NET-02        | N/S          | POSTPAY_DAILY | PARTIAL        |             51 |      5244.79 |
+| PAY-07-R02 | PAY-07        | H            | PREPAY_SYNC   | EXECUTABLE     |             47 |       462.82 |
+| PAY-02-R01 | PAY-02        | H            | PREPAY_SYNC   | EXECUTABLE     |             42 |       187.28 |
+| PAY-03-R01 | PAY-03        | H            | INGEST        | PARTIAL        |             41 |       641.56 |
+| PAY-08-R02 | PAY-08        | H/E          | PREPAY_ASYNC  | EXECUTABLE     |             37 |      1117.89 |
+| PAY-09-R04 | PAY-09        | S            | POSTPAY_DAILY | EXECUTABLE     |             36 |      1109.21 |
+| CLN-03-R02 | CLN-03        | E            | PREPAY_ASYNC  | EXECUTABLE     |             33 |        63.43 |
+| PAY-04-R04 | PAY-04        | H            | PREPAY_SYNC   | EXECUTABLE     |             32 |       565.85 |
+| CLN-03-R03 | CLN-03        | E            | POSTPAY_DAILY | PARTIAL        |             31 |        36.7  |
+| DOC-01-R01 | DOC-01        | H/E          | PREPAY_ASYNC  | EXECUTABLE     |             31 |       543.63 |
+| ENT-03-R01 | ENT-03        | H            | PREPAY_SYNC   | EXECUTABLE     |             31 |       385.43 |
+| PHR-03-R02 | PHR-03        | E            | PREPAY_SYNC   | EXECUTABLE     |             25 |       598.27 |
+| PAY-06-R04 | PAY-06        | S            | MODEL_MONTHLY | EXECUTABLE     |             24 |       130.7  |
+| PHR-02-R01 | PHR-02        | H/E          | PREPAY_SYNC   | EXECUTABLE     |             23 |        98.75 |
+| CLN-06-R05 | CLN-06        | S            | MODEL_MONTHLY | PARTIAL        |             21 |       178.3  |
+| CLN-01-R02 | CLN-01        | S/M          | POSTPAY_DAILY | PARTIAL        |             21 |        86.75 |
+| CLN-06-R04 | CLN-06        | S            | POSTPAY_DAILY | EXECUTABLE     |             20 |        16.47 |
+| CLN-04-R01 | CLN-04        | E            | PREPAY_SYNC   | PARTIAL        |             19 |        76.19 |
+| POL-01-R01 | POL-01        | H            | POSTPAY_DAILY | EXECUTABLE     |             18 |       305.29 |
+| PAY-06-R02 | PAY-06        | H            | INGEST        | PARTIAL        |             18 |         5.62 |
+| PAY-07-R04 | PAY-07        | H/S          | POSTPAY_DAILY | EXECUTABLE     |             16 |       129.7  |
+| ENT-01-R04 | ENT-01        | H            | PREPAY_SYNC   | EXECUTABLE     |             16 |       458.87 |
 
 _(117 further rows in the accompanying CSV.)_
 
@@ -382,10 +382,10 @@ Its labels are the answer key of the generator that planted the patterns (`synth
 | ENT-06 telehealth clinic sending nearly every prescription to one pharmacy                            |                36 |                         18 |               0.5    |                          36 | PHR-03-R02 (18)                                                     |
 | CLN clinic ordering genetic tests for a large share of its patients                                   |                34 |                         34 |               1      |                          34 | PAY-06-R03 (34)                                                     |
 | CLN minor clinic visits reliably followed by a large specialist, CT and echo bundle                   |                32 |                         16 |               0.5    |                          32 | PAY-06-R03 (16); ENT-04-R01 (3); CLN-04-R01 (1)                     |
-| NET-03 clinic waiving patient share on repeated knee injections for a small patient group             |                32 |                         32 |               1      |                          32 | NET-03-R01 (32); PAY-07-R02 (32); PAY-07-R01 (32); CLN-06-R05 (32)  |
-| PAY clinic bills a payable substitute code after refused services                                     |                32 |                         21 |               0.6562 |                          32 | CLN-03-R02 (16); CLN-03-R01 (16); ENT-04-R01 (16); PAY-01-R03 (4)   |
+| NET-03 clinic waiving patient share on repeated knee injections for a small patient group             |                32 |                         32 |               1      |                          32 | PAY-07-R01 (32); PAY-07-R02 (32); NET-03-R01 (32); CLN-06-R05 (32)  |
+| PAY clinic bills a payable substitute code after refused services                                     |                32 |                         21 |               0.6562 |                          32 | CLN-03-R01 (16); CLN-03-R02 (16); ENT-04-R01 (16); CLN-05-R03 (4)   |
 | PHR-04 prescriber concentrated on one pharmacy                                                        |                30 |                         20 |               0.6667 |                          30 | PAY-01-R03 (20); CLN-05-R03 (20)                                    |
-| CLN ten consultations for a cold within one month                                                     |                30 |                         30 |               1      |                          30 | CLN-04-R02 (30); PAY-01-R02 (30); PAY-01-R03 (30); CLN-05-R03 (30)  |
+| CLN ten consultations for a cold within one month                                                     |                30 |                         30 |               1      |                          30 | CLN-04-R02 (30); CLN-05-R03 (30); PAY-01-R02 (30); NET-03-R01 (30)  |
 | PHR-02 therapy continued beyond the policy duration on one prescription                               |                30 |                         30 |               1      |                          30 | PHR-02-R02 (30); PAY-01-R03 (30); CLN-05-R03 (23); PAY-01-R02 (10)  |
 | PHR-04 clinic-to-pharmacy flow with shared bank account and phone                                     |                27 |                         18 |               0.6667 |                          27 | PAY-01-R03 (18); CLN-05-R03 (8)                                     |
 | DOC-02 one-line discharge summaries for high-complexity admissions                                    |                27 |                         21 |               0.7778 |                          27 | NET-03-R01 (20); PAY-06-R03 (6); CLN-05-R03 (5); PAY-10-R01 (1)     |
@@ -402,28 +402,28 @@ Its labels are the answer key of the generator that planted the patterns (`synth
 | PHR-02 early refills (stockpiling)                                                                    |                20 |                         20 |               1      |                          20 | PHR-02-R01 (20); PAY-01-R03 (20); CLN-05-R03 (16)                   |
 | ENT-02 one member's cover used in two distant emirates on the same days                               |                20 |                         20 |               1      |                          17 | ENT-02-R04 (20); NET-03-R01 (1)                                     |
 | PHR-03 wastage billed far above vial arithmetic                                                       |                20 |                         20 |               1      |                          20 | PAY-04-R04 (20); NET-03-R01 (20); PAY-01-R03 (2); DOC-01-R02 (1)    |
-| PAY service resubmitted four times with a different change each time                                  |                20 |                         20 |               1      |                          20 | PAY-08-R02 (20); NET-03-R01 (20); PAY-08-R03 (20); PAY-01-R03 (9)   |
+| PAY service resubmitted four times with a different change each time                                  |                20 |                         20 |               1      |                          20 | PAY-08-R03 (20); NET-03-R01 (20); PAY-08-R02 (20); PAY-01-R03 (9)   |
 | PHR-04 high-cost prescriptions steered to one pharmacy                                                |                20 |                         13 |               0.65   |                          20 | PAY-06-R03 (10); NET-03-R01 (6); PAY-01-R03 (2)                     |
 | POL-01 application declared no prior cover and no conditions although earlier treatment is on record  |                19 |                         15 |               0.7895 |                          10 | POL-01-R03 (15); POL-01-R04 (3)                                     |
 | POL-01 new employer group claiming within weeks at two clinics sharing a bank account                 |                18 |                          6 |               0.3333 |                          18 | POL-01-R04 (6)                                                      |
 | ENT-03 clinic billing after its facility licence expired                                              |                16 |                         16 |               1      |                          11 | ENT-03-R01 (16)                                                     |
-| CLN HbA1c repeated twelve days later, before the first result was recorded                            |                16 |                         16 |               1      |                           4 | CLN-04-R01 (16); CLN-04-R03 (16); PAY-01-R03 (12); CLN-05-R03 (10)  |
+| CLN HbA1c repeated twelve days later, before the first result was recorded                            |                16 |                         16 |               1      |                           4 | CLN-04-R03 (16); CLN-04-R01 (16); PAY-01-R03 (12); CLN-05-R03 (10)  |
 | ENT-01 clinic billing after leaving the payer network                                                 |                16 |                         16 |               1      |                          12 | ENT-01-R04 (16); PAY-10-R01 (4); CLN-06-R05 (1); POL-01-R04 (1)     |
 | PAY one adjudicator pays one provider's pended claims in full, uniformly                              |                15 |                          0 |               0      |                          15 | — none —                                                            |
-| PHR-02 same controlled medicine from several unrelated prescribers                                    |                14 |                         14 |               1      |                          14 | PHR-02-R03 (14); PAY-03-R01 (14); PAY-01-R03 (14); CLN-05-R03 (14)  |
+| PHR-02 same controlled medicine from several unrelated prescribers                                    |                14 |                         14 |               1      |                          14 | PAY-03-R01 (14); PHR-02-R03 (14); PAY-01-R03 (14); CLN-05-R03 (14)  |
 | NET-01 clinic keeps its lab and imaging referrals inside providers sharing its bank account and phone |                14 |                         10 |               0.7143 |                          14 | CLN-08-R01 (10)                                                     |
 | CLN complication code lifts the case rate but is not in the discharge summary                         |                13 |                         13 |               1      |                          12 | CLN-02-R01 (10); PAY-06-R03 (8); CLN-01-R02 (2)                     |
-| CLN clinic re-billing a reference laboratory's tests at three times its price                         |                13 |                         13 |               1      |                          13 | PAY-06-R01 (13); PAY-06-R03 (13)                                    |
+| CLN clinic re-billing a reference laboratory's tests at three times its price                         |                13 |                         13 |               1      |                          13 | PAY-06-R03 (13); PAY-06-R01 (13)                                    |
 | ENT-03 clinician billing after their licence expired                                                  |                13 |                         13 |               1      |                          13 | ENT-03-R01 (13); NET-03-R01 (4); PAY-06-R03 (2); CLN-05-R03 (1)     |
 | POL-01 one person enrolled twice with overlapping cover                                               |                13 |                          4 |               0.3077 |                           3 | POL-01-R01 (3); PAY-07-R01 (1)                                      |
 | CLN ECG billed for an upper respiratory infection with no cardiac reason                              |                12 |                         12 |               1      |                           9 | CLN-03-R02 (12); CLN-03-R01 (12)                                    |
-| PHR-02 same medicine collected from several pharmacies                                                |                12 |                         12 |               1      |                           8 | PHR-02-R04 (12); PHR-02-R01 (12); PHR-02-R02 (12)                   |
+| PHR-02 same medicine collected from several pharmacies                                                |                12 |                         12 |               1      |                           8 | PHR-02-R02 (12); PHR-02-R01 (12); PHR-02-R04 (12)                   |
 | PAY patient share below the benefit co-payment                                                        |                11 |                         11 |               1      |                           9 | PAY-07-R01 (11); NET-03-R01 (5)                                     |
 | ENT-05 outpatient visit billed at the same hospital during the stay                                   |                10 |                         10 |               1      |                          10 | NET-03-R01 (10); ENT-05-R03 (10); PAY-06-R03 (1)                    |
 | ENT-02 services after the member's recorded death                                                     |                10 |                         10 |               1      |                           9 | ENT-02-R02 (10); NET-03-R01 (5); PAY-01-R03 (2); PAY-06-R03 (1)     |
-| PAY one adjudicator overrides one hospital's claims far more than colleagues                          |                10 |                          5 |               0.5    |                          10 | NET-03-R01 (5); PAY-06-R03 (3); CLN-02-R03 (1); PAY-01-R03 (1)      |
+| PAY one adjudicator overrides one hospital's claims far more than colleagues                          |                10 |                          5 |               0.5    |                          10 | NET-03-R01 (5); PAY-06-R03 (3); CLN-02-R03 (1); CLN-05-R03 (1)      |
 | CLN member says the visit did not happen (verified app response)                                      |                10 |                         10 |               1      |                           8 | PAY-09-R04 (10); CLN-06-R04 (10); NET-03-R01 (2)                    |
-| CLN imaging paid with no report or result on file                                                     |                10 |                         10 |               1      |                           7 | DOC-01-R01 (10); CLN-06-R01 (10); NET-03-R01 (1)                    |
+| CLN imaging paid with no report or result on file                                                     |                10 |                         10 |               1      |                           7 | CLN-06-R01 (10); DOC-01-R01 (10); NET-03-R01 (1)                    |
 | NET-04 clinic owned by the agent who sold its patients' policies                                      |                10 |                          1 |               0.1    |                          10 | DOC-01-R02 (1)                                                      |
 | PAY post-edit migration: modifier 59 after a new edit                                                 |                 9 |                          0 |               0      |                           9 | — none —                                                            |
 | PAY member receipt exceeds the approved patient share                                                 |                 9 |                          9 |               1      |                           9 | PAY-07-R04 (9); NET-03-R01 (3)                                      |
@@ -434,13 +434,13 @@ Its labels are the answer key of the generator that planted the patterns (`synth
 | PAY payment check overridden without a reason or by an unauthorised role                              |                 9 |                          9 |               1      |                           8 | PAY-11-R01 (9); NET-03-R01 (3)                                      |
 | CLN all basic metabolic panel components billed one by one                                            |                 8 |                          8 |               1      |                           5 | CLN-08-R02 (8)                                                      |
 | PAY clinical note describes a cosmetic service billed under a covered code                            |                 8 |                          8 |               1      |                           7 | PAY-09-R01 (8); NET-03-R01 (5); PAY-01-R03 (2); DOC-01-R02 (1)      |
-| CLN main diagnosis marked not present on admission                                                    |                 8 |                          8 |               1      |                           8 | CLN-02-R04 (8); PAY-06-R03 (5); NET-03-R01 (4); PAY-01-R03 (1)      |
-| CLN laboratory tests with no ordering clinician, or one on no roster                                  |                 8 |                          8 |               1      |                           1 | CLN-08-R01 (8); ENT-04-R01 (4); PAY-10-R01 (1); POL-01-R01 (1)      |
+| CLN main diagnosis marked not present on admission                                                    |                 8 |                          8 |               1      |                           8 | CLN-02-R04 (8); PAY-06-R03 (5); NET-03-R01 (4); CLN-05-R03 (1)      |
+| CLN laboratory tests with no ordering clinician, or one on no roster                                  |                 8 |                          8 |               1      |                           1 | CLN-08-R01 (8); ENT-04-R01 (4); POL-01-R01 (1); PAY-10-R01 (1)      |
 | CLN laboratory tests paid with no result recorded                                                     |                 8 |                          8 |               1      |                           1 | DOC-01-R01 (8); CLN-08-R03 (7)                                      |
 | ENT-01 service after cover ended                                                                      |                 8 |                          8 |               1      |                           7 | ENT-01-R01 (8); POL-01-R01 (7); NET-03-R01 (4)                      |
 | DOC-01 required document never sent (operative note, discharge summary or imaging report)             |                 8 |                          8 |               1      |                           6 | DOC-01-R01 (8); PAY-06-R03 (2); PAY-10-R01 (1)                      |
 | PAY member says the billed service did not take place                                                 |                 8 |                          8 |               1      |                           7 | PAY-09-R04 (8); CLN-06-R04 (8); NET-03-R01 (2)                      |
-| DOC-01 high-cost service without the required indication in the record                                |                 8 |                          8 |               1      |                           7 | DOC-01-R03 (8); NET-03-R01 (5); PAY-06-R03 (2); PAY-01-R03 (1)      |
+| DOC-01 high-cost service without the required indication in the record                                |                 8 |                          8 |               1      |                           7 | DOC-01-R03 (8); NET-03-R01 (5); PAY-06-R03 (2); PAY-10-R01 (1)      |
 | DOC-02 discharge summary carries another patient's age or sex                                         |                 8 |                          8 |               1      |                           8 | DOC-02-R02 (8); NET-03-R01 (2); PAY-06-R03 (2)                      |
 | PAY same line paid twice                                                                              |                 7 |                          7 |               1      |                           7 | PAY-12-R02 (7); PAY-06-R02 (6); NET-03-R01 (2); PAY-01-R03 (1)      |
 | PHR-05 supplies beyond usual consumption or useful life                                               |                 7 |                          7 |               1      |                           7 | PHR-05-R03 (5); PAY-03-R01 (4); PAY-06-R03 (3)                      |
@@ -448,31 +448,31 @@ Its labels are the answer key of the generator that planted the patterns (`synth
 | PAY resubmission with a missing, unknown or unrelated original                                        |                 7 |                          7 |               1      |                           6 | PAY-08-R01 (7); NET-03-R01 (2)                                      |
 | CLN identical three-service encounter at 10:00 for different patients                                 |                 6 |                          6 |               1      |                           6 | ENT-05-R01 (6); PAY-06-R01 (1)                                      |
 | CLN identical multi-value results reported for unrelated patients                                     |                 6 |                          0 |               0      |                           6 | — none —                                                            |
-| PAY covered procedure billed with a cosmetic-risk diagnosis                                           |                 6 |                          6 |               1      |                           6 | PAY-09-R03 (6); CLN-03-R02 (4); CLN-03-R01 (4); ENT-04-R01 (4)      |
+| PAY covered procedure billed with a cosmetic-risk diagnosis                                           |                 6 |                          6 |               1      |                           6 | PAY-09-R03 (6); CLN-03-R01 (4); CLN-03-R02 (4); ENT-04-R01 (4)      |
 | PAY unbundling: panel component billed beside its panel                                               |                 6 |                          6 |               1      |                           3 | PAY-02-R01 (6); CLN-08-R01 (6)                                      |
 | PHR-01 billed product differs from prescribed (non-equivalent)                                        |                 6 |                          6 |               1      |                           6 | PHR-01-R01 (6)                                                      |
 | PHR-03 second-line drug without first-line history, or drug not indicated                             |                 6 |                          6 |               1      |                           0 | PHR-03-R02 (6)                                                      |
 | PHR-05 one device serial billed for two patients                                                      |                 6 |                          6 |               1      |                           6 | PAY-03-R01 (6)                                                      |
 | PHR-01 pharmacy billed more of a product in a month than its stock records allow                      |                 6 |                          0 |               0      |                           6 | — none —                                                            |
-| PAY payment increased after settlement with no reason on record                                       |                 6 |                          6 |               1      |                           4 | PAY-11-R03 (6); PAY-06-R02 (6); NET-03-R01 (2); PAY-01-R03 (1)      |
-| PAY patient share waived and shifted onto the insurer                                                 |                 6 |                          6 |               1      |                           6 | PAY-07-R02 (6); PAY-07-R01 (6); NET-03-R01 (2)                      |
-| PAY second insurer paid the bill and we paid too                                                      |                 6 |                          6 |               1      |                           5 | PAY-10-R01 (6); PAY-10-R02 (6); PAY-01-R04 (6); NET-03-R01 (4)      |
+| PAY payment increased after settlement with no reason on record                                       |                 6 |                          6 |               1      |                           4 | PAY-06-R02 (6); PAY-11-R03 (6); NET-03-R01 (2); PAY-06-R03 (1)      |
+| PAY patient share waived and shifted onto the insurer                                                 |                 6 |                          6 |               1      |                           6 | PAY-07-R01 (6); PAY-07-R02 (6); NET-03-R01 (2)                      |
+| PAY second insurer paid the bill and we paid too                                                      |                 6 |                          6 |               1      |                           5 | PAY-10-R02 (6); PAY-01-R04 (6); PAY-10-R01 (6); NET-03-R01 (4)      |
 | ENT-04 physiotherapist billed for three overlapping timed sessions                                    |                 6 |                          6 |               1      |                           6 | PAY-03-R04 (6); NET-03-R01 (5)                                      |
-| ENT-01 physiotherapy course billed past the annual benefit limit                                      |                 6 |                          6 |               1      |                           6 | CLN-06-R05 (6); PAY-03-R03 (6); PAY-01-R02 (6); PAY-01-R03 (6)      |
+| ENT-01 physiotherapy course billed past the annual benefit limit                                      |                 6 |                          6 |               1      |                           6 | PAY-06-R03 (6); CLN-05-R03 (6); PAY-01-R02 (6); PAY-03-R03 (6)      |
 | ENT-03 GP whose privileges exclude joint injections billing one                                       |                 6 |                          6 |               1      |                           6 | ENT-03-R03 (6)                                                      |
 | DOC-02 discharge summary rewritten after a denial (longer stay, severity added)                       |                 6 |                          6 |               1      |                           6 | DOC-02-R03 (6)                                                      |
 | DOC-01 approval requested for a plain X-ray or ultrasound, advanced scan billed                       |                 6 |                          6 |               1      |                           4 | DOC-01-R04 (6); NET-03-R01 (2)                                      |
-| PAY claim cancelled after payment; payment never reversed                                             |                 6 |                          6 |               1      |                           6 | PAY-12-R01 (6); NET-03-R01 (1); PAY-06-R03 (1)                      |
+| PAY claim cancelled after payment; payment never reversed                                             |                 6 |                          6 |               1      |                           6 | PAY-12-R01 (6); PAY-06-R03 (1); NET-03-R01 (1)                      |
 | PAY provider refund received but never applied (one applied months late)                              |                 6 |                          1 |               0.1667 |                           6 | NET-03-R01 (1)                                                      |
 | PAY price above the contracted tariff                                                                 |                 6 |                          6 |               1      |                           4 | PAY-06-R01 (6); NET-03-R01 (2); POL-01-R04 (1)                      |
-| ENT-01 cosmetic service billed under a plan that excludes it                                          |                 6 |                          6 |               1      |                           5 | ENT-01-R02 (6); ENT-04-R01 (6); PAY-07-R01 (6); PAY-06-R03 (6)      |
+| ENT-01 cosmetic service billed under a plan that excludes it                                          |                 6 |                          6 |               1      |                           5 | PAY-06-R03 (6); ENT-01-R02 (6); PAY-07-R01 (6); ENT-04-R01 (6)      |
 | PHR-03 daily dose above the mg/kg limit                                                               |                 5 |                          5 |               1      |                           0 | PHR-03-R01 (5); PAY-03-R01 (2)                                      |
 | PAY demographic impossibility: service outside its sex or age restriction                             |                 5 |                          5 |               1      |                           2 | PAY-03-R02 (5); DOC-02-R02 (3); CLN-08-R01 (3)                      |
 | PAY approval scope: another code or another provider                                                  |                 5 |                          5 |               1      |                           5 | PAY-04-R03 (5); CLN-03-R03 (5)                                      |
 | PAY approval refused, or service after the approval expired                                           |                 5 |                          5 |               1      |                           5 | PAY-04-R02 (5); CLN-03-R03 (5)                                      |
 | PAY cross-payer duplicate: second insurer also paid, no coordination record                           |                 5 |                          5 |               1      |                           5 | PAY-01-R04 (5); NET-03-R01 (3); CLN-05-R03 (1); POL-01-R04 (1)      |
 | ENT-04 clinician from another facility billed as the treating clinician                               |                 5 |                          5 |               1      |                           4 | ENT-04-R02 (5); NET-03-R01 (3)                                      |
-| ENT-05 inpatient stay billed with no bed assigned                                                     |                 5 |                          5 |               1      |                           5 | ENT-05-R02 (5); NET-03-R01 (2); PAY-06-R03 (2); PAY-10-R01 (1)      |
+| ENT-05 inpatient stay billed with no bed assigned                                                     |                 5 |                          5 |               1      |                           5 | ENT-05-R02 (5); PAY-06-R03 (2); NET-03-R01 (2); PAY-10-R01 (1)      |
 | POL-01 member added after a costly service with cover backdated over it                               |                 5 |                          5 |               1      |                           5 | POL-01-R02 (5); NET-03-R01 (5); PAY-06-R03 (3)                      |
 | PAY paid in full after a documented third-party settlement                                            |                 5 |                          5 |               1      |                           5 | PAY-10-R04 (5); NET-03-R01 (3)                                      |
 | PAY prior approval missing for advanced imaging                                                       |                 5 |                          5 |               1      |                           5 | PAY-04-R01 (5); CLN-03-R03 (5)                                      |
@@ -482,34 +482,34 @@ Its labels are the answer key of the generator that planted the patterns (`synth
 | PHR-01 receipt shows a non-medical item billed as a covered medicine                                  |                 5 |                          5 |               1      |                           5 | PAY-07-R04 (5); PAY-09-R04 (5)                                      |
 | PHR-01 billed quantity three times the prescription                                                   |                 5 |                          5 |               1      |                           5 | PHR-01-R02 (5)                                                      |
 | ENT-03 GP billing specialist consultation codes                                                       |                 4 |                          4 |               1      |                           4 | ENT-03-R04 (4); PAY-06-R03 (2); NET-03-R01 (1)                      |
-| PAY modifier 59 used to bypass an edit that allows no modifier                                        |                 4 |                          4 |               1      |                           2 | PAY-05-R01 (4); PAY-02-R01 (4); CLN-08-R01 (3)                      |
+| PAY modifier 59 used to bypass an edit that allows no modifier                                        |                 4 |                          4 |               1      |                           2 | PAY-02-R01 (4); PAY-05-R01 (4); CLN-08-R01 (3)                      |
 | PAY unit maximum: units above the daily maximum                                                       |                 4 |                          4 |               1      |                           3 | PAY-03-R03 (4); PAY-06-R03 (2); DOC-01-R01 (1)                      |
 | PAY time units: billed minutes exceed the recorded window                                             |                 4 |                          4 |               1      |                           3 | PAY-03-R04 (4)                                                      |
 | PAY package: included component charged, refused at remittance                                        |                 4 |                          4 |               1      |                           4 | PAY-02-R03 (4); PAY-06-R03 (3); NET-03-R01 (1)                      |
 | PAY payment reference reused across providers and dates                                               |                 4 |                          4 |               1      |                           4 | PAY-12-R02 (4); NET-03-R01 (2); PAY-01-R03 (1)                      |
 | PAY invalid code: deleted code billed after its end date                                              |                 4 |                          4 |               1      |                           4 | PAY-03-R01 (4)                                                      |
-| PAY package leakage: included component charged and paid                                              |                 4 |                          4 |               1      |                           4 | PAY-02-R04 (4); PAY-04-R04 (4); PAY-02-R03 (4); NET-03-R01 (3)      |
-| PHR-05 implant with no procedure, or on the opposite side                                             |                 4 |                          4 |               1      |                           4 | PHR-05-R02 (4); PAY-06-R03 (4); PAY-01-R03 (2); NET-03-R01 (2)      |
+| PAY package leakage: included component charged and paid                                              |                 4 |                          4 |               1      |                           4 | PAY-02-R04 (4); PAY-02-R03 (4); PAY-04-R04 (4); NET-03-R01 (3)      |
+| PHR-05 implant with no procedure, or on the opposite side                                             |                 4 |                          4 |               1      |                           4 | PAY-06-R03 (4); PHR-05-R02 (4); NET-03-R01 (2); PAY-01-R03 (2)      |
 | ENT-06 three-minute teleconsult ending in a prescription                                              |                 4 |                          4 |               1      |                           4 | ENT-06-R02 (4); PHR-03-R02 (1)                                      |
 | PAY approval reused for other patients                                                                |                 4 |                          4 |               1      |                           4 | PAY-04-R05 (4); PAY-04-R04 (4); CLN-03-R03 (4)                      |
 | ENT-06 telehealth visit billing an ECG                                                                |                 4 |                          4 |               1      |                           3 | ENT-06-R01 (4)                                                      |
-| PAY approval exhausted: drug course beyond the approved units                                         |                 4 |                          4 |               1      |                           2 | PAY-04-R04 (4); PAY-01-R03 (4); NET-03-R01 (4); PAY-06-R03 (4)      |
+| PAY approval exhausted: drug course beyond the approved units                                         |                 4 |                          4 |               1      |                           2 | PAY-06-R03 (4); PAY-04-R04 (4); NET-03-R01 (4); PAY-01-R03 (4)      |
 | PAY cross-provider unbundling: ECG interpretation billed again                                        |                 4 |                          4 |               1      |                           4 | PAY-02-R02 (4)                                                      |
 | ENT-04 clinician billed while on recorded annual leave                                                |                 3 |                          0 |               0      |                           3 | — none —                                                            |
 | CLN the same diagnosis code listed twice on a claim                                                   |                 3 |                          3 |               1      |                           3 | CLN-02-R04 (3); DOC-01-R02 (1); PAY-06-R03 (1); NET-03-R01 (1)      |
 | CLN lipid panel billed together with its own cholesterol component                                    |                 3 |                          3 |               1      |                           1 | PAY-02-R01 (3)                                                      |
-| PHR-05 used or rented equipment billed as a new purchase                                              |                 3 |                          3 |               1      |                           3 | PHR-05-R01 (3); PAY-03-R01 (3)                                      |
-| PAY package incomplete: core activities not itemised                                                  |                 3 |                          3 |               1      |                           3 | PAY-02-R03 (3); NET-03-R01 (2); PAY-06-R03 (2); PAY-01-R03 (1)      |
+| PHR-05 used or rented equipment billed as a new purchase                                              |                 3 |                          3 |               1      |                           3 | PAY-03-R01 (3); PHR-05-R01 (3)                                      |
+| PAY package incomplete: core activities not itemised                                                  |                 3 |                          3 |               1      |                           3 | PAY-02-R03 (3); PAY-06-R03 (2); NET-03-R01 (2); CLN-05-R03 (1)      |
 | NET-03 several patients of one clinic say billed services were never given                            |                 3 |                          2 |               0.6667 |                           3 | PAY-09-R04 (2); CLN-06-R04 (2)                                      |
 | ENT-05 service billed by a pharmacy not licensed for it                                               |                 3 |                          3 |               1      |                           2 | ENT-05-R01 (3); POL-01-R01 (1); ENT-01-R01 (1)                      |
 | ENT-04 consultation line with no treating clinician                                                   |                 3 |                          3 |               1      |                           2 | ENT-04-R01 (3)                                                      |
 | ENT-04 clinician billed in two distant emirates twenty minutes apart                                  |                 2 |                          1 |               0.5    |                           2 | ENT-04-R02 (1)                                                      |
-| ENT-05 service billed by a radiology centre not licensed for it                                       |                 2 |                          2 |               1      |                           0 | ENT-05-R01 (2); CLN-08-R01 (2); POL-01-R01 (1); ENT-01-R01 (1)      |
+| ENT-05 service billed by a radiology centre not licensed for it                                       |                 2 |                          2 |               1      |                           0 | ENT-05-R01 (2); CLN-08-R01 (2); ENT-01-R01 (1); POL-01-R01 (1)      |
 | PAY post-edit: plain component billed with its parent after the edit                                  |                 2 |                          2 |               1      |                           2 | PAY-02-R01 (2)                                                      |
-| PAY cross-payer duplicate: secondary insurer paid the full bill                                       |                 2 |                          2 |               1      |                           1 | PAY-01-R04 (2); PAY-10-R02 (2); PAY-10-R01 (2); POL-01-R04 (1)      |
-| ENT-04 consultation line with the facility's own code as treating clinician                           |                 2 |                          2 |               1      |                           2 | ENT-04-R01 (2); PAY-01-R03 (1); NET-03-R01 (1)                      |
+| PAY cross-payer duplicate: secondary insurer paid the full bill                                       |                 2 |                          2 |               1      |                           1 | PAY-10-R02 (2); PAY-10-R01 (2); PAY-01-R04 (2); POL-01-R04 (1)      |
+| ENT-04 consultation line with the facility's own code as treating clinician                           |                 2 |                          2 |               1      |                           2 | ENT-04-R01 (2); NET-03-R01 (1); PAY-01-R03 (1)                      |
 | PAY invalid code: code absent from the code set                                                       |                 2 |                          2 |               1      |                           2 | PAY-03-R01 (2); PAY-07-R01 (1)                                      |
-| PAY unit maximum: daily units split over two claims                                                   |                 2 |                          2 |               1      |                           2 | PAY-03-R03 (2); PAY-01-R02 (2); PAY-01-R03 (2); PAY-01-R01 (2)      |
+| PAY unit maximum: daily units split over two claims                                                   |                 2 |                          2 |               1      |                           2 | PAY-01-R01 (2); CLN-05-R03 (2); PAY-01-R02 (2); PAY-03-R03 (2)      |
 | PAY member complaint of being charged more than the share                                             |                 2 |                          2 |               1      |                           2 | PAY-07-R04 (2); NET-03-R01 (1)                                      |
 | ENT-04 consultation line with a clinician ID on no roster                                             |                 1 |                          1 |               1      |                           1 | ENT-04-R01 (1)                                                      |
 | PAY time units: one clinician in two timed sessions at once                                           |                 1 |                          1 |               1      |                           0 | PAY-03-R04 (1)                                                      |
@@ -837,26 +837,26 @@ Stage timings for this run:
 
 | stage                                          |   seconds |
 |:-----------------------------------------------|----------:|
-| adapter and canonical model                    |      6.96 |
-| lineage and episodes                           |      1.96 |
-| rule registry                                  |      0.47 |
-| feature store                                  |      5.53 |
-| peers, shrinkage and the transparent composite |      2    |
-| graph and entity resolution                    |      9.07 |
-| synthetic document corpus and NLP pipeline     |      0.52 |
-| unsupervised models, SHAP, drift, clusters     |      5.29 |
+| adapter and canonical model                    |      4.59 |
+| lineage and episodes                           |      1.47 |
+| rule registry                                  |      0.43 |
+| feature store                                  |      4.86 |
+| peers, shrinkage and the transparent composite |      1.71 |
+| graph and entity resolution                    |      7.76 |
+| synthetic document corpus and NLP pipeline     |      0.45 |
+| unsupervised models, SHAP, drift, clusters     |      3.9  |
 | AI layer                                       |      0    |
-| control evaluation                             |    124.22 |
-| case correlation and priority                  |      0.27 |
+| control evaluation                             |    113.02 |
+| case correlation and priority                  |      0.21 |
 
 
 ### Stage latency against the stage ceilings
 
 | stage          |   ceiling_ms |   observed_ms | within_ceiling   | note                                                                                                                                                                                                  |
 |:---------------|-------------:|--------------:|:-----------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| INGEST         |         1000 |        1427.2 | False            | Observed is the BATCH time for this stage across 24,855 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
-| PREPAY_SYNC    |          500 |       21503.8 | False            | Observed is the BATCH time for this stage across 24,855 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
-| PREPAY_ASYNC   |       600000 |       28174.8 | True             | Observed is the BATCH time for this stage across 24,855 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
-| POSTPAY_DAILY  |     86400000 |       43100.1 | True             | Observed is the BATCH time for this stage across 24,855 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
-| NETWORK_WEEKLY |    604800000 |        2899.3 | True             | Observed is the BATCH time for this stage across 24,855 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
-| MODEL_MONTHLY  |   2592000000 |       27098   | True             | Observed is the BATCH time for this stage across 24,855 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| INGEST         |         1000 |        1205.1 | False            | Observed is the BATCH time for this stage across 24,855 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| PREPAY_SYNC    |          500 |       18452.5 | False            | Observed is the BATCH time for this stage across 24,855 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| PREPAY_ASYNC   |       600000 |       25678.2 | True             | Observed is the BATCH time for this stage across 24,855 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| POSTPAY_DAILY  |     86400000 |       46232.4 | True             | Observed is the BATCH time for this stage across 24,855 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| NETWORK_WEEKLY |    604800000 |        2043.2 | True             | Observed is the BATCH time for this stage across 24,855 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
+| MODEL_MONTHLY  |   2592000000 |       19393.8 | True             | Observed is the BATCH time for this stage across 24,855 claims, not a per-claim online latency. A real PREPAY_SYNC deployment would be measured per claim; this artefact runs as a batch and says so. |
