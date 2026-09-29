@@ -231,8 +231,13 @@ class GraphService:
 
     # ---------------------------------------------------------------- views
 
-    def edge_inventory(self) -> pd.DataFrame:
-        """What edge types exist here, and which are inferred rather than observed."""
+    def edge_inventory(self, dataset: Any = None) -> pd.DataFrame:
+        """What edge types exist here, and which are inferred rather than observed.
+
+        ``dataset`` (the canonical dataset) lets the notes for the edge types the
+        graph does not build say whether the FILE lacks the data or only the
+        graph does: "no referral records" is false of a file that has them.
+        """
         rows = []
         for etype, meta in EDGE_TYPES.items():
             count = 0
@@ -247,13 +252,21 @@ class GraphService:
                     "note": meta["note"],
                 }
             )
-        for missing, note in (
-            ("referral (directed A→B)", "ABSENT — no referral records. NET-01-R02 reciprocity is "
-                                        "structurally undefined, not merely unmeasured."),
-            ("prescriber—pharmacy", "ABSENT — no prescriptions or pharmacy entities."),
-            ("shared administrative identifier", "ABSENT — no bank, phone, address or device tokens."),
-            ("ownership", "ABSENT — no ownership records."),
+        in_file = _unbuilt_edge_sources(dataset)
+        for missing, key, note in (
+            ("referral (directed A→B)", "referral",
+             "ABSENT — no referral records. NET-01-R02 reciprocity is "
+             "structurally undefined, not merely unmeasured."),
+            ("prescriber—pharmacy", "prescriber_pharmacy",
+             "ABSENT — no prescriptions or pharmacy entities."),
+            ("shared administrative identifier", "shared_identifier",
+             "ABSENT — no bank, phone, address or device tokens."),
+            ("ownership", "ownership", "ABSENT — no ownership records."),
         ):
+            if in_file.get(key):
+                note = (f"NOT BUILT INTO THE GRAPH — the file has {in_file[key]}, but this graph "
+                        f"does not yet build the edge. The controls that need it read those "
+                        f"records directly.")
             rows.append({"edge_type": missing, "present": False, "edges": 0, "observed": False, "note": note})
         return pd.DataFrame(rows)
 
@@ -274,3 +287,38 @@ class GraphService:
     def subgraph_for_community(self, community_id: int) -> nx.Graph:
         nodes = [n for n, c in self.full_communities.items() if c == community_id]
         return self.full_graph.subgraph(nodes).copy() if self.full_graph else nx.Graph()
+
+
+def _unbuilt_edge_sources(dataset: Any) -> dict[str, str]:
+    """For each edge type the graph does not build, what the file holds (if anything)."""
+    if dataset is None:
+        return {}
+
+    def table(name: str) -> pd.DataFrame:
+        try:
+            frame = dataset.get(name)
+        except Exception:  # an adapter without this table
+            return pd.DataFrame()
+        return frame if isinstance(frame, pd.DataFrame) else pd.DataFrame()
+
+    def filled(frame: pd.DataFrame, columns: tuple[str, ...]) -> int:
+        cols = [c for c in columns if c in frame.columns]
+        if frame.empty or not cols:
+            return 0
+        return int(frame[cols].notna().any(axis=1).sum())
+
+    out: dict[str, str] = {}
+    referral = table("referral")
+    if not referral.empty:
+        out["referral"] = f"{len(referral):,} referral records"
+    dispense = table("prescription_dispense")
+    if not dispense.empty:
+        out["prescriber_pharmacy"] = f"{len(dispense):,} prescription and dispensing records"
+    provider = table("provider")
+    shared = filled(provider, ("bank_account_token", "phone_token"))
+    if shared:
+        out["shared_identifier"] = f"bank or phone tokens for {shared:,} providers"
+    owned = filled(provider, ("owner_entity_id", "ownership_changed_on"))
+    if owned:
+        out["ownership"] = f"ownership details for {owned:,} providers"
+    return out

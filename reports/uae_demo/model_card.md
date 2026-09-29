@@ -2,7 +2,7 @@
 
 > **THIS REPORT DESCRIBES ONE DATASET**
 >
-> Source `uae_demo.zip` · 24,855 claim rows · `UAE_MULTITABLE` adapter · run 2026-09-28 21:13 UTC.
+> Source `uae_demo.zip` · 24,855 claim rows · `UAE_MULTITABLE` adapter · run 2026-09-29 02:01 UTC.
 >
 > Every figure below is a measured property of that file. None of it transfers to another population without being re-measured there.
 >

@@ -75,25 +75,38 @@ class ReleaseGates:
         linkage = self.result.dataset.key_linkage_rate()
         report = self.result.dataset.population_report()
         not_populated = report[report["status"] == "NOT_POPULATED"]
-        status = PASS if linkage >= threshold else FAIL
+        line_linkage = self.result.dataset.line_linkage_rate()
+        if line_linkage is None:
+            line_part = ("The LINE half of this gate is vacuous here — there are no claim lines "
+                         "to link — so the measured figure covers claim-level linkage only.")
+            measured = linkage
+        else:
+            line_part = (f"Line linkage (claim line → claim) is {line_linkage:.4%}; the measured "
+                         f"figure is the lower of the two.")
+            measured = min(linkage, line_linkage)
+        status = PASS if measured >= threshold else FAIL
         return GateResult(
             "Data readiness",
             "≥99.5% key linkage for claims and lines; scenario-specific completeness reported "
             "explicitly, not hidden by imputation",
             status,
             f"Key linkage (claim → member and provider) is {linkage:.4%} against a required "
-            f"{threshold:.1%}. Scenario completeness IS reported explicitly: "
+            f"{threshold:.1%}. {line_part} Scenario completeness IS reported explicitly: "
             f"{len(not_populated)} of {len(report)} canonical tables are NOT_POPULATED, each with "
-            f"a stated reason, and no field is imputed to hide the gap. The LINE half of this "
-            f"gate is vacuous here — there are no claim lines to link — so the measured figure "
-            f"covers claim-level linkage only.",
-            measured=round(linkage, 4), threshold=threshold,
+            f"a stated reason, and no field is imputed to hide the gap.",
+            measured=round(measured, 4), threshold=threshold,
         )
 
     def _hard_edit(self) -> GateResult:
         threshold = float(self.config.get("gate_hard_edit_reproducibility_min"))
+        # What ran on THIS file (the evaluator's effective classification), not
+        # the catalogue's static one: an unlocked control is executable here.
+        run = self.result.evaluation.to_frame()
+        effective = (dict(zip(run["rule_id"], run["data_support"]))
+                     if {"rule_id", "data_support"} <= set(run.columns) else {})
         hard = [c for c in self.result.registry.all()
-                if c.can_deny and c.data_support.value != "NOT_EXECUTABLE_ON_THIS_DATASET"]
+                if c.can_deny and effective.get(c.rule_id, c.data_support.value)
+                != "NOT_EXECUTABLE_ON_THIS_DATASET"]
         signed_off = [c for c in hard if c.approved_by]
         return GateResult(
             "Hard edit",

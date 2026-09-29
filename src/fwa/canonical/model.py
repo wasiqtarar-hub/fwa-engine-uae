@@ -374,6 +374,20 @@ class CanonicalDataset:
         )
         return float(linked.mean())
 
+    def line_linkage_rate(self) -> float | None:
+        """Share of claim_line rows whose claim_sk resolves to a claim_header row.
+
+        ``None`` when the file has no claim lines: the line half of the
+        data-readiness gate is then vacuous, and saying so beats reporting 100%.
+        """
+        lines = self.get("claim_line")
+        if lines.empty or "claim_sk" not in lines.columns:
+            return None
+        claims = set(self.get("claim_header")["claim_sk"].dropna().astype(str))
+        if not claims:
+            return 0.0
+        return float(lines["claim_sk"].astype(str).isin(claims).mean())
+
 
 def _supplementary() -> dict[str, TableSpec]:
     from .supplementary import SUPPLEMENTARY_TABLES  # local: supplementary imports TableSpec

@@ -669,6 +669,29 @@ def _join(words: Sequence[str]) -> str:
     return ", ".join(words[:-1]) + " and " + words[-1]
 
 
+def _when(claims: pd.DataFrame | None, claim_ids: Sequence[Any], period: str,
+          period_label: str) -> str:
+    """When the claims in the headline happened, as the claims themselves say.
+
+    A provider case is filed under the month it was scored, but carries every
+    claim behind the pattern. "322 claims in December 2025" is false when the
+    322 span eighteen months, so the month is used only if the claims fit it.
+    """
+    dates = None
+    if claims is not None and not claims.empty and claim_ids and "claim_sk" in claims.columns:
+        for column in ("service_date", "admission_date", "submission_date"):
+            if column in claims.columns:
+                sub = claims[claims["claim_sk"].astype(str).isin([str(c) for c in claim_ids])]
+                dates = pd.to_datetime(sub[column], errors="coerce").dropna()
+                break
+    if dates is None or dates.empty:
+        return f" in {period_label}" if period_label and len(claim_ids) <= 1 else ""
+    first, last = dates.min().to_period("M"), dates.max().to_period("M")
+    if first == last:
+        return f" in {plain_month(str(first) + '-01')}"
+    return f" between {plain_month(str(first) + '-01')} and {plain_month(str(last) + '-01')}"
+
+
 def _number_word(n: int) -> str:
     return {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven",
             8: "eight", 9: "nine"}.get(n, f"{n:,}")
@@ -802,7 +825,7 @@ def explain_case(
     money = f" {verb} {aed(billed)}" if billed is not None else ""
     claims_part = (f" across {len(claim_ids):,} claim{'s' if len(claim_ids) != 1 else ''}"
                    if claim_ids and not (subject_kind == "claim" and len(claim_ids) == 1) else "")
-    when = f" in {period_label}" if period_label else ""
+    when = _when(claims, claim_ids, period, period_label)
     headline = (f"{subject_label}{money}{claims_part}{when}, with {pattern_words}. "
                 f"We suggest {suggestion}.")
     if not money:

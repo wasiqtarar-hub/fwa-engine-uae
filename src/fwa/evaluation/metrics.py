@@ -72,6 +72,13 @@ class MetricSuite:
 
     # ------------------------------------------------------------------ label
 
+    def _has_rows(self, table: str) -> bool:
+        try:
+            frame = self.result.dataset.get(table)
+        except Exception:  # an adapter without this table
+            return False
+        return frame is not None and not frame.empty
+
     def label_series(self) -> pd.Series:
         """``claim_sk -> 1/0``. Evaluation only."""
         if self.labels is None or self.labels.empty:
@@ -209,7 +216,9 @@ class MetricSuite:
         out.append(Metric(
             "Prevented / recovered AED", None, "AED", NOT_MEASURABLE,
             "Value stopped pre-payment or recovered post-payment.",
-            required_data="remittance.* (no payment records exist in the claim extract)"))
+            required_data=("review_outcome.confirmed_amount_aed and remittance.*"
+                           if self._has_rows("remittance") else
+                           "remittance.* (no payment records exist in the claim extract)")))
 
         # ---- net savings after review cost --------------------------------
         n_cases = len(self.result.cases.cases)
@@ -336,6 +345,12 @@ class MetricSuite:
                     if source == "expert_review" else
                     "pattern_detection labels are produced by a pattern process and share its "
                     "blind spots."
+                    if source == "pattern_detection" else
+                    "synthetic_injection labels are the answer key of the generator that planted "
+                    "the patterns; the injectors were written with the checks in mind, so "
+                    "precision and recall against them are closer to a self-test."
+                    if source == "synthetic_injection" else
+                    f"{source} labels come from an unreviewed process and are an upper bound."
                 ),
             })
         return pd.DataFrame(rows)

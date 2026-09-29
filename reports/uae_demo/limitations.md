@@ -2,7 +2,7 @@
 
 > **THIS REPORT DESCRIBES ONE DATASET**
 >
-> Source `uae_demo.zip` · 24,855 claim rows · `UAE_MULTITABLE` adapter · run 2026-09-28 21:13 UTC.
+> Source `uae_demo.zip` · 24,855 claim rows · `UAE_MULTITABLE` adapter · run 2026-09-29 02:01 UTC.
 >
 > Every figure below is a measured property of that file. None of it transfers to another population without being re-measured there.
 >
@@ -11,24 +11,22 @@
 
 ## 1. Every figure here is a property of one input file
 
-This run's input is a claim-header extract of 24,855 rows, in a non-AED source currency converted through `config/fx.yaml` at the service-date rate. Which controls can run at all, which are silent, and every rate below are all properties of that file's schema and contents. **Re-measure on your own data before treating any number here as a forecast of what it will do there.**
+This run's input is `uae_demo.zip`: 24,855 claims and 62,009 claim lines across the canonical tables. Amounts are in AED as supplied. Which controls can run, which are silent, and every rate below are properties of that file's schema and contents. **Re-measure on your own data before treating any number here as a forecast of what it will do there.**
 
-## 2. The labels were produced by detection processes
+## 2. How the labels were produced
 
-`ground_truth_source` takes three values — `pattern_detection`, `expert_review` and `rule_engine`. Every one of them is a detection process, so the labels carry that process's blind spots. Worse, profiling shows each `fraud_type` is encoded through a single dominant field, so a control testing that field recovers the type almost perfectly. **Precision against these labels is close to tautological for rule-based controls and is reported as an upper bound throughout.**
+Its labels are the answer key of the generator that planted the patterns (`synthetic_injection`). The injectors were written with the checks in mind, so every precision and recall figure below is closer to a self-test than to an estimate of real performance, and an upper bound at best. **Precision and recall against these labels are reported as upper bounds throughout.**
 
-## 3. Most of the catalogue cannot run here
+## 3. What cannot run here
 
-127 of 164 controls are classified `NOT_EXECUTABLE_ON_THIS_DATASET`. The four structural gaps, in order of consequence:
+1 control cannot run on this file:
 
-1. **No `authorization` table.** The entire PAY-04 scenario is unrunnable — including PAY-04-R01, the usual worked example of the atomic-control contract.
-2. **Claim-header level only.** No activity codes, units or line amounts, so PAY-02, PAY-03, PAY-05, CLN-08 and all of PHR-01/02/04/05 have no input at all. The missingness rule says explicitly that no claim-level or provider-level aggregate can substitute for the code-pair co-occurrence feature.
-3. **No `claim_version` lineage and no `remittance`.** PAY-08 and PAY-12 are dead, and 'prevented/recovered AED' is NOT_MEASURABLE.
-4. **No geography.** Peer-hierarchy level 5 is `NOT_POPULATED` and every travel-impossibility and geographic-cluster control is classified out rather than run against a fabricated location.
+- **NET-04-R01** — This control requires CONFIRMED REVIEW OUTCOMES as its label, and the catalogue is explicit that raw system flags must never be used as one. review_outcome is empty at load, and fraud_label is held-out evaluation data that no detection component may read. Implementing it against fraud_label would be precisely the leakage this artefact is built to prevent. It becomes executable once the artefact has accumulated real reviewer dispositions.
 
-## 4. Proxies are proxies
+## 4. Simplified checks are simplified
 
-28 controls run against a PROXY rather than the field the catalogue specifies: ICD chapter for provider specialty, policy type for encounter/facility type, an undated blacklist flag for an effective-dated exclusion list, agent co-occurrence for a clinical referral edge. Each proxy is named on the signal itself, and each weakens the finding.
+86 controls run in a simplified form on this file: a proxy stands in for a field or table the catalogue specifies. Each simplification is named on the signal itself, and each weakens the finding.
+
 
 ## 5. Nothing has been reviewed
 
