@@ -49,6 +49,47 @@ def _md_table(frame: pd.DataFrame, max_rows: int | None = None) -> str:
     )
 
 
+def _table_rows(result, name: str) -> int:
+    """Rows of one canonical or supplementary table in this run (0 if absent)."""
+    try:
+        frame = result.dataset.get(name)
+    except Exception:  # an adapter without this table
+        return 0
+    return 0 if frame is None else int(len(frame))
+
+
+def _label_sources(result) -> list[str]:
+    """The ``ground_truth_source`` values that actually occur in this run's labels."""
+    held = getattr(result, "held_out_labels", None)
+    if held is None or held.empty or "ground_truth_source" not in held.columns:
+        return []
+    return sorted(str(v) for v in held["ground_truth_source"].dropna().unique())
+
+
+def label_source_sentence(result) -> str:
+    """How this run's labels were produced, stated from the labels themselves.
+
+    An earlier version named three detection processes whatever the input; on
+    a file whose answer key comes from the generator that planted the
+    patterns, that sentence was false while still reading as authoritative.
+    """
+    sources = _label_sources(result)
+    if not sources:
+        return "No labels accompany this dataset."
+    if sources == ["synthetic_injection"]:
+        return ("Its labels are the answer key of the generator that planted the patterns "
+                "(`synthetic_injection`). The injectors were written with the checks in mind, so "
+                "every precision and recall figure below is closer to a self-test than to an "
+                "estimate of real performance, and an upper bound at best.")
+    names = ", ".join(f"`{v}`" for v in sources)
+    what = "detection process" if len(sources) == 1 else f"{len(sources)} detection processes"
+    tautology = (" — and a rule-based detector scoring well against `rule_engine` labels is "
+                 "close to tautological" if "rule_engine" in sources else "")
+    return (f"Its labels were produced by {'a ' if len(sources) == 1 else ''}{what} ({names}), "
+            f"so every precision figure below is an upper bound on what a real review would "
+            f"confirm, not an estimate of it{tautology}.")
+
+
 def _banner_block(result=None) -> str:
     """The header every report opens with: which dataset, and the boundary.
 
@@ -122,9 +163,29 @@ class ReportBuilder:
 
     # -------------------------------------------------------------- artefacts
 
+    def _run_frame(self) -> pd.DataFrame:
+        """The evaluator's per-control record, with catalogue reasons labelled as such.
+
+        A control that keeps its catalogue classification carries the catalogue's
+        reason, which was written against the one-row-per-claim extract ("no
+        codes, no remittance"). On a file that has those tables, that sentence
+        must say whose it is, or it reads as a statement about this file.
+        """
+        run = self.result.evaluation.to_frame()
+        if run.empty or "support_basis" not in run.columns or "support_reason" not in run.columns:
+            return run
+        if _table_rows(self.result, "claim_line") == 0:
+            return run
+        run = run.copy()
+        catalogue = (run["support_basis"] == "catalogue") & run["support_reason"].fillna("").ne("")
+        run.loc[catalogue, "support_reason"] = (
+            "Catalogue note, written for a one-row-per-claim extract: "
+            + run.loc[catalogue, "support_reason"].astype(str))
+        return run
+
     def _write_coverage_matrix(self) -> None:
         frame = pd.DataFrame(self.result.registry.coverage_rows())
-        run = self.result.evaluation.to_frame()
+        run = self._run_frame()
         if not run.empty:
             # ``data_support`` stays the catalogue's static classification (it
             # is what the YAML declares); what this particular file allowed is
@@ -148,7 +209,7 @@ class ReportBuilder:
         self._write_csv("metrics.csv", pd.DataFrame([m.to_row() for m in metric_rows]))
         self._write_csv("evaluation_protocol.csv",
                         pd.DataFrame([p.to_row() for p in protocol_results]))
-        self._write_csv("control_run_report.csv", self.result.evaluation.to_frame())
+        self._write_csv("control_run_report.csv", self._run_frame())
         self._write_csv("canonical_population_report.csv",
                         self.result.dataset.population_report())
         self._write_csv("parameter_registry.csv",
@@ -253,11 +314,8 @@ class ReportBuilder:
             "active, evidence capping, alert ceilings, kill switches, an append-only audit log — "
             "runs.\n\n"
             "**It does not establish** a performance claim that transfers to any other book of "
-            "business. Its labels were produced by three detection "
-            "processes (`pattern_detection`, `expert_review`, `rule_engine`), so every precision "
-            "figure below is an upper bound on what a real review would confirm, not an estimate "
-            "of it — and a rule-based detector scoring well against `rule_engine` labels is close "
-            "to tautological. Nothing here has been reviewed by a human, so precision in the "
+            f"business. {label_source_sentence(r)} "
+            "Nothing here has been reviewed by a human, so precision in the "
             "strict sense (confirmed ÷ reviewed) is NOT_MEASURABLE and is reported as such.\n\n"
             "Every number below is a measured output of this run, a configuration threshold "
             "labelled as such, or `NOT_MEASURABLE_ON_THIS_DATASET`.\n"
@@ -354,12 +412,15 @@ class ReportBuilder:
         by_source = self.metrics.by_ground_truth_source()
         parts.append("\n### Stratified by `ground_truth_source`\n")
         parts.append(_md_table(by_source))
-        parts.append(
-            "\n`expert_review` and `rule_engine` labels are **exactly the kind of biased ground "
-            "truth** the evaluation design warns against: the first exists because somebody chose to "
-            "investigate, the second because a rule fired. Headline precision against them is an "
-            "upper bound, not an estimate of real-world performance.\n"
-        )
+        if {"expert_review", "rule_engine"} & set(_label_sources(r)):
+            parts.append(
+                "\n`expert_review` and `rule_engine` labels are **exactly the kind of biased ground "
+                "truth** the evaluation design warns against: the first exists because somebody chose to "
+                "investigate, the second because a rule fired. Headline precision against them is an "
+                "upper bound, not an estimate of real-world performance.\n"
+            )
+        else:
+            parts.append(f"\n{label_source_sentence(r)}\n")
 
         parts.append("\n### Recall by `fraud_type`, and which control found it\n")
         parts.append(_md_table(self.metrics.recall_by_fraud_type()))
@@ -410,9 +471,9 @@ class ReportBuilder:
             f"This run is deterministic. Seed `{summary['seed']}` "
             f"(`cfg.random_seed`), parameter-registry fingerprint "
             f"`{summary['parameters_fingerprint']}`. Re-running "
-            f"`python -m fwa.run_validation --data {r.source_path or 'data/claims_demo_synthetic.csv'}` "
+            f"`{self._rerun_command()}` "
             f"regenerates every file in "
-            f"`reports/` identically, because signal identity is a pure function of "
+            f"`{self.out.as_posix()}/` identically, because signal identity is a pure function of "
             f"(tenant, rule, version, subject, fact, period) and every model is seeded.\n\n"
             f"Stage timings for this run:\n\n"
             + _md_table(pd.DataFrame([
@@ -424,6 +485,26 @@ class ReportBuilder:
 
         self._write("validation_report.md", "\n".join(parts))
         self._write_html("validation_report.html", "\n".join(parts))
+
+    def _rerun_command(self) -> str:
+        """The exact command that regenerates this report set."""
+        r = self.result
+        data = r.source_path or "data/claims_demo_synthetic.csv"
+        try:
+            data = Path(data).resolve().relative_to(Path.cwd().resolve()).as_posix()
+        except (ValueError, OSError):
+            data = Path(data).as_posix()
+        # adapter_name is the adapter's source_system; the CLI takes its key.
+        cli_key = {"GENERIC_INDIA_TPA": "", "SHAFAFIYA_DOH_ABU_DHABI": "shafafiya",
+                   "ECLAIMLINK_DHA_DUBAI": "eclaimlink", "UAE_MULTITABLE": "uae_multitable"}
+        system = str(getattr(r, "adapter_name", "") or "")
+        adapter = cli_key.get(system, system.lower())
+        parts = ["python -m fwa.run_validation", f"--data {data}"]
+        if adapter:
+            parts.append(f"--adapter {adapter}")
+        if self.out.as_posix() != "reports":
+            parts.append(f"--reports {self.out.as_posix()}")
+        return " ".join(parts)
 
     # ------------------------------------------------------------- narratives
 
@@ -465,9 +546,19 @@ class ReportBuilder:
         run = self.result.evaluation.to_frame()
         silent = set(run.loc[run["outcome"] == "NOT_TRIGGERED", "rule_id"])
         lines = ["\nA control that runs and finds nothing has found something. Specifically:\n"]
-        for rule, note in notes.items():
-            if rule in silent:
-                lines.append(f"- **{rule}** — {note}")
+        # The notes above profile the one-row-per-claim demo extract. On any
+        # other file they would read as authoritative and be false, so they are
+        # used only when the file has no claim lines, like that extract.
+        if _table_rows(self.result, "claim_line") == 0:
+            for rule, note in notes.items():
+                if rule in silent:
+                    lines.append(f"- **{rule}** — {note}")
+        else:
+            for rule in sorted(silent):
+                lines.append(f"- **{rule}** ran on this file and raised nothing. Whether nothing in "
+                             f"the file matches, or its threshold cannot be crossed here, needs a "
+                             f"look at the data it reads; the threshold is not lowered to "
+                             f"manufacture signals.")
         return "\n".join(lines) + "\n"
 
     def _fraud_type_notes(self) -> str:
@@ -566,7 +657,7 @@ class ReportBuilder:
                 f"{count(len(r.entity_candidates), 'entity-resolution candidate')} surfaced for human "
                 f"confirmation — **none merged automatically**, at any confidence.\n"
             )
-            parts.append(_md_table(r.graph.edge_inventory()))
+            parts.append(_md_table(r.graph.edge_inventory(r.dataset)))
 
         # models
         if r.models is not None and r.models.anomaly is not None:
@@ -596,8 +687,11 @@ class ReportBuilder:
             parts.append("\n### Document / NLP layer\n")
             summary = r.documents.summary()
             parts.append(
-                f"\nThe source file contains **no documents**. The pipeline runs against "
-                f"{summary['corpus'].get('documents', 0)} clearly-labelled SYNTHETIC discharge "
+                (f"\nThe source file carries **{_table_rows(r, 'document'):,} documents**, which "
+                 f"the document controls read directly. Separately, the extraction pipeline runs "
+                 f"against " if _table_rows(r, "document") else
+                 "\nThe source file contains **no documents**. The pipeline runs against ")
+                + f"{summary['corpus'].get('documents', 0)} clearly-labelled SYNTHETIC discharge "
                 f"summaries generated by this artefact "
                 f"({summary['corpus'].get('by_language', {})}), of which "
                 f"{summary['corpus'].get('inconsistent', 0)} carry a deliberately injected "
@@ -710,10 +804,10 @@ class ReportBuilder:
             )
         self._write("model_card.md", "\n".join(parts))
 
-    def _write_limitations(self) -> None:
+    def _claim_header_limitations(self, support) -> str:
+        """Sections 1-4 for a one-row-per-claim extract (the text profiles that file)."""
         r = self.result
-        support = r.registry.summary()["by_data_support"]
-        parts = [f"# Limitations — `uae-fwa-engine` {__version__}\n", _banner_block(self.result)]
+        parts: list[str] = []
         parts.append(
             "\n## 1. Every figure here is a property of one input file\n\n"
             f"This run's input is a claim-header extract of {len(r.claims):,} rows, in a "
@@ -751,6 +845,56 @@ class ReportBuilder:
             "encounter/facility type, an undated blacklist flag for an effective-dated exclusion "
             "list, agent co-occurrence for a clinical referral edge. Each proxy is named on the "
             "signal itself, and each weakens the finding.\n\n"
+        )
+        return "".join(parts)
+
+    def _multitable_limitations(self) -> str:
+        """Sections 1-4 for a multi-table file, measured from this run."""
+        r = self.result
+        run = r.evaluation.to_frame()
+        effective = run["data_support"].value_counts().to_dict() if "data_support" in run else {}
+        blocked = run[run.get("data_support", pd.Series(dtype=str)) == "NOT_EXECUTABLE_ON_THIS_DATASET"]
+        currencies = (sorted(str(c) for c in r.claims["source_currency"].dropna().unique())
+                      if "source_currency" in r.claims.columns else [])
+        money = ("Amounts are in AED as supplied." if currencies in ([], ["AED"]) else
+                 "Non-AED amounts are converted through `config/fx.yaml` at the service-date rate.")
+        lines = _table_rows(r, "claim_line")
+        out = [
+            "\n## 1. Every figure here is a property of one input file\n\n"
+            f"This run's input is `{r.source_name or 'this file'}`: {len(r.claims):,} claims and "
+            f"{lines:,} claim lines across the canonical tables. {money} Which controls can run, "
+            "which are silent, and every rate below are properties of that file's schema and "
+            "contents. **Re-measure on your own data before treating any number here as a "
+            "forecast of what it will do there.**\n\n",
+            "## 2. How the labels were produced\n\n"
+            f"{label_source_sentence(r)} **Precision and recall against these labels are "
+            "reported as upper bounds throughout.**\n\n",
+            "## 3. What cannot run here\n\n",
+        ]
+        if blocked.empty:
+            out.append("Every control in the catalogue can run on this file.\n\n")
+        else:
+            out.append(f"{count(len(blocked), 'control')} cannot run on this file:\n\n")
+            for row in blocked.itertuples(index=False):
+                reason = str(getattr(row, "support_reason", "") or "no reason recorded")
+                out.append(f"- **{row.rule_id}** — {reason}\n")
+            out.append("\n")
+        out.append(
+            "## 4. Simplified checks are simplified\n\n"
+            f"{effective.get('PARTIAL', 0)} controls run in a simplified form on this file: a "
+            "proxy stands in for a field or table the catalogue specifies. Each simplification is "
+            "named on the signal itself, and each weakens the finding.\n\n")
+        return "".join(out)
+
+    def _write_limitations(self) -> None:
+        r = self.result
+        support = r.registry.summary()["by_data_support"]
+        parts = [f"# Limitations — `uae-fwa-engine` {__version__}\n", _banner_block(self.result)]
+        if _table_rows(r, "claim_line") == 0:
+            parts.append(self._claim_header_limitations(support))
+        else:
+            parts.append(self._multitable_limitations())
+        parts.append(
             "## 5. Nothing has been reviewed\n\n"
             "Precision in the strict sense is *confirmed ÷ reviewed*. Nothing has been reviewed, "
             "so precision, review yield, confirmed AED, prevented/recovered AED, net savings, "

@@ -2,7 +2,7 @@
 
 > **THIS REPORT DESCRIBES ONE DATASET**
 >
-> Source `uae_demo.zip` · 24,855 claim rows · `UAE_MULTITABLE` adapter · run 2026-09-28 21:13 UTC.
+> Source `uae_demo.zip` · 24,855 claim rows · `UAE_MULTITABLE` adapter · run 2026-09-29 02:27 UTC.
 >
 > Every figure below is a measured property of that file. None of it transfers to another population without being re-measured there.
 >
@@ -26,7 +26,7 @@ Each of the six release gates, evaluated against **this build**, with an explici
 **Measured:** `1.0`
 
 
-**Evidence:** Key linkage (claim → member and provider) is 100.0000% against a required 99.5%. Scenario completeness IS reported explicitly: 1 of 17 canonical tables are NOT_POPULATED, each with a stated reason, and no field is imputed to hide the gap. The LINE half of this gate is vacuous here — there are no claim lines to link — so the measured figure covers claim-level linkage only.
+**Evidence:** Key linkage (claim → member and provider) is 100.0000% against a required 99.5%. Line linkage (claim line → claim) is 100.0000%; the measured figure is the lower of the two. Scenario completeness IS reported explicitly: 1 of 17 canonical tables are NOT_POPULATED, each with a stated reason, and no field is imputed to hide the gap.
 
 
 ## Hard edit — **NOT_ASSESSABLE**
@@ -38,7 +38,7 @@ Each of the six release gates, evaluated against **this build**, with an explici
 **Threshold:** `0.99` (a configuration acceptance criterion quoted from the specification, not a result achieved here)
 
 
-**Evidence:** 1 hard/expert control that may deny is executable here, and 0 carry a policy-owner sign-off — because no control in this build has been activated. Decision REPRODUCIBILITY is demonstrable (signal ids are a pure function of rule, version, subject, fact and period, and the idempotency test asserts a replay produces no duplicate), but reproducibility against an EXISTING ADJUDICATION SYSTEM — which is what this gate means — cannot be measured without that system's decisions. Exception coverage IS documented: every control declares its exclusions or fails to register.
+**Evidence:** 21 hard/expert controls that may deny are executable here, and 0 carry a policy-owner sign-off — because no control in this build has been activated. Decision REPRODUCIBILITY is demonstrable (signal ids are a pure function of rule, version, subject, fact and period, and the idempotency test asserts a replay produces no duplicate), but reproducibility against an EXISTING ADJUDICATION SYSTEM — which is what this gate means — cannot be measured without that system's decisions. Exception coverage IS documented: every control declares its exclusions or fails to register.
 
 
 ## Expert edit — **NOT_ASSESSABLE**

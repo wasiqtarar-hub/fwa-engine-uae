@@ -215,12 +215,11 @@ class EvaluationProtocol:
                 "random_audit_miss_rate": round(miss_rate, 4),
             },
             caveat=(
-                "This is a SIMULATED audit over labels that were themselves produced by detection "
-                "processes (pattern_detection, expert_review, rule_engine). It therefore cannot "
-                "correct for those processes' blind spots — a claim no process ever flagged is "
-                "labelled legitimate here whether or not it was. A genuine random audit needs "
-                "HUMAN review of a representative sample regardless of flag status, and its "
-                "absence blocks supervised modelling."
+                f"This is a SIMULATED audit over labels that were themselves produced by "
+                f"{_label_origin(self.metrics)}. It therefore cannot correct for that process's "
+                f"blind spots — a claim it never marked is labelled legitimate here whether or "
+                f"not it was. A genuine random audit needs HUMAN review of a representative "
+                f"sample regardless of flag status, and its absence blocks supervised modelling."
             ),
         )
 
@@ -395,3 +394,14 @@ class EvaluationProtocol:
                 "'fairness/appeal monitoring' is NOT_MEASURABLE — no appeals exist."
             ),
         )
+
+
+def _label_origin(metrics) -> str:
+    """Name the process that produced this run's labels, from the labels themselves."""
+    labels = getattr(metrics, "labels", None)
+    if labels is None or labels.empty or "ground_truth_source" not in labels.columns:
+        return "an unstated process"
+    sources = sorted(str(v) for v in labels["ground_truth_source"].dropna().unique())
+    if sources == ["synthetic_injection"]:
+        return "the generator that planted the patterns (synthetic_injection)"
+    return "detection processes (" + ", ".join(sources) + ")"

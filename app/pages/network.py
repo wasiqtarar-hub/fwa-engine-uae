@@ -56,7 +56,7 @@ def render() -> None:
     ])
     with tab_overview:
         with friendly_failure("the connections overview"):
-            _overview(graph)
+            _overview(graph, result.dataset)
     with tab_groups:
         with friendly_failure("the connected groups"):
             _groups(result, graph, state)
@@ -73,7 +73,7 @@ def render() -> None:
 # =============================================================================
 
 
-def _overview(graph) -> None:
+def _overview(graph, dataset=None) -> None:
     g = graph.full_graph
     st.markdown(
         "This page draws the claim file as a **map of connections**. Each dot is a patient, a "
@@ -91,13 +91,15 @@ def _overview(graph) -> None:
     ])
 
     st.markdown("#### Kinds of connection")
-    inventory = graph.edge_inventory()
+    inventory = graph.edge_inventory(dataset)
     rows = []
     for r in inventory.itertuples(index=False):
         label, meaning = edge_words(r.edge_type)
         rows.append({
             "Connection": label,
-            "In this file": "Yes" if r.present else "No",
+            "In this file": ("Yes" if r.present else
+                             "Yes, not on the map yet" if str(r.note).startswith("NOT BUILT")
+                             else "No"),
             "Number": int(r.edges),
             "How we know": ("Seen on the claim" if r.observed and r.present else
                             "Inferred (not seen directly)" if r.present else "—"),
@@ -109,7 +111,9 @@ def _overview(graph) -> None:
                    keep_numeric=["Number"])
     st.caption("The link between an agent and a provider is inferred from appearing on the same "
                "claim; it is not a referral, and every flag that rests on it says so. Connection types "
-               "marked No are missing from the file, so the checks that need them do not run.")
+               "marked No are missing from the file, so the checks that need them do not run. "
+               "\"Not on the map yet\" means the file has these records and the checks read them "
+               "directly, but this map does not draw them.")
 
     summary = graph.snapshot_summary()
     if not summary.empty:
